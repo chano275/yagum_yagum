@@ -1,0 +1,27 @@
+# Python 관련
+# __pycache__/
+# *.py[cod]
+# *.egg-info/
+# .env
+
+# Node.js 관련
+# node_modules/
+# npm-debug.log*
+# yarn-debug.log*
+# yarn-error.log*
+
+# Docker 관련
+# docker-compose.override.yml
+
+# 데이터베이스 데이터 (예: mariadb의 data 디렉터리)
+# backend/mariadb/data/
+# backend/chromadb/data/
+
+# OS 및 에디터 파일
+# .DS_Store
+# Thumbs.db
+# .vscode/
+# .idea/
+
+# 로그 파일
+# *.log
