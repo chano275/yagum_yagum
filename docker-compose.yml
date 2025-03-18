@@ -12,19 +12,16 @@ services:
       - ./backend/fastapi/app:/app
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
-    # depends_on:
-    #   - mariadb
+    depends_on:
+      - mariadb
 
   mariadb:
     image: mariadb:latest
     environment:
      MARIADB_ROOT_PASSWORD: ${MARIA_PASSWORD} 
      MARIADB_DATABASE: finball
-     MARIADB_USER: root
-     MARIADB_PASSWORD: B206_fintech
     volumes:
       - ./backend/mariadb/data:/var/lib/mysql
-      - ./backend/mariadb/my.cnf:/etc/mysql/my.cnf
     ports:
       - "${MARIA_PORT}:${MARIA_PORT}"
 
@@ -36,12 +33,12 @@ services:
       args:                                  
         FRONTEND_METRO_PORT: ${FRONTEND_METRO_PORT}
         FRONTEND_EXPO_PORT: ${FRONTEND_EXPO_PORT}
-    # env_file:
-    #   - ./frontend/react-native/.env
+    env_file:
+      - ./frontend/react-native/.env
     volumes:
       - ./frontend/react-native:/app
+      - /app/node_modules 
       # node_modules만 빈 볼륨으로 오버라이드
-      - /app/node_modules
     ports:
       - "${FRONTEND_METRO_PORT}:${FRONTEND_METRO_PORT}"
       - "${FRONTEND_EXPO_PORT}:${FRONTEND_EXPO_PORT}"
@@ -55,16 +52,3 @@ services:
       - ./nginx/html:/usr/share/nginx/html
     ports:
       - "${NGINX_PORT}:${NGINX_PORT}"
-
-
-
-
-
-
-  # chromadb:
-  #   image: chromadb/chroma:latest
-  #   volumes:
-  #     - ./backend/chromadb/config:/config
-  #     - ./backend/chromadb/data:/data
-  #   ports:
-  #     - "8001:8001"
