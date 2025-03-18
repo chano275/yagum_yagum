@@ -1,27 +1,31 @@
-# Python 관련
-# __pycache__/
-# *.py[cod]
-# *.egg-info/
-# .env
+# 1) OS / Editor / Common
+.DS_Store
+Thumbs.db
 
-# Node.js 관련
-# node_modules/
-# npm-debug.log*
-# yarn-debug.log*
-# yarn-error.log*
+# 2) Logs
+*.log
+logs/
 
-# Docker 관련
-# docker-compose.override.yml
+# 3) Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
 
-# 데이터베이스 데이터 (예: mariadb의 data 디렉터리)
-# backend/mariadb/data/
-# backend/chromadb/data/
+# 4) Node / React Native
+node_modules/
+npm-debug.log
+yarn-error.log
+android/
+ios/
+.expo/
+.expo-shared/
 
-# OS 및 에디터 파일
-# .DS_Store
-# Thumbs.db
-# .vscode/
-# .idea/
+# 5) Docker
+.env
+docker-compose.override.yml
 
-# 로그 파일
-# *.log
+# 6) 기타
+# my.cnf(민감정보가 들어있다면)
+my.cnf
