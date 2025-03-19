@@ -1,10 +1,10 @@
 {
     "version": "V2",
     "requestId": "test",
-    "timestamp": 1742285141749,
+    "timestamp": 1742356475202,
     "images": [
         {
-            "uid": "5bdccc16bec249b78ff4ee6c73ec6270",
+            "uid": "29ac9350b7ca4606b68f92a678c936c7",
             "name": "test_image",
             "inferResult": "SUCCESS",
             "message": "SUCCESS",
