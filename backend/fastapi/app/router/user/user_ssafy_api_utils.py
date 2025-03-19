@@ -1,0 +1,204 @@
+import requests
+import json
+import os
+from fastapi import HTTPException, status
+import logging
+
+# 로깅 설정
+logger = logging.getLogger(__name__)
+
+# 환경 변수에서 API 정보 가져오기
+SSAFY_API_BASE_URL = os.getenv("SSAFY_API_BASE_URL", "https://finopenapi.ssafy.io/ssafy/api/v1").rstrip("/")
+MEMBER_ENDPOINT = f"{SSAFY_API_BASE_URL}/member"
+MEMBER_SEARCH_ENDPOINT = f"{SSAFY_API_BASE_URL}/member/search"
+
+# API 키와 기관 코드 설정
+DEFAULT_API_KEY = os.getenv("SSAFY_API_KEY", "")
+
+async def check_user_exists(email: str, api_key: str = DEFAULT_API_KEY):
+    """
+    사용자 이메일로 등록된 userKey가 있는지 확인
+    """
+    # API 요청 데이터 구성
+    try:
+        # 직접 요청 구조 생성 (API 문서 형식 따름)
+        request_data = {
+            "userId": email,
+            "apiKey": api_key
+        }
+        
+        logger.info(f"사용자 조회 요청 URL: {MEMBER_SEARCH_ENDPOINT}")
+        logger.info(f"사용자 조회 요청 데이터: {json.dumps(request_data)}")
+        
+        response = requests.post(
+            MEMBER_SEARCH_ENDPOINT,
+            json=request_data,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        logger.info(f"API 응답 상태 코드: {response.status_code}")
+        logger.info(f"API 응답 헤더: {dict(response.headers)}")
+        logger.info(f"API 응답 본문: {response.text}")
+        
+        # 응답 확인 - 기존 사용자 없음 케이스 처리
+        if response.status_code == 400:
+            response_text = response.text
+            # E4003은 존재하지 않는 ID라는 의미로, 이는 오류가 아닌 정상적인 결과입니다
+            if "E4003" in response_text:
+                logger.info("사용자를 찾을 수 없음 (정상 응답)")
+                return None
+        
+        # 정상 응답 처리
+        if response.status_code == 200:
+            try:
+                response_data = response.json()
+                logger.info(f"응답 데이터: {json.dumps(response_data)}")
+                
+                # 응답 형식에 따라 적절히 파싱
+                if isinstance(response_data, dict):
+                    # userKey가 직접 있는 경우
+                    if "userKey" in response_data:
+                        return response_data
+                    # userId, userName 등의 키가 있는 경우
+                    if "userId" in response_data:
+                        return response_data
+                    
+                return response_data  # 기타 경우
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON 파싱 오류: {str(e)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"API 응답 파싱 오류: {str(e)}"
+                )
+        
+        # 기타 오류 처리
+        logger.error(f"API 오류 응답: {response.text}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"금융 API 오류: {response.text}"
+        )
+        
+    except requests.RequestException as e:
+        logger.error(f"API 연결 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"금융 API 연결 오류: {str(e)}"
+        )
+
+async def register_user(email: str, username: str, api_key: str = DEFAULT_API_KEY):
+    """
+    금융 API에 새 사용자를 등록하고 userKey를 발급받음
+    """
+    try:
+        # 직접 요청 구조 생성 (API 문서 형식 따름)
+        request_data = {
+            "userId": email,
+            "apiKey": api_key
+        }
+        
+        logger.info(f"사용자 등록 요청 URL: {MEMBER_ENDPOINT}")
+        logger.info(f"사용자 등록 요청 데이터: {json.dumps(request_data)}")
+        
+        response = requests.post(
+            MEMBER_ENDPOINT,
+            json=request_data,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        logger.info(f"API 응답 상태 코드: {response.status_code}")
+        logger.info(f"API 응답 헤더: {dict(response.headers)}")
+        logger.info(f"API 응답 본문: {response.text}")
+        
+        # 응답 확인
+        response_text = response.text
+        
+        # 응답이 JSON 형식인지 확인
+        try:
+            response_data = json.loads(response_text)
+            
+            # userKey가 응답에 포함되어 있는지 확인
+            if "userKey" in response_data:
+                user_key = response_data["userKey"]
+                logger.info(f"발급받은 사용자 키: {user_key}")
+                return user_key
+            
+            # 응답 코드 확인
+            if "responseCode" in response_data:
+                code = response_data["responseCode"]
+                message = response_data.get("responseMessage", "알 수 없는 오류")
+                
+                # 이미 등록된 사용자 처리
+                if code == "E4002":
+                    logger.info(f"이미 등록된 사용자: {message}")
+                    return None
+                
+                # 기타 오류
+                logger.error(f"API 오류 응답: {code} - {message}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"금융 API 오류: {code} - {message}"
+                )
+            
+            # 예상치 못한 응답 형식
+            logger.error(f"예상치 못한 응답 형식: {response_text}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"예상치 못한 API 응답 형식: {response_text}"
+            )
+            
+        except json.JSONDecodeError:
+            logger.error(f"JSON 파싱 오류: {response_text}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"API 응답 파싱 오류: 유효하지 않은 JSON 형식"
+            )
+        
+    except requests.RequestException as e:
+        logger.error(f"API 연결 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"금융 API 연결 오류: {str(e)}"
+        )
+
+async def get_or_create_user_key(email: str, username: str, api_key: str = DEFAULT_API_KEY):
+    """
+    사용자 이메일로 userKey를 조회하거나, 없으면 새로 생성
+    """
+    try:
+        logger.info(f"사용자 키 조회/생성 시작: 이메일={email}, 이름={username}")
+        
+        # 기존 사용자 확인
+        user_info = await check_user_exists(email, api_key)
+        
+        if user_info and user_info.get("userKey"):
+            logger.info(f"기존 사용자 키 반환: {user_info.get('userKey')}")
+            return user_info.get("userKey")
+        
+        # 신규 사용자 등록 시도
+        logger.info("신규 사용자 등록 시작")
+        user_key = await register_user(email, username, api_key)
+        
+        # 신규 등록 실패하고 이미 존재하는 ID인 경우 (E4002) 조회 다시 시도
+        if user_key is None:
+            logger.info("사용자가 이미 존재하는 것으로 판단되어 다시 조회 시도")
+            # 짧은 대기 시간 추가 (선택사항)
+            import asyncio
+            await asyncio.sleep(0.5)
+            
+            user_info = await check_user_exists(email, api_key)
+            if user_info and "userKey" in user_info:
+                logger.info(f"재조회 성공: {user_info.get('userKey')}")
+                return user_info.get("userKey")
+            else:
+                logger.error("재조회 실패: userKey를 찾을 수 없음")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="userKey를 가져오지 못했습니다"
+                )
+        
+        return user_key
+            
+    except Exception as e:
+        logger.error(f"사용자 키 조회/생성 오류: {str(e)}")
+        raise
