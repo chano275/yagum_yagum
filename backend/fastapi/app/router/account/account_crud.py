@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+import os
 
 import models
 from router.account.account_schema import AccountCreate, AccountUpdate, BalanceUpdate
@@ -25,26 +26,38 @@ def get_all_accounts(db: Session, skip: int = 0, limit: int = 100):
     """모든 계정 조회"""
     return db.query(models.Account).offset(skip).limit(limit).all()
 
-def create_account(db: Session, account: AccountCreate):
+async def create_account(db: Session, user_id: int, team_id: Optional[int], saving_goal: int, 
+                        daily_limit: int, month_limit: int, source_account: str, user_key: str):
     """새로운 계정 생성"""
-    BASE_INTEREST_RATE = 2.5
-
-    db_account = models.Account(
-        USER_ID=account.USER_ID,
-        TEAM_ID=account.TEAM_ID,
-        ACCOUNT_NUM=account.ACCOUNT_NUM,
-        INTEREST_RATE=account.BASE_INTEREST_RATE,
-        SAVING_GOAL=account.SAVING_GOAL,
-        DAILY_LIMIT=account.DAILY_LIMIT,
-        MONTH_LIMIT=account.MONTH_LIMIT,
-        SOURCE_ACCOUNT=account.SOURCE_ACCOUNT,
-        TOTAL_AMOUNT=0,  # 초기 잔액은 0으로 설정
-        created_at=datetime.now()
-    )
-    db.add(db_account)
-    db.commit()
-    db.refresh(db_account)
-    return db_account
+    try:
+        # 금융 API를 통해 계좌번호 생성
+        from router.user.user_ssafy_api_utils import create_demand_deposit_account
+        SAVING_CODE = os.getenv("SAVING_CODE")
+        account_num = await create_demand_deposit_account(user_key,SAVING_CODE)
+        
+        # 기본 이자율 설정
+        BASE_INTEREST_RATE = 2.5  # 시스템에서 정의한 기본 이자율
+        
+        # 계정 생성
+        db_account = models.Account(
+            USER_ID=user_id,
+            TEAM_ID=team_id,
+            ACCOUNT_NUM=account_num,
+            INTEREST_RATE=BASE_INTEREST_RATE,
+            SAVING_GOAL=saving_goal,
+            DAILY_LIMIT=daily_limit,
+            MONTH_LIMIT=month_limit,
+            SOURCE_ACCOUNT=source_account,
+            TOTAL_AMOUNT=0,
+            created_at=datetime.now()
+        )
+        db.add(db_account)
+        db.commit()
+        db.refresh(db_account)
+        return db_account
+    except Exception as e:
+        db.rollback()
+        raise e
 
 def update_account(db: Session, account_id: int, account_update: AccountUpdate):
     """계정 정보 업데이트"""

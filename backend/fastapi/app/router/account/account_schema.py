@@ -4,7 +4,7 @@ from datetime import datetime
 
 # 계정 기본 모델
 class AccountBase(BaseModel):
-    USER_ID: int
+    # USER_ID: int
     TEAM_ID: Optional[int] = None
     # ACCOUNT_NUM: str
     # INTEREST_RATE: float

@@ -23,27 +23,21 @@ async def create_account(
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"계정 생성 시도: 사용자 ID {account.USER_ID}")
+        logger.info(f"계정 생성 시도: 사용자 ID {current_user.USER_ID}")
         
-        # 권한 확인: 본인 계정만 생성 가능
-        if current_user.USER_ID != account.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 대상 ID {account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        # CRUD 함수 호출하여 계정 생성
+        new_account = await account_crud.create_account(
+            db=db,
+            user_id=current_user.USER_ID,
+            team_id=account.TEAM_ID,
+            saving_goal=account.SAVING_GOAL,
+            daily_limit=account.DAILY_LIMIT,
+            month_limit=account.MONTH_LIMIT,
+            source_account=account.SOURCE_ACCOUNT,
+            user_key=current_user.USER_KEY
+        )
         
-        # 계좌번호 중복 확인
-        existing_account = account_crud.get_account_by_account_num(db, account.ACCOUNT_NUM)
-        if existing_account:
-            logger.warning(f"이미 존재하는 계좌번호: {account.ACCOUNT_NUM}")
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, 
-                detail="이미 존재하는 계좌번호입니다"
-            )
-        
-        # 계정 생성
-        logger.info("새 계정 생성 시작")
-        new_account = account_crud.create_account(db, account)
         logger.info(f"계정 생성 완료: 계정 ID {new_account.ACCOUNT_ID}")
-        
         return new_account
         
     except HTTPException:
