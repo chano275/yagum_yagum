@@ -49,7 +49,7 @@ async def check_user_exists(email: str, api_key: str = DEFAULT_API_KEY):
                 return None
         
         # 정상 응답 처리
-        if response.status_code == 200:
+        if response.status_code in [200,201]:
             try:
                 response_data = response.json()
                 logger.info(f"응답 데이터: {json.dumps(response_data)}")
@@ -202,3 +202,82 @@ async def get_or_create_user_key(email: str, username: str, api_key: str = DEFAU
     except Exception as e:
         logger.error(f"사용자 키 조회/생성 오류: {str(e)}")
         raise
+
+# 입출금 통장 개설설
+async def create_demand_deposit_account(user_key, account_type_unique_no="999-1-0146508f197d4c", api_key=None):
+    """
+    금융 API를 통해 입출금 계좌 개설
+    """
+    try:
+        # API 이름 및 URL 설정
+        api_name = "createDemandDepositAccount"
+        api_url = f"{SSAFY_API_BASE_URL}/edu/demandDeposit/createDemandDepositAccount"
+        
+        # API 키 설정
+        if api_key is None:
+            api_key = DEFAULT_API_KEY
+        
+        # 현재 사용 중인 generate_api_header 함수를 그대로 사용
+        from utils.api_header_utils import generate_api_header
+        
+        # 헤더 생성
+        header = generate_api_header(
+            api_name=api_name,
+            user_key=user_key,
+            api_key=api_key
+        )
+        
+        # 전체 요청 데이터 구성
+        request_data = {
+            "Header": header,
+            "accountTypeUniqueNo": account_type_unique_no
+        }
+        
+        logger.info(f"입출금 계좌 개설 요청 URL: {api_url}")
+        logger.info(f"입출금 계좌 개설 요청 데이터: {json.dumps(request_data)}")
+        
+        # API 요청
+        response = requests.post(
+            api_url,
+            json=request_data,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        logger.info(f"API 응답 상태 코드: {response.status_code}")
+        logger.info(f"API 응답 본문: {response.text}")
+        
+        # 응답 확인
+        response_data = response.json()
+        
+        # 응답 코드 확인
+        header = response_data.get("Header", {})
+        response_code = header.get("responseCode")
+        
+        if response_code != "H0000":
+            response_message = header.get("responseMessage", "알 수 없는 오류")
+            logger.error(f"API 오류 응답: {response_code} - {response_message}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"금융 API 오류: {response_code} - {response_message}"
+            )
+        
+        # 계좌 정보 확인
+        rec = response_data.get("REC", {})
+        account_no = rec.get("accountNo")
+        
+        if not account_no:
+            logger.error("계좌번호를 찾을 수 없음")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="계좌번호를 가져오지 못했습니다"
+            )
+        
+        logger.info(f"생성된 계좌번호: {account_no}")
+        return account_no
+            
+    except Exception as e:
+        logger.error(f"계좌 생성 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"계좌 생성 중 오류 발생: {str(e)}"
+        )

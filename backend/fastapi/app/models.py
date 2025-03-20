@@ -15,6 +15,7 @@ class User(Base):
     PASSWORD = Column(String(100))
     USER_KEY = Column(String(60))
     created_at = Column(DateTime, server_default=func.now())
+    SOURCE_ACCOUNT = Column(String(16))
     
     # 관계 정의
     accounts = relationship("Account", back_populates="user")

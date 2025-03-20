@@ -48,14 +48,15 @@ def authenticate_user(db: Session, email: str, password: str):
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.User).offset(skip).limit(limit).all()
 
-def create_user(db: Session, user: UserCreate, user_key: str = None):
+def create_user(db: Session, user: UserCreate, user_key: str = None, source_account: str = None):
     """사용자 생성 함수"""
     hashed_password = get_password_hash(user.PASSWORD)
     db_user = models.User(
         NAME=user.NAME,
         USER_EMAIL=user.USER_EMAIL,
         PASSWORD=hashed_password,
-        USER_KEY=user_key,  # 외부에서 전달받은 user_key 사용
+        USER_KEY=user_key,
+        SOURCE_ACCOUNT=source_account,  # 생성된 입출금 계좌번호 저장
         created_at=datetime.now()
     )
     db.add(db_user)

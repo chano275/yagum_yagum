@@ -79,15 +79,34 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
                 detail="이미 가입된 이메일입니다."
             )
 
-        # 금융 API에서 userKey 조회 또는 생성
+        # 1. 금융 API에서 userKey 조회 또는 생성 (기존 로직 유지)
         logger.info(f"금융 API에서 userKey 조회/생성 시작: {user.USER_EMAIL}")
         user_key = await get_or_create_user_key(user.USER_EMAIL, user.NAME)
+        
+        if not user_key:
+            logger.error(f"userKey를 가져오지 못함: {user.USER_EMAIL}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="사용자 키를 가져오지 못했습니다"
+            )
+        
         logger.info(f"금융 API에서 userKey 획득 완료: {user_key}")
         
-        # 사용자 생성
+        # 2. 입출금 계좌 개설 (업데이트된 함수 사용)
+        from router.user.user_ssafy_api_utils import create_demand_deposit_account
+        logger.info(f"입출금 계좌 개설 시작: userKey {user_key}")
+        account_no = await create_demand_deposit_account(user_key)
+        logger.info(f"입출금 계좌 개설 완료: 계좌번호 {account_no}")
+        
+        # 3. 사용자 생성 (SOURCE_ACCOUNT 포함)
         logger.info("새 사용자 생성 시작")
-        new_user = user_crud.create_user(db=db, user=user, user_key=user_key)
-        logger.info("사용자 생성 완료")
+        new_user = user_crud.create_user(
+            db=db, 
+            user=user, 
+            user_key=user_key, 
+            source_account=account_no
+        )
+        logger.info(f"사용자 생성 완료: ID {new_user.USER_ID}, 계좌번호 {account_no}")
         
         return new_user
     

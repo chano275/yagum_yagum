@@ -27,11 +27,13 @@ def get_all_accounts(db: Session, skip: int = 0, limit: int = 100):
 
 def create_account(db: Session, account: AccountCreate):
     """새로운 계정 생성"""
+    BASE_INTEREST_RATE = 2.5
+
     db_account = models.Account(
         USER_ID=account.USER_ID,
         TEAM_ID=account.TEAM_ID,
         ACCOUNT_NUM=account.ACCOUNT_NUM,
-        INTEREST_RATE=account.INTEREST_RATE,
+        INTEREST_RATE=account.BASE_INTEREST_RATE,
         SAVING_GOAL=account.SAVING_GOAL,
         DAILY_LIMIT=account.DAILY_LIMIT,
         MONTH_LIMIT=account.MONTH_LIMIT,

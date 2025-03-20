@@ -116,5 +116,3 @@ def get_request_json(api_name, body=None, user_key=None, api_key=None, instituti
     )
     
     return json.dumps(request, ensure_ascii=False, indent=2)
-
-print(generate_api_header("createDemandDeposit",None,"5a4dda08418e4fa1885c08924abd5131"))

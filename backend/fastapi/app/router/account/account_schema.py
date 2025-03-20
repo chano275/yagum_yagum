@@ -6,8 +6,8 @@ from datetime import datetime
 class AccountBase(BaseModel):
     USER_ID: int
     TEAM_ID: Optional[int] = None
-    ACCOUNT_NUM: str
-    INTEREST_RATE: float
+    # ACCOUNT_NUM: str
+    # INTEREST_RATE: float
     SAVING_GOAL: int
     DAILY_LIMIT: int
     MONTH_LIMIT: int
@@ -30,6 +30,7 @@ class AccountUpdate(BaseModel):
 # 계정 응답 모델
 class AccountResponse(AccountBase):
     ACCOUNT_ID: int
+    ACCOUNT_NUM:str
     TOTAL_AMOUNT: int
     created_at: datetime
     
