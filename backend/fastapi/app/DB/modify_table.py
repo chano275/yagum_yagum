@@ -10,6 +10,7 @@ from sqlalchemy import text
 from database import engine
 
 with engine.connect() as connection:
-    connection.execute(text("ALTER TABLE user MODIFY COLUMN PASSWORD VARCHAR(100)"))
+    connection.execute(text("ALTER TABLE user_saving_rule MODIFY COLUMN PLAYER_TYPE_ID INT NULL"))
+    connection.execute(text("ALTER TABLE user_saving_rule MODIFY COLUMN PLAYER_ID INT NULL"))
     connection.commit()
     print("칼럼 변경 성공")

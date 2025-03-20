@@ -111,9 +111,9 @@ class UserSavingRuleBase(BaseModel):
     ACCOUNT_ID: int
     SAVING_RULE_TYPE_ID: int
     SAVING_RULE_DETAIL_ID: int
-    PLAYER_TYPE_ID: int
+    PLAYER_TYPE_ID: Optional[int] = None  # Optional로 변경
     USER_SAVING_RULED_AMOUNT: int
-    PLAYER_ID: int
+    PLAYER_ID: Optional[int] = None  # Optional로 변경
 
 # 사용자 적금 규칙 생성 모델 (요청)
 class UserSavingRuleCreate(UserSavingRuleBase):
@@ -260,3 +260,11 @@ class DailySavingFilterParams(BaseModel):
     end_date: Optional[date] = None
     skip: int = 0
     limit: int = 100
+
+    # 규칙 생성을 위한 새로운 스키마
+class UserSavingRuleCreateSimplified(BaseModel):
+    ACCOUNT_ID: int
+    SAVING_RULE_TYPE_ID: int  # 예: 1=기본 규칙, 2=투수, 3=타자, 4=상대팀
+    RECORD_TYPE_ID: int  # 예: 1=승리, 2=안타, 3=홈런 등
+    PLAYER_ID: Optional[int] = None  # 선수 규칙의 경우에만 필요
+    USER_SAVING_RULED_AMOUNT: int  # 적립 금액

@@ -379,12 +379,12 @@ def calculate_daily_saving(db: Session, account_id: int, player_record: Dict):
     count = player_record.get("COUNT", 0)
     record_date = player_record.get("DATE")
     
-    if not all([player_id, record_type_id, record_date]):
+    if not record_type_id or not record_date:
         return None
     
-    # 선수 정보 조회
-    player = db.query(models.Player).filter(models.Player.PLAYER_ID == player_id).first()
-    if not player:
+    # 계정 정보 조회
+    account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
+    if not account:
         return None
     
     # 적금 규칙 찾기
@@ -399,20 +399,49 @@ def calculate_daily_saving(db: Session, account_id: int, player_record: Dict):
     created_savings = []
     
     for rule in saving_rules:
-        # 해당 규칙의 상세 규칙 찾기 (선수 타입 고려)
-        rule_detail = db.query(models.SavingRuleDetail).filter(
-            models.SavingRuleDetail.SAVING_RULE_ID == rule.SAVING_RULE_ID,
-            models.SavingRuleDetail.PLAYER_TYPE_ID == player.PLAYER_TYPE_ID
-        ).first()
+        # 규칙 타입 확인
+        rule_type = saving_rule_crud.get_saving_rule_type_by_id(db, rule.SAVING_RULE_TYPE_ID)
+        is_team_rule = rule_type and rule_type.SAVING_RULE_TYPE_NAME in ["기본 규칙", "상대팀"]
+        
+        # 해당 규칙의 상세 규칙 찾기
+        if is_team_rule:
+            # 팀 규칙은 선수 타입 관계없이 처리
+            rule_detail = db.query(models.SavingRuleDetail).filter(
+                models.SavingRuleDetail.SAVING_RULE_ID == rule.SAVING_RULE_ID
+            ).first()
+        else:
+            # 선수 규칙은 선수 타입 고려
+            if not player_id:
+                continue
+                
+            # 선수 정보 조회
+            player = db.query(models.Player).filter(models.Player.PLAYER_ID == player_id).first()
+            if not player:
+                continue
+                
+            rule_detail = db.query(models.SavingRuleDetail).filter(
+                models.SavingRuleDetail.SAVING_RULE_ID == rule.SAVING_RULE_ID,
+                models.SavingRuleDetail.PLAYER_TYPE_ID == player.PLAYER_TYPE_ID
+            ).first()
         
         if not rule_detail:
             continue
         
         # 사용자 적금 규칙 확인
-        user_rule = db.query(models.UserSavingRule).filter(
-            models.UserSavingRule.ACCOUNT_ID == account_id,
-            models.UserSavingRule.SAVING_RULE_DETAIL_ID == rule_detail.SAVING_RULE_DETAIL_ID
-        ).first()
+        if is_team_rule:
+            # 팀 규칙은 PLAYER_ID가 NULL인 규칙 찾기
+            user_rule = db.query(models.UserSavingRule).filter(
+                models.UserSavingRule.ACCOUNT_ID == account_id,
+                models.UserSavingRule.SAVING_RULE_DETAIL_ID == rule_detail.SAVING_RULE_DETAIL_ID,
+                models.UserSavingRule.PLAYER_ID == None
+            ).first()
+        else:
+            # 선수 규칙은 특정 선수 ID를 가진 규칙 찾기
+            user_rule = db.query(models.UserSavingRule).filter(
+                models.UserSavingRule.ACCOUNT_ID == account_id,
+                models.UserSavingRule.SAVING_RULE_DETAIL_ID == rule_detail.SAVING_RULE_DETAIL_ID,
+                models.UserSavingRule.PLAYER_ID == player_id
+            ).first()
         
         if not user_rule:
             continue
@@ -506,11 +535,11 @@ def get_saving_rule_combinations(db: Session):
 
 def get_account_saving_summary(db: Session, account_id: int, start_date: Optional[date] = None, end_date: Optional[date] = None):
     """계정의 적금 요약 정보"""
-    # 기본 날짜 범위 설정 (한 달)
+    # 기본 날짜 범위 설정 (일주일일)
     if not end_date:
         end_date = datetime.now().date()
     if not start_date:
-        start_date = end_date - timedelta(days=30)
+        start_date = end_date - timedelta(days=7)
     
     # 계정 확인
     account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
@@ -530,7 +559,7 @@ def get_account_saving_summary(db: Session, account_id: int, start_date: Optiona
         rule_type = db.query(models.SavingRuleType).filter(
             models.SavingRuleType.SAVING_RULE_TYPE_ID == saving.SAVING_RULED_TYPE_ID
         ).first()
-        
+        ### 수정 필요 rule_type_name이 투수가 아닌 퀄스 이런 식으로
         if rule_type:
             rule_type_name = rule_type.SAVING_RULE_TYPE_NAME
             if rule_type_name not in rule_type_stats:

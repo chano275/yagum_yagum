@@ -195,9 +195,9 @@ class UserSavingRule(Base):
     ACCOUNT_ID = Column(Integer, ForeignKey("account.ACCOUNT_ID"), nullable=False)
     SAVING_RULE_TYPE_ID = Column(Integer, ForeignKey("saving_rule_type.SAVING_RULE_TYPE_ID"), nullable=False)
     SAVING_RULE_DETAIL_ID = Column(Integer, ForeignKey("saving_rule_detail.SAVING_RULE_DETAIL_ID"), nullable=False)
-    PLAYER_TYPE_ID = Column(Integer, ForeignKey("player_type.PLAYER_TYPE_ID"), nullable=False)
-    USER_SAVING_RULED_AMOUNT = Column(Integer)
-    PLAYER_ID = Column(Integer, ForeignKey("player.PLAYER_ID"), nullable=False)
+    PLAYER_TYPE_ID = Column(Integer, ForeignKey("player_type.PLAYER_TYPE_ID"), nullable=True)  # NULL 허용으로 변경
+    USER_SAVING_RULED_AMOUNT = Column(Integer, nullable=False)
+    PLAYER_ID = Column(Integer, ForeignKey("player.PLAYER_ID"), nullable=True)  # NULL 허용으로 변경
     
     # 관계 정의
     account = relationship("Account", back_populates="user_saving_rules")

@@ -55,3 +55,16 @@ class AccountSummary(BaseModel):
 class BalanceUpdate(BaseModel):
     amount: int
     description: Optional[str] = None
+
+# 계좌번호 초기 발급 응답 모델
+class InitAccountResponse(BaseModel):
+    ACCOUNT_ID: int
+    ACCOUNT_NUM: str
+
+# 계좌 설정 모델
+class AccountSetup(BaseModel):
+    TEAM_ID: int
+    SAVING_GOAL: int
+    DAILY_LIMIT: int
+    MONTH_LIMIT: int
+    SOURCE_ACCOUNT: str
