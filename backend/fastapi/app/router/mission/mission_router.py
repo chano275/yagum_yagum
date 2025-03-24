@@ -59,164 +59,6 @@ async def read_mission(
             detail=f"미션 조회 중 오류 발생: {str(e)}"
         )
 
-# # 새 미션 생성
-# @router.post("/", response_model=mission_schema.MissionResponse)
-# async def create_mission(
-#     mission: mission_schema.MissionCreate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"미션 생성 시도: {mission.MISSION_NAME}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 중복 미션 이름 확인
-#         existing_mission = mission_crud.get_mission_by_name(db, mission.MISSION_NAME)
-#         if existing_mission:
-#             logger.warning(f"이미 존재하는 미션 이름: {mission.MISSION_NAME}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_409_CONFLICT,
-#                 detail="이미 존재하는 미션 이름입니다"
-#             )
-            
-#         # 금리 값 검증
-#         if mission.MISSION_RATE < 0:
-#             logger.warning(f"유효하지 않은 금리 값: {mission.MISSION_RATE}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="금리는 음수가 될 수 없습니다"
-#             )
-            
-#         # 최대 카운트 검증
-#         if mission.MISSION_MAX_COUNT <= 0:
-#             logger.warning(f"유효하지 않은 최대 카운트 값: {mission.MISSION_MAX_COUNT}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="최대 카운트는 양수여야 합니다"
-#             )
-            
-#         # 미션 생성
-#         new_mission = mission_crud.create_mission(db, mission)
-#         logger.info(f"미션 생성 완료: ID {new_mission.MISSION_ID}")
-        
-#         return new_mission
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"미션 생성 중 예상치 못한 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"미션 생성 중 오류 발생: {str(e)}"
-#         )
-
-# # 미션 업데이트
-# @router.put("/{mission_id}", response_model=mission_schema.MissionResponse)
-# async def update_mission(
-#     mission_id: int,
-#     mission: mission_schema.MissionUpdate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"미션 업데이트 요청: 미션 ID {mission_id}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 미션 존재 여부 확인
-#         db_mission = mission_crud.get_mission_by_id(db, mission_id)
-#         if not db_mission:
-#             logger.warning(f"미션을 찾을 수 없음: {mission_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="미션을 찾을 수 없습니다"
-#             )
-            
-#         # 이름 변경 시 중복 확인
-#         if mission.MISSION_NAME and mission.MISSION_NAME != db_mission.MISSION_NAME:
-#             existing_mission = mission_crud.get_mission_by_name(db, mission.MISSION_NAME)
-#             if existing_mission:
-#                 logger.warning(f"이미 존재하는 미션 이름: {mission.MISSION_NAME}")
-#                 raise HTTPException(
-#                     status_code=status.HTTP_409_CONFLICT,
-#                     detail="이미 존재하는 미션 이름입니다"
-#                 )
-                
-#         # 금리 값 검증
-#         if mission.MISSION_RATE is not None and mission.MISSION_RATE < 0:
-#             logger.warning(f"유효하지 않은 금리 값: {mission.MISSION_RATE}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="금리는 음수가 될 수 없습니다"
-#             )
-            
-#         # 최대 카운트 검증
-#         if mission.MISSION_MAX_COUNT is not None and mission.MISSION_MAX_COUNT <= 0:
-#             logger.warning(f"유효하지 않은 최대 카운트 값: {mission.MISSION_MAX_COUNT}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="최대 카운트는 양수여야 합니다"
-#             )
-            
-#         # 미션 업데이트
-#         updated_mission = mission_crud.update_mission(db, mission_id, mission)
-#         if not updated_mission:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="미션 업데이트 중 오류가 발생했습니다"
-#             )
-            
-#         logger.info(f"미션 업데이트 완료: 미션 ID {mission_id}")
-#         return updated_mission
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"미션 업데이트 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"미션 업데이트 중 오류 발생: {str(e)}"
-#         )
-
-# # 미션 삭제
-# @router.delete("/{mission_id}", status_code=status.HTTP_204_NO_CONTENT)
-# async def delete_mission(
-#     mission_id: int,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"미션 삭제 요청: 미션 ID {mission_id}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 미션 존재 여부 확인
-#         db_mission = mission_crud.get_mission_by_id(db, mission_id)
-#         if not db_mission:
-#             logger.warning(f"미션을 찾을 수 없음: {mission_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="미션을 찾을 수 없습니다"
-#             )
-            
-#         # 미션 삭제
-#         success = mission_crud.delete_mission(db, mission_id)
-#         if not success:
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="미션 삭제 실패: 이미 사용 중인 미션은 삭제할 수 없습니다"
-#             )
-            
-#         logger.info(f"미션 삭제 완료: 미션 ID {mission_id}")
-#         return None
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"미션 삭제 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"미션 삭제 중 오류 발생: {str(e)}"
-#         )
-
 # 계정 미션 목록 조회
 @router.get("/account/{account_id}", response_model=List[mission_schema.UsedMissionDetailResponse])
 async def read_account_missions(
@@ -582,44 +424,44 @@ async def get_account_interest_rate(
             detail=f"계정 이자율 조회 중 오류 발생: {str(e)}"
         )
 
-# 사용 가능한 미션 목록 조회 (계정에 아직 등록되지 않은 미션)
-@router.get("/account/{account_id}/available", response_model=List[mission_schema.MissionResponse])
-async def get_available_missions(
-    account_id: int,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    try:
-        logger.info(f"사용 가능한 미션 목록 조회 요청: 계정 ID {account_id}")
+# # 사용 가능한 미션 목록 조회 (계정에 아직 등록되지 않은 미션)
+# @router.get("/account/{account_id}/available", response_model=List[mission_schema.MissionResponse])
+# async def get_available_missions(
+#     account_id: int,
+#     db: Session = Depends(get_db),
+#     current_user: models.User = Depends(get_current_user)
+# ):
+#     try:
+#         logger.info(f"사용 가능한 미션 목록 조회 요청: 계정 ID {account_id}")
         
-        # 계정 존재 여부 및 소유권 확인
-        account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
-        if not account:
-            logger.warning(f"계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
+#         # 계정 존재 여부 및 소유권 확인
+#         account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
+#         if not account:
+#             logger.warning(f"계정을 찾을 수 없음: {account_id}")
+#             raise HTTPException(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 detail="계정을 찾을 수 없습니다"
+#             )
             
-        if account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="이 계정의 사용 가능한 미션을 조회할 권한이 없습니다"
-            )
+#         if account.USER_ID != current_user.USER_ID:
+#             logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
+#             raise HTTPException(
+#                 status_code=status.HTTP_403_FORBIDDEN,
+#                 detail="이 계정의 사용 가능한 미션을 조회할 권한이 없습니다"
+#             )
             
-        # 사용 가능한 미션 목록 조회
-        available_missions = mission_crud.get_unused_missions(db, account_id)
+#         # 사용 가능한 미션 목록 조회
+#         available_missions = mission_crud.get_unused_missions(db, account_id)
         
-        return available_missions
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"사용 가능한 미션 목록 조회 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"사용 가능한 미션 목록 조회 중 오류 발생: {str(e)}"
-        )
+#         return available_missions
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"사용 가능한 미션 목록 조회 중 오류: {str(e)}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"사용 가능한 미션 목록 조회 중 오류 발생: {str(e)}"
+#         )
 
 # 계정의 미션 삭제 (미션 등록 취소)
 @router.delete("/account/{account_id}/mission/{mission_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -683,36 +525,3 @@ async def remove_mission_from_account(
             detail=f"계정의 미션 삭제 중 오류 발생: {str(e)}"
         )
 
-# 모든 계정의 이자율 갱신 (일괄 처리)
-@router.post("/refresh-all-rates", status_code=status.HTTP_200_OK)
-async def refresh_all_interest_rates(
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    try:
-        logger.info(f"모든 계정의 이자율 갱신 요청")
-        
-        # TODO: 관리자 권한 확인 필요
-        
-        # 모든 계정 조회
-        accounts = db.query(models.Account).all()
-        updated_count = 0
-        
-        # 각 계정의 이자율 업데이트
-        for account in accounts:
-            try:
-                mission_crud.update_account_interest_rate(db, account.ACCOUNT_ID)
-                updated_count += 1
-            except Exception as e:
-                logger.warning(f"계정 이자율 업데이트 중 오류: 계정 ID {account.ACCOUNT_ID}, 오류: {str(e)}")
-                continue
-                
-        logger.info(f"모든 계정의 이자율 갱신 완료: {updated_count}개 계정 업데이트됨")
-        
-        return {"message": f"{updated_count}개 계정의 이자율이 갱신되었습니다"}
-    except Exception as e:
-        logger.error(f"모든 계정의 이자율 갱신 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"이자율 갱신 중 오류 발생: {str(e)}"
-        )
