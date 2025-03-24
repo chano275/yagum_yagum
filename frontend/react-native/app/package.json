@@ -21,7 +21,8 @@
     "react-native-safe-area-context": "^5.3.0",
     "react-native-web": "~0.19.13",
     "styled-components": "^6.1.16",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "expo-font": "~13.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
