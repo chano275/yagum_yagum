@@ -177,7 +177,7 @@ class SavingRuleDetail(Base):
 
     SAVING_RULE_DETAIL_ID = Column(Integer, primary_key=True)
     SAVING_RULE_TYPE_ID = Column(Integer, ForeignKey("saving_rule_type.SAVING_RULE_TYPE_ID"), nullable=False)
-    PLAYER_TYPE_ID = Column(Integer, ForeignKey("player_type.PLAYER_TYPE_ID"), nullable=False)
+    PLAYER_TYPE_ID = Column(Integer, ForeignKey("player_type.PLAYER_TYPE_ID"), nullable=True)
     SAVING_RULE_ID = Column(Integer, ForeignKey("saving_rule_list.SAVING_RULE_ID"), nullable=False)
     
     # 관계 정의
