@@ -75,132 +75,6 @@ async def read_team(
             detail=f"팀 조회 중 오류 발생: {str(e)}"
         )
 
-# # 팀 생성
-# @router.post("/", response_model=team_schema.TeamResponse)
-# async def create_team(
-#     team: team_schema.TeamCreate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"팀 생성 시도: {team.TEAM_NAME}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 중복 이름 확인
-#         existing_team = team_crud.get_team_by_name(db, team.TEAM_NAME)
-#         if existing_team:
-#             logger.warning(f"이미 존재하는 팀 이름: {team.TEAM_NAME}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_409_CONFLICT,
-#                 detail="이미 존재하는 팀 이름입니다"
-#             )
-            
-#         # 팀 생성
-#         new_team = team_crud.create_team(db, team)
-#         logger.info(f"팀 생성 완료: ID {new_team.TEAM_ID}")
-        
-#         return new_team
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"팀 생성 중 예상치 못한 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"팀 생성 중 오류 발생: {str(e)}"
-#         )
-
-# # 팀 업데이트
-# @router.put("/{team_id}", response_model=team_schema.TeamResponse)
-# async def update_team(
-#     team_id: int,
-#     team: team_schema.TeamUpdate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"팀 업데이트 요청: 팀 ID {team_id}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 팀 존재 여부 확인
-#         db_team = team_crud.get_team_by_id(db, team_id)
-#         if not db_team:
-#             logger.warning(f"존재하지 않는 팀: {team_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="존재하지 않는 팀입니다"
-#             )
-            
-#         # 팀 이름 중복 확인 (이름이 변경된 경우)
-#         if team.TEAM_NAME is not None and team.TEAM_NAME != db_team.TEAM_NAME:
-#             existing_team = team_crud.get_team_by_name(db, team.TEAM_NAME)
-#             if existing_team:
-#                 logger.warning(f"이미 존재하는 팀 이름: {team.TEAM_NAME}")
-#                 raise HTTPException(
-#                     status_code=status.HTTP_409_CONFLICT,
-#                     detail="이미 존재하는 팀 이름입니다"
-#                 )
-                
-#         # 팀 업데이트
-#         updated_team = team_crud.update_team(db, team_id, team)
-#         if not updated_team:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="팀 업데이트 중 오류가 발생했습니다"
-#             )
-            
-#         logger.info(f"팀 업데이트 완료: 팀 ID {team_id}")
-#         return updated_team
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"팀 업데이트 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"팀 업데이트 중 오류 발생: {str(e)}"
-#         )
-
-# # 팀 삭제
-# @router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
-# async def delete_team(
-#     team_id: int,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"팀 삭제 요청: 팀 ID {team_id}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 팀 존재 여부 확인
-#         db_team = team_crud.get_team_by_id(db, team_id)
-#         if not db_team:
-#             logger.warning(f"존재하지 않는 팀: {team_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="존재하지 않는 팀입니다"
-#             )
-            
-#         # 팀 삭제
-#         success = team_crud.delete_team(db, team_id)
-#         if not success:
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="이 팀을 참조하는 계정이나 선수가 있어 삭제할 수 없습니다"
-#             )
-            
-#         logger.info(f"팀 삭제 완료: 팀 ID {team_id}")
-#         return None
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"팀 삭제 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"팀 삭제 중 오류 발생: {str(e)}"
-#         )
-
 # 팀 상세 정보 조회 (선수, 계정, 게임 일정 포함)
 @router.get("/{team_id}/details", response_model=team_schema.TeamFullDetailResponse)
 async def read_team_full_details(
@@ -297,160 +171,117 @@ async def read_team_full_details(
             detail=f"팀 상세 정보 조회 중 오류 발생: {str(e)}"
         )
 
-# 팀 요약 정보 조회
-@router.get("/{team_id}/summary", response_model=team_schema.TeamSummaryResponse)
-async def read_team_summary(
-    team_id: int,
-    db: Session = Depends(get_db)
-):
-    try:
-        logger.info(f"팀 요약 정보 조회: 팀 ID {team_id}")
-        
-        # 팀 존재 여부 확인
-        team = team_crud.get_team_by_id(db, team_id)
-        if not team:
-            logger.warning(f"존재하지 않는 팀: {team_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="존재하지 않는 팀입니다"
-            )
-            
-        # 팀 요약 정보 조회
-        summary = team_crud.get_team_summary(db, team_id)
-        if not summary:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="팀 요약 정보 조회 중 오류가 발생했습니다"
-            )
-            
-        return summary
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"팀 요약 정보 조회 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"팀 요약 정보 조회 중 오류 발생: {str(e)}"
-        )
-
-# 팀 월간 통계 조회
-@router.get("/{team_id}/stats/{year}/{month}", response_model=team_schema.TeamMonthlyStatsResponse)
-async def read_team_monthly_stats(
-    team_id: int,
-    year: int,
-    month: int,
-    db: Session = Depends(get_db)
-):
-    try:
-        logger.info(f"팀 월간 통계 조회: 팀 ID {team_id}, {year}년 {month}월")
-        
-        # 팀 존재 여부 확인
-        team = team_crud.get_team_by_id(db, team_id)
-        if not team:
-            logger.warning(f"존재하지 않는 팀: {team_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="존재하지 않는 팀입니다"
-            )
-            
-        # 날짜 유효성 검사
-        if month < 1 or month > 12:
-            logger.warning(f"유효하지 않은 월: {month}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="월은 1부터 12 사이의 값이어야 합니다"
-            )
-            
-        # 팀 월간 통계 조회
-        stats = team_crud.get_team_monthly_stats(db, team_id, year, month)
-        
-        return stats
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"팀 월간 통계 조회 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"팀 월간 통계 조회 중 오류 발생: {str(e)}"
-        )
-
-# 팀 순위 정보 조회
-@router.get("/ratings", response_model=List[team_schema.TeamRatingDetailResponse])
-async def read_team_ratings(
-    rating_date: Optional[date] = None,
-    db: Session = Depends(get_db)
-):
-    try:
-        # 기본 날짜는 오늘
-        if not rating_date:
-            rating_date = datetime.now().date()
-            
-        logger.info(f"팀 순위 정보 조회: 날짜 {rating_date}")
-        
-        ratings = team_crud.get_team_ratings_by_date(db, rating_date)
-        
-        # 팀 이름 추가
-        result = []
-        for rating in ratings:
-            team = team_crud.get_team_by_id(db, rating.TEAM_ID)
-            rating_dict = {
-                "TEAM_RATING_ID": rating.TEAM_RATING_ID,
-                "TEAM_ID": rating.TEAM_ID,
-                "DAILY_RANKING": rating.DAILY_RANKING,
-                "DATE": rating.DATE,
-                "team_name": team.TEAM_NAME if team else None
-            }
-            result.append(rating_dict)
-            
-        return result
-    except Exception as e:
-        logger.error(f"팀 순위 정보 조회 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"팀 순위 정보 조회 중 오류 발생: {str(e)}"
-        )
-
-# # 팀 순위 정보 생성/업데이트
-# @router.post("/ratings", response_model=team_schema.TeamRatingResponse)
-# async def create_team_rating(
-#     team_rating: team_schema.TeamRatingCreate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
+# # 팀 요약 정보 조회
+# @router.get("/{team_id}/summary", response_model=team_schema.TeamSummaryResponse)
+# async def read_team_summary(
+#     team_id: int,
+#     db: Session = Depends(get_db)
 # ):
 #     try:
-#         logger.info(f"팀 순위 정보 생성/업데이트 요청: 팀 ID {team_rating.TEAM_ID}, 날짜 {team_rating.DATE}")
-        
-#         # TODO: 관리자 권한 확인 필요
+#         logger.info(f"팀 요약 정보 조회: 팀 ID {team_id}")
         
 #         # 팀 존재 여부 확인
-#         team = team_crud.get_team_by_id(db, team_rating.TEAM_ID)
+#         team = team_crud.get_team_by_id(db, team_id)
 #         if not team:
-#             logger.warning(f"존재하지 않는 팀: {team_rating.TEAM_ID}")
+#             logger.warning(f"존재하지 않는 팀: {team_id}")
 #             raise HTTPException(
 #                 status_code=status.HTTP_404_NOT_FOUND,
 #                 detail="존재하지 않는 팀입니다"
 #             )
             
-#         # 순위 값 유효성 검사
-#         if team_rating.DAILY_RANKING <= 0 or team_rating.DAILY_RANKING >10:
-#             logger.warning(f"유효하지 않은 순위 값: {team_rating.DAILY_RANKING}")
+#         # 팀 요약 정보 조회
+#         summary = team_crud.get_team_summary(db, team_id)
+#         if not summary:
 #             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="1 ~ 10 이여야 합니다"
+#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#                 detail="팀 요약 정보 조회 중 오류가 발생했습니다"
 #             )
             
-#         # 순위 정보 생성/업데이트
-#         created_rating = team_crud.create_team_rating(db, team_rating)
-        
-#         logger.info(f"팀 순위 정보 생성/업데이트 완료: 팀 ID {team_rating.TEAM_ID}")
-#         return created_rating
+#         return summary
 #     except HTTPException:
 #         raise
 #     except Exception as e:
-#         logger.error(f"팀 순위 정보 생성/업데이트 중 오류: {str(e)}")
+#         logger.error(f"팀 요약 정보 조회 중 오류: {str(e)}")
 #         raise HTTPException(
 #             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"팀 순위 정보 생성/업데이트 중 오류 발생: {str(e)}"
+#             detail=f"팀 요약 정보 조회 중 오류 발생: {str(e)}"
+#         )
+
+# # 팀 월간 통계 조회
+# @router.get("/{team_id}/stats/{year}/{month}", response_model=team_schema.TeamMonthlyStatsResponse)
+# async def read_team_monthly_stats(
+#     team_id: int,
+#     year: int,
+#     month: int,
+#     db: Session = Depends(get_db)
+# ):
+#     try:
+#         logger.info(f"팀 월간 통계 조회: 팀 ID {team_id}, {year}년 {month}월")
+        
+#         # 팀 존재 여부 확인
+#         team = team_crud.get_team_by_id(db, team_id)
+#         if not team:
+#             logger.warning(f"존재하지 않는 팀: {team_id}")
+#             raise HTTPException(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 detail="존재하지 않는 팀입니다"
+#             )
+            
+#         # 날짜 유효성 검사
+#         if month < 1 or month > 12:
+#             logger.warning(f"유효하지 않은 월: {month}")
+#             raise HTTPException(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 detail="월은 1부터 12 사이의 값이어야 합니다"
+#             )
+            
+#         # 팀 월간 통계 조회
+#         stats = team_crud.get_team_monthly_stats(db, team_id, year, month)
+        
+#         return stats
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"팀 월간 통계 조회 중 오류: {str(e)}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"팀 월간 통계 조회 중 오류 발생: {str(e)}"
+#         )
+
+# # 팀 순위 정보 조회
+# @router.get("/ratings", response_model=List[team_schema.TeamRatingDetailResponse])
+# async def read_team_ratings(
+#     rating_date: Optional[date] = None,
+#     db: Session = Depends(get_db)
+# ):
+#     try:
+#         # 기본 날짜는 오늘
+#         if not rating_date:
+#             rating_date = datetime.now().date()
+            
+#         logger.info(f"팀 순위 정보 조회: 날짜 {rating_date}")
+        
+#         ratings = team_crud.get_team_ratings_by_date(db, rating_date)
+        
+#         # 팀 이름 추가
+#         result = []
+#         for rating in ratings:
+#             team = team_crud.get_team_by_id(db, rating.TEAM_ID)
+#             rating_dict = {
+#                 "TEAM_RATING_ID": rating.TEAM_RATING_ID,
+#                 "TEAM_ID": rating.TEAM_ID,
+#                 "DAILY_RANKING": rating.DAILY_RANKING,
+#                 "DATE": rating.DATE,
+#                 "team_name": team.TEAM_NAME if team else None
+#             }
+#             result.append(rating_dict)
+            
+#         return result
+#     except Exception as e:
+#         logger.error(f"팀 순위 정보 조회 중 오류: {str(e)}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"팀 순위 정보 조회 중 오류 발생: {str(e)}"
 #         )
 
 # 팀 뉴스 조회
@@ -485,50 +316,6 @@ async def read_team_news(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"팀 뉴스 조회 중 오류 발생: {str(e)}"
         )
-
-# # 팀 뉴스 생성
-# @router.post("/{team_id}/news", response_model=team_schema.NewsResponse)
-# async def create_team_news(
-#     team_id: int,
-#     news: team_schema.NewsCreate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"팀 뉴스 생성 요청: 팀 ID {team_id}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 팀 존재 여부 확인
-#         team = team_crud.get_team_by_id(db, team_id)
-#         if not team:
-#             logger.warning(f"존재하지 않는 팀: {team_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="존재하지 않는 팀입니다"
-#             )
-            
-#         # 요청 경로의 팀 ID와 뉴스 데이터의 팀 ID 일치 확인
-#         if news.TEAM_ID != team_id:
-#             logger.warning(f"경로의 팀 ID와 데이터의 팀 ID 불일치: 경로 {team_id}, 데이터 {news.TEAM_ID}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="경로의 팀 ID와 뉴스 데이터의 팀 ID가 일치하지 않습니다"
-#             )
-            
-#         # 뉴스 생성
-#         created_news = team_crud.create_news(db, news)
-        
-#         logger.info(f"팀 뉴스 생성 완료: 팀 ID {team_id}, 뉴스 ID {created_news.NEWS_ID}")
-#         return created_news
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"팀 뉴스 생성 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"팀 뉴스 생성 중 오류 발생: {str(e)}"
-#         )
 
 # 팀 일일 보고서 조회
 @router.get("/{team_id}/daily-reports", response_model=List[team_schema.DailyReportResponse])
@@ -601,50 +388,6 @@ async def read_team_daily_report_by_date(
             detail=f"특정 날짜 팀 일일 보고서 조회 중 오류 발생: {str(e)}"
         )
 
-# # 팀 일일 보고서 생성/업데이트
-# @router.post("/{team_id}/daily-reports", response_model=team_schema.DailyReportResponse)
-# async def create_team_daily_report(
-#     team_id: int,
-#     report: team_schema.DailyReportCreate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"팀 일일 보고서 생성/업데이트 요청: 팀 ID {team_id}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 팀 존재 여부 확인
-#         team = team_crud.get_team_by_id(db, team_id)
-#         if not team:
-#             logger.warning(f"존재하지 않는 팀: {team_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="존재하지 않는 팀입니다"
-#             )
-            
-#         # 요청 경로의 팀 ID와 보고서 데이터의 팀 ID 일치 확인
-#         if report.TEAM_ID != team_id:
-#             logger.warning(f"경로의 팀 ID와 데이터의 팀 ID 불일치: 경로 {team_id}, 데이터 {report.TEAM_ID}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="경로의 팀 ID와 보고서 데이터의 팀 ID가 일치하지 않습니다"
-#             )
-            
-#         # 보고서 생성/업데이트
-#         created_report = team_crud.create_daily_report(db, report)
-        
-#         logger.info(f"팀 일일 보고서 생성/업데이트 완료: 팀 ID {team_id}")
-#         return created_report
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"팀 일일 보고서 생성/업데이트 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"팀 일일 보고서 생성/업데이트 중 오류 발생: {str(e)}"
-#         )
-
 # 팀 주간 보고서 조회
 @router.get("/{team_id}/weekly-reports", response_model=List[team_schema.WeeklyReportResponse])
 async def read_team_weekly_reports(
@@ -716,49 +459,49 @@ async def read_team_weekly_report_by_date(
             detail=f"특정 날짜 팀 주간 보고서 조회 중 오류 발생: {str(e)}"
         )
 
-# # 팀 주간 보고서 생성/업데이트
-# @router.post("/{team_id}/weekly-reports", response_model=team_schema.WeeklyReportResponse)
-# async def create_team_weekly_report(
-#     team_id: int,
-#     report: team_schema.WeeklyReportCreate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"팀 주간 보고서 생성/업데이트 요청: 팀 ID {team_id}")
+# 팀 주간 보고서 생성/업데이트
+@router.post("/{team_id}/weekly-reports", response_model=team_schema.WeeklyReportResponse)
+async def create_team_weekly_report(
+    team_id: int,
+    report: team_schema.WeeklyReportCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"팀 주간 보고서 생성/업데이트 요청: 팀 ID {team_id}")
         
-#         # TODO: 관리자 권한 확인 필요
+        # TODO: 관리자 권한 확인 필요
         
-#         # 팀 존재 여부 확인
-#         team = team_crud.get_team_by_id(db, team_id)
-#         if not team:
-#             logger.warning(f"존재하지 않는 팀: {team_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="존재하지 않는 팀입니다"
-#             )
+        # 팀 존재 여부 확인
+        team = team_crud.get_team_by_id(db, team_id)
+        if not team:
+            logger.warning(f"존재하지 않는 팀: {team_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="존재하지 않는 팀입니다"
+            )
             
-#         # 요청 경로의 팀 ID와 보고서 데이터의 팀 ID 일치 확인
-#         if report.TEAM_ID != team_id:
-#             logger.warning(f"경로의 팀 ID와 데이터의 팀 ID 불일치: 경로 {team_id}, 데이터 {report.TEAM_ID}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="경로의 팀 ID와 보고서 데이터의 팀 ID가 일치하지 않습니다"
-#             )
+        # 요청 경로의 팀 ID와 보고서 데이터의 팀 ID 일치 확인
+        if report.TEAM_ID != team_id:
+            logger.warning(f"경로의 팀 ID와 데이터의 팀 ID 불일치: 경로 {team_id}, 데이터 {report.TEAM_ID}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="경로의 팀 ID와 보고서 데이터의 팀 ID가 일치하지 않습니다"
+            )
             
-#         # 보고서 생성/업데이트
-#         created_report = team_crud.create_weekly_report(db, report.dict())
+        # 보고서 생성/업데이트
+        created_report = team_crud.create_weekly_report(db, report.dict())
         
-#         logger.info(f"팀 주간 보고서 생성/업데이트 완료: 팀 ID {team_id}")
-#         return created_report
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"팀 주간 보고서 생성/업데이트 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"팀 주간 보고서 생성/업데이트 중 오류 발생: {str(e)}"
-#         )
+        logger.info(f"팀 주간 보고서 생성/업데이트 완료: 팀 ID {team_id}")
+        return created_report
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"팀 주간 보고서 생성/업데이트 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"팀 주간 보고서 생성/업데이트 중 오류 발생: {str(e)}"
+        )
 
 # 팀 선수 목록 조회
 @router.get("/{team_id}/players", response_model=List[team_schema.TeamPlayerBasicInfo])

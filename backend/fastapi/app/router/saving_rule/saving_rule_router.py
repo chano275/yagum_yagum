@@ -140,151 +140,6 @@ async def read_saving_rules(
 #             detail=f"적금 규칙 조회 중 오류 발생: {str(e)}"
 #         )
 
-# # 적금 규칙 생성
-# @router.post("/rules", response_model=saving_rule_schema.SavingRuleListResponse)
-# async def create_saving_rule(
-#     rule: saving_rule_schema.SavingRuleListCreate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"적금 규칙 생성 시도: 타입 ID {rule.SAVING_RULE_TYPE_ID}, 기록 타입 ID {rule.RECORD_TYPE_ID}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 적금 규칙 타입 존재 여부 확인
-#         rule_type = saving_rule_crud.get_saving_rule_type_by_id(db, rule.SAVING_RULE_TYPE_ID)
-#         if not rule_type:
-#             logger.warning(f"존재하지 않는 적금 규칙 타입: {rule.SAVING_RULE_TYPE_ID}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="존재하지 않는 적금 규칙 타입입니다"
-#             )
-            
-#         # 기록 타입 존재 여부 확인
-#         record_type = saving_rule_crud.get_record_type_by_id(db, rule.RECORD_TYPE_ID)
-#         if not record_type:
-#             logger.warning(f"존재하지 않는 기록 타입: {rule.RECORD_TYPE_ID}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="존재하지 않는 기록 타입입니다"
-#             )
-            
-#         # 적금 규칙 생성
-#         new_rule = saving_rule_crud.create_saving_rule(db, rule)
-#         logger.info(f"적금 규칙 생성 완료: ID {new_rule.SAVING_RULE_ID}")
-        
-#         return new_rule
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"적금 규칙 생성 중 예상치 못한 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"적금 규칙 생성 중 오류 발생: {str(e)}"
-#         )
-
-# # 적금 규칙 업데이트
-# @router.put("/rules/{saving_rule_id}", response_model=saving_rule_schema.SavingRuleListResponse)
-# async def update_saving_rule(
-#     saving_rule_id: int,
-#     rule: saving_rule_schema.SavingRuleListUpdate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"적금 규칙 업데이트 요청: ID {saving_rule_id}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 적금 규칙 존재 여부 확인
-#         db_rule = saving_rule_crud.get_saving_rule_by_id(db, saving_rule_id)
-#         if not db_rule:
-#             logger.warning(f"존재하지 않는 적금 규칙: {saving_rule_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="존재하지 않는 적금 규칙입니다"
-#             )
-            
-#         # 적금 규칙 타입 ID가 변경된 경우, 존재 여부 확인
-#         if rule.SAVING_RULE_TYPE_ID is not None:
-#             rule_type = saving_rule_crud.get_saving_rule_type_by_id(db, rule.SAVING_RULE_TYPE_ID)
-#             if not rule_type:
-#                 logger.warning(f"존재하지 않는 적금 규칙 타입: {rule.SAVING_RULE_TYPE_ID}")
-#                 raise HTTPException(
-#                     status_code=status.HTTP_404_NOT_FOUND,
-#                     detail="존재하지 않는 적금 규칙 타입입니다"
-#                 )
-                
-#         # 기록 타입 ID가 변경된 경우, 존재 여부 확인
-#         if rule.RECORD_TYPE_ID is not None:
-#             record_type = saving_rule_crud.get_record_type_by_id(db, rule.RECORD_TYPE_ID)
-#             if not record_type:
-#                 logger.warning(f"존재하지 않는 기록 타입: {rule.RECORD_TYPE_ID}")
-#                 raise HTTPException(
-#                     status_code=status.HTTP_404_NOT_FOUND,
-#                     detail="존재하지 않는 기록 타입입니다"
-#                 )
-                
-#         # 적금 규칙 업데이트
-#         updated_rule = saving_rule_crud.update_saving_rule(db, saving_rule_id, rule)
-#         if not updated_rule:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="적금 규칙 업데이트 중 오류가 발생했습니다"
-#             )
-            
-#         logger.info(f"적금 규칙 업데이트 완료: ID {saving_rule_id}")
-#         return updated_rule
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"적금 규칙 업데이트 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"적금 규칙 업데이트 중 오류 발생: {str(e)}"
-#         )
-
-# # 적금 규칙 삭제
-# @router.delete("/rules/{saving_rule_id}", status_code=status.HTTP_204_NO_CONTENT)
-# async def delete_saving_rule(
-#     saving_rule_id: int,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"적금 규칙 삭제 요청: ID {saving_rule_id}")
-        
-#         # TODO: 관리자 권한 확인 필요
-        
-#         # 적금 규칙 존재 여부 확인
-#         db_rule = saving_rule_crud.get_saving_rule_by_id(db, saving_rule_id)
-#         if not db_rule:
-#             logger.warning(f"존재하지 않는 적금 규칙: {saving_rule_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="존재하지 않는 적금 규칙입니다"
-#             )
-            
-#         # 적금 규칙 삭제
-#         success = saving_rule_crud.delete_saving_rule(db, saving_rule_id)
-#         if not success:
-#             raise HTTPException(
-#                 status_code=status.HTTP_400_BAD_REQUEST,
-#                 detail="이 적금 규칙을 참조하는 다른 데이터가 있어 삭제할 수 없습니다"
-#             )
-            
-#         logger.info(f"적금 규칙 삭제 완료: ID {saving_rule_id}")
-#         return None
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"적금 규칙 삭제 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"적금 규칙 삭제 중 오류 발생: {str(e)}"
-#         )
-
 # 계정별 사용자 적금 규칙 조회
 @router.get("/user-rules/account/{account_id}", response_model=List[saving_rule_schema.UserSavingRuleDetailResponse])
 async def read_user_saving_rules_by_account(
@@ -370,118 +225,118 @@ async def read_user_saving_rules_by_account(
             detail=f"계정별 사용자 적금 규칙 조회 중 오류 발생: {str(e)}"
         )
 
-# 사용자 적금 규칙 생성
-@router.post("/user-rules", response_model=saving_rule_schema.UserSavingRuleResponse)
-async def create_user_saving_rule(
-    user_rule: saving_rule_schema.UserSavingRuleCreate,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    try:
-        logger.info(f"사용자 적금 규칙 생성 시도: 계정 ID {user_rule.ACCOUNT_ID}, 규칙 상세 ID {user_rule.SAVING_RULE_DETAIL_ID}")
+# # 사용자 적금 규칙 생성
+# @router.post("/user-rules", response_model=saving_rule_schema.UserSavingRuleResponse)
+# async def create_user_saving_rule(
+#     user_rule: saving_rule_schema.UserSavingRuleCreate,
+#     db: Session = Depends(get_db),
+#     current_user: models.User = Depends(get_current_user)
+# ):
+#     try:
+#         logger.info(f"사용자 적금 규칙 생성 시도: 계정 ID {user_rule.ACCOUNT_ID}, 규칙 상세 ID {user_rule.SAVING_RULE_DETAIL_ID}")
         
-        # 계정 존재 여부 및 권한 확인
-        account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == user_rule.ACCOUNT_ID).first()
-        if not account:
-            logger.warning(f"존재하지 않는 계정: {user_rule.ACCOUNT_ID}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="존재하지 않는 계정입니다"
-            )
+#         # 계정 존재 여부 및 권한 확인
+#         account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == user_rule.ACCOUNT_ID).first()
+#         if not account:
+#             logger.warning(f"존재하지 않는 계정: {user_rule.ACCOUNT_ID}")
+#             raise HTTPException(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 detail="존재하지 않는 계정입니다"
+#             )
             
-        if account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="이 계정에 적금 규칙을 생성할 권한이 없습니다"
-            )
+#         if account.USER_ID != current_user.USER_ID:
+#             logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
+#             raise HTTPException(
+#                 status_code=status.HTTP_403_FORBIDDEN,
+#                 detail="이 계정에 적금 규칙을 생성할 권한이 없습니다"
+#             )
             
-        # 적금 규칙 타입 존재 여부 확인
-        rule_type = saving_rule_crud.get_saving_rule_type_by_id(db, user_rule.SAVING_RULE_TYPE_ID)
-        if not rule_type:
-            logger.warning(f"존재하지 않는 적금 규칙 타입: {user_rule.SAVING_RULE_TYPE_ID}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="존재하지 않는 적금 규칙 타입입니다"
-            )
+#         # 적금 규칙 타입 존재 여부 확인
+#         rule_type = saving_rule_crud.get_saving_rule_type_by_id(db, user_rule.SAVING_RULE_TYPE_ID)
+#         if not rule_type:
+#             logger.warning(f"존재하지 않는 적금 규칙 타입: {user_rule.SAVING_RULE_TYPE_ID}")
+#             raise HTTPException(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 detail="존재하지 않는 적금 규칙 타입입니다"
+#             )
             
-        # 적금 규칙 상세 존재 여부 확인
-        rule_detail = saving_rule_crud.get_saving_rule_detail_by_id(db, user_rule.SAVING_RULE_DETAIL_ID)
-        if not rule_detail:
-            logger.warning(f"존재하지 않는 적금 규칙 상세: {user_rule.SAVING_RULE_DETAIL_ID}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="존재하지 않는 적금 규칙 상세입니다"
-            )
+#         # 적금 규칙 상세 존재 여부 확인
+#         rule_detail = saving_rule_crud.get_saving_rule_detail_by_id(db, user_rule.SAVING_RULE_DETAIL_ID)
+#         if not rule_detail:
+#             logger.warning(f"존재하지 않는 적금 규칙 상세: {user_rule.SAVING_RULE_DETAIL_ID}")
+#             raise HTTPException(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 detail="존재하지 않는 적금 규칙 상세입니다"
+#             )
             
-        # 선수 관련 필드 체크 (팀 규칙이 아닌 경우에만)
-        is_team_rule = rule_type.SAVING_RULE_TYPE_NAME in ["기본 규칙", "상대팀"]
+#         # 선수 관련 필드 체크 (팀 규칙이 아닌 경우에만)
+#         is_team_rule = rule_type.SAVING_RULE_TYPE_NAME in ["기본 규칙", "상대팀"]
         
-        if not is_team_rule:
-            # 선수 타입 존재 여부 확인
-            if user_rule.PLAYER_TYPE_ID is None:
-                logger.warning("선수 타입이 필요합니다")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="선수 규칙에는 선수 타입이 필요합니다"
-                )
+#         if not is_team_rule:
+#             # 선수 타입 존재 여부 확인
+#             if user_rule.PLAYER_TYPE_ID is None:
+#                 logger.warning("선수 타입이 필요합니다")
+#                 raise HTTPException(
+#                     status_code=status.HTTP_400_BAD_REQUEST,
+#                     detail="선수 규칙에는 선수 타입이 필요합니다"
+#                 )
                 
-            player_type = db.query(models.PlayerType).filter(models.PlayerType.PLAYER_TYPE_ID == user_rule.PLAYER_TYPE_ID).first()
-            if not player_type:
-                logger.warning(f"존재하지 않는 선수 타입: {user_rule.PLAYER_TYPE_ID}")
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="존재하지 않는 선수 타입입니다"
-                )
+#             player_type = db.query(models.PlayerType).filter(models.PlayerType.PLAYER_TYPE_ID == user_rule.PLAYER_TYPE_ID).first()
+#             if not player_type:
+#                 logger.warning(f"존재하지 않는 선수 타입: {user_rule.PLAYER_TYPE_ID}")
+#                 raise HTTPException(
+#                     status_code=status.HTTP_404_NOT_FOUND,
+#                     detail="존재하지 않는 선수 타입입니다"
+#                 )
                 
-            # 선수 존재 여부 확인
-            if user_rule.PLAYER_ID is None:
-                logger.warning("선수 ID가 필요합니다")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="선수 규칙에는 선수 ID가 필요합니다"
-                )
+#             # 선수 존재 여부 확인
+#             if user_rule.PLAYER_ID is None:
+#                 logger.warning("선수 ID가 필요합니다")
+#                 raise HTTPException(
+#                     status_code=status.HTTP_400_BAD_REQUEST,
+#                     detail="선수 규칙에는 선수 ID가 필요합니다"
+#                 )
                 
-            player = db.query(models.Player).filter(models.Player.PLAYER_ID == user_rule.PLAYER_ID).first()
-            if not player:
-                logger.warning(f"존재하지 않는 선수: {user_rule.PLAYER_ID}")
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="존재하지 않는 선수입니다"
-                )
+#             player = db.query(models.Player).filter(models.Player.PLAYER_ID == user_rule.PLAYER_ID).first()
+#             if not player:
+#                 logger.warning(f"존재하지 않는 선수: {user_rule.PLAYER_ID}")
+#                 raise HTTPException(
+#                     status_code=status.HTTP_404_NOT_FOUND,
+#                     detail="존재하지 않는 선수입니다"
+#                 )
                 
-            # 선수와 선수 타입 일치 확인
-            if player.PLAYER_TYPE_ID != user_rule.PLAYER_TYPE_ID:
-                logger.warning(f"선수 타입 불일치: 선수 {user_rule.PLAYER_ID}의 타입은 {player.PLAYER_TYPE_ID}이지만, 요청된 타입은 {user_rule.PLAYER_TYPE_ID}입니다")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="선수와 선수 타입이 일치하지 않습니다"
-                )
+#             # 선수와 선수 타입 일치 확인
+#             if player.PLAYER_TYPE_ID != user_rule.PLAYER_TYPE_ID:
+#                 logger.warning(f"선수 타입 불일치: 선수 {user_rule.PLAYER_ID}의 타입은 {player.PLAYER_TYPE_ID}이지만, 요청된 타입은 {user_rule.PLAYER_TYPE_ID}입니다")
+#                 raise HTTPException(
+#                     status_code=status.HTTP_400_BAD_REQUEST,
+#                     detail="선수와 선수 타입이 일치하지 않습니다"
+#                 )
             
-        # 금액 유효성 검사
-        if user_rule.USER_SAVING_RULED_AMOUNT <= 0:
-            logger.warning(f"유효하지 않은 적립 금액: {user_rule.USER_SAVING_RULED_AMOUNT}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="적립 금액은 양수여야 합니다"
-            )
+#         # 금액 유효성 검사
+#         if user_rule.USER_SAVING_RULED_AMOUNT <= 0:
+#             logger.warning(f"유효하지 않은 적립 금액: {user_rule.USER_SAVING_RULED_AMOUNT}")
+#             raise HTTPException(
+#                 status_code=status.HTTP_400_BAD_REQUEST,
+#                 detail="적립 금액은 양수여야 합니다"
+#             )
             
-        # 사용자 적금 규칙 생성
-        new_user_rule = saving_rule_crud.create_user_saving_rule(db, user_rule)
-        logger.info(f"사용자 적금 규칙 생성 완료: ID {new_user_rule.USER_SAVING_RULED_ID}")
+#         # 사용자 적금 규칙 생성
+#         new_user_rule = saving_rule_crud.create_user_saving_rule(db, user_rule)
+#         logger.info(f"사용자 적금 규칙 생성 완료: ID {new_user_rule.USER_SAVING_RULED_ID}")
         
-        return new_user_rule
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"사용자 적금 규칙 생성 중 예상치 못한 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"사용자 적금 규칙 생성 중 오류 발생: {str(e)}"
-        )
+#         return new_user_rule
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"사용자 적금 규칙 생성 중 예상치 못한 오류: {str(e)}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"사용자 적금 규칙 생성 중 오류 발생: {str(e)}"
+#         )
 
 # 간소화된 적금 규칙 생성
-@router.post("/user-rules/simple", response_model=saving_rule_schema.UserSavingRuleResponse)
+@router.post("/user-rules", response_model=saving_rule_schema.UserSavingRuleResponse)
 async def create_user_saving_rule_simplified(
     user_rule: saving_rule_schema.UserSavingRuleCreateSimplified,
     db: Session = Depends(get_db),
