@@ -144,3 +144,49 @@ def get_account_savings(db: Session, account_id: int, start_date=None, end_date=
 def get_account_saving_rules(db: Session, account_id: int):
     """계정의 적금 규칙 설정 조회"""
     return db.query(models.UserSavingRule).filter(models.UserSavingRule.ACCOUNT_ID == account_id).all()
+
+async def transfer_to_saving_account(db: Session, account_id: int, amount: int):
+    """
+    입출금 계좌에서 적금 계좌로 송금
+    
+    Args:
+        db (Session): 데이터베이스 세션
+        account_id (int): 적금 계정 ID
+        amount (int): 송금 금액
+    
+    Returns:
+        dict: 송금 결과 및 계정 정보
+    """
+    try:
+        # 계정 정보 조회
+        account = get_account_by_id(db, account_id)
+        if not account:
+            raise Exception("계정을 찾을 수 없습니다")
+        
+        # 사용자 정보 조회
+        user = db.query(models.User).filter(models.User.USER_ID == account.USER_ID).first()
+        if not user:
+            raise Exception("사용자 정보를 찾을 수 없습니다")
+        
+        # 금융 API를 통해 송금 처리
+        from router.user.user_ssafy_api_utils import transfer_money
+        
+        transfer_result = await transfer_money(
+            user_key=user.USER_KEY,
+            withdrawal_account=account.SOURCE_ACCOUNT,  # 출금 계좌 (입출금 계좌)
+            deposit_account=account.ACCOUNT_NUM,        # 입금 계좌 (적금 계좌)
+            amount=amount
+        )
+        
+        # 계정 잔액 업데이트
+        balance_update = BalanceUpdate(amount=amount, description="입출금 계좌에서 적금")
+        updated_account = update_account_balance(db, account_id, balance_update)
+        
+        return {
+            "transfer_result": transfer_result,
+            "account": updated_account
+        }
+    
+    except Exception as e:
+        db.rollback()
+        raise e

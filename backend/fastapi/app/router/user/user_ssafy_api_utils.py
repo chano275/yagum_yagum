@@ -283,4 +283,78 @@ async def create_demand_deposit_account(user_key, account_type_unique_no="999-1-
         )
     
 
+async def transfer_money(user_key, withdrawal_account, deposit_account, amount, api_key=None):
+    """
+    금융 API를 통해 계좌 간 송금 처리
     
+    Args:
+        user_key (str): 사용자 키
+        withdrawal_account (str): 출금 계좌번호
+        deposit_account (str): 입금 계좌번호
+        amount (int): 송금 금액
+        api_key (str, optional): API 키
+    
+    Returns:
+        dict: 송금 결과 정보
+    """
+    try:
+        # API 이름 및 URL 설정
+        api_name = "updateDemandDepositAccountTransfer"
+        api_url = f"{SSAFY_API_BASE_URL}/edu/demandDeposit/updateDemandDepositAccountTransfer"
+        
+        # API 키 설정
+        if api_key is None:
+            api_key = DEFAULT_API_KEY
+        
+        # 헤더 생성 
+        from utils.api_header_utils import generate_api_header
+        header = generate_api_header(
+            api_name=api_name,
+            user_key=user_key,
+            api_key=api_key
+        )
+        
+        # 전체 요청 데이터 구성
+        request_data = {
+            "Header": header,
+            "depositAccountNo": deposit_account,  # 입금계좌번호
+            "transactionBalance": str(amount),    # 거래금액 (문자열로 변환)
+            "withdrawalAccountNo": withdrawal_account,  # 출금계좌번호
+            "depositTransactionSummary": "(수시입출금) : 입금(이체)",  # 거래 요약정보 (입금계좌)
+            "withdrawalTransactionSummary": "(수시입출금) : 출금(이체)"  # 거래 요약정보 (출금계좌)
+        }
+        
+        logger.info(f"송금 요청 URL: {api_url}")
+        logger.info(f"송금 요청 데이터: {json.dumps(request_data)}")
+        
+        # API 요청
+        response = requests.post(
+            api_url,
+            json=request_data,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        logger.info(f"API 응답 상태 코드: {response.status_code}")
+        logger.info(f"API 응답 본문: {response.text}")
+        
+        # 응답 확인
+        response_data = response.json()
+        
+        # 응답 코드 확인
+        header = response_data.get("Header", {})
+        response_code = header.get("responseCode")
+        
+        if response_code != "H0000":
+            response_message = header.get("responseMessage", "알 수 없는 오류")
+            logger.error(f"API 오류 응답: {response_code} - {response_message}")
+            raise Exception(f"금융 API 오류: {response_code} - {response_message}")
+        
+        # 송금 결과 정보
+        result = response_data.get("REC", {})
+        
+        logger.info(f"송금 완료: {withdrawal_account} -> {deposit_account}, 금액: {amount}")
+        return result
+            
+    except Exception as e:
+        logger.error(f"송금 중 오류: {str(e)}")
+        raise    
