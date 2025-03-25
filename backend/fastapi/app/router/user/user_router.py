@@ -11,7 +11,7 @@ from database import get_db
 import models
 from router.user.user_schema import UserCreate, UserUpdate, UserResponse, UserLogin, TokenResponse, TokenData
 import router.user.user_crud as user_crud
-# 새로 추가된 임포트
+from router.account import account_schema, account_crud
 from router.user.user_ssafy_api_utils import get_or_create_user_key
 import logging
 
@@ -217,59 +217,6 @@ async def read_user_me(current_user: models.User = Depends(get_current_user)):
 #             detail=f"사용자 조회 중 오류가 발생했습니다: {str(e)}"
 #         )
 
-# # 사용자 정보 업데이트 - 수정된 부분
-# @router.put("/{user_id}", response_model=UserResponse)
-# async def update_user_info(user_id: int, user: UserUpdate, db: Session = Depends(get_db), 
-#                           current_user: models.User = Depends(get_current_user)):
-#     try:
-#         logger.info(f"사용자 업데이트 요청: {user_id}")
-        
-#         # 권한 확인
-#         if current_user.USER_ID != user_id:
-#             logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 대상 ID {user_id}")
-#             raise HTTPException(status_code=403, detail="권한이 없습니다")
-        
-#         # 사용자 존재 여부 확인
-#         db_user = user_crud.get_user_by_id(db, user_id=user_id)
-#         if not db_user:
-#             logger.warning(f"업데이트할 사용자를 찾을 수 없음: {user_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="사용자를 찾을 수 없습니다"
-#             )
-        
-#         # 이메일 변경 시 중복 확인 및 userKey 업데이트
-#         if user.USER_EMAIL and user.USER_EMAIL != db_user.USER_EMAIL:
-#             email_exists = user_crud.get_user_by_email(db, email=user.USER_EMAIL)
-#             if email_exists:
-#                 logger.warning(f"이미 존재하는 이메일: {user.USER_EMAIL}")
-#                 raise HTTPException(
-#                     status_code=status.HTTP_409_CONFLICT,
-#                     detail="이미 가입된 이메일입니다"
-#                 )
-                
-#             # 이메일 변경 시 금융 API에서 userKey 다시 조회
-#             logger.info(f"이메일 변경으로 금융 API에서 userKey 재조회: {user.USER_EMAIL}")
-#             user_key = await get_or_create_user_key(user.USER_EMAIL, db_user.NAME)
-            
-#             # userKey 설정
-#             user_data = user.dict(exclude_unset=True)
-#             user_data["USER_KEY"] = user_key
-#             user = UserUpdate(**user_data)
-        
-#         # 사용자 정보 업데이트
-#         updated_user = user_crud.update_user(db=db, user_id=user_id, user=user)
-#         return updated_user
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"사용자 업데이트 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"사용자 업데이트 중 오류가 발생했습니다: {str(e)}"
-#         )
-
 # 사용자 삭제
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: int, db: Session = Depends(get_db), 
@@ -308,4 +255,67 @@ async def delete_user(user_id: int, db: Session = Depends(get_db),
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"사용자 삭제 중 오류가 발생했습니다: {str(e)}"
+        )
+    
+@router.get("/accounts", response_model=account_schema.UserAccountsResponse)
+async def get_user_accounts(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"사용자 계좌 정보 조회 요청: 사용자 ID {current_user.USER_ID}")
+        
+        # 입출금 계좌 정보 가져오기
+        source_account = current_user.SOURCE_ACCOUNT
+        
+        # 금융 API를 통해 입출금 계좌 잔액 조회
+        from router.user.user_ssafy_api_utils import get_account_balance
+        
+        source_account_balance = await get_account_balance(
+            user_key=current_user.USER_KEY,
+            account_num=source_account
+        )
+        
+        # 사용자의 모든 적금 계좌 조회
+        savings_accounts = account_crud.get_accounts_by_user_id(db, current_user.USER_ID)
+        
+        # 적금 계좌 정보 구성
+        savings_info = []
+        for account in savings_accounts:
+            # 팀 이름 조회
+            team = db.query(models.Team).filter(models.Team.TEAM_ID == account.TEAM_ID).first()
+            
+            # 진행률 계산
+            progress_percentage = (account.TOTAL_AMOUNT / account.SAVING_GOAL * 100) if account.SAVING_GOAL > 0 else 0
+            
+            savings_info.append({
+                "account_id": account.ACCOUNT_ID,
+                "account_num": account.ACCOUNT_NUM,
+                "total_amount": account.TOTAL_AMOUNT,
+                "interest_rate": account.INTEREST_RATE,
+                "saving_goal": account.SAVING_GOAL,
+                "progress_percentage": round(progress_percentage, 2),
+                "team_name": team.TEAM_NAME if team else None,
+                "created_at": account.created_at
+            })
+        
+        # 결과 구성
+        result = {
+            "user_id": current_user.USER_ID,
+            "user_email": current_user.USER_EMAIL,
+            "user_name": current_user.NAME,
+            "source_account": {
+                "account_num": source_account,
+                "total_amount": source_account_balance
+            },
+            "savings_accounts": savings_info
+        }
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"사용자 계좌 정보 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"사용자 계좌 정보 조회 중 오류 발생: {str(e)}"
         )

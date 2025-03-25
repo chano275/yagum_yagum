@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 # 계정 기본 모델
@@ -68,3 +68,54 @@ class AccountSetup(BaseModel):
     DAILY_LIMIT: int
     MONTH_LIMIT: int
     SOURCE_ACCOUNT: str
+
+    # 적금 규칙 설정 모델
+class SavingRuleRequest(BaseModel):
+    SAVING_RULE_TYPE_ID: int  # 기본 규칙(1), 투수(2), 타자(3), 상대팀(4)
+    RECORD_TYPE_ID: int  # 승리(1), 안타(2), 홈런(3) 등
+    PLAYER_ID: Optional[int] = None  # 선수 규칙의 경우만 필요
+    USER_SAVING_RULED_AMOUNT: int  # 적립 금액
+
+# 적금 가입 요청 모델
+class AccountCreateRequest(BaseModel):
+    TEAM_ID: int  # 응원 팀
+    SAVING_GOAL: int  # 저축 목표액
+    DAILY_LIMIT: int  # 일일 적립 한도
+    MONTH_LIMIT: int  # 월 적립 한도
+    SOURCE_ACCOUNT: str  # 출금 계좌
+    saving_rules: List[SavingRuleRequest]  # 적금 규칙 목록
+
+# 적금 가입 응답 모델
+class AccountCreateResponse(BaseModel):
+    ACCOUNT_ID: int
+    ACCOUNT_NUM: str
+    TEAM_ID: int
+    SAVING_GOAL: int
+    DAILY_LIMIT: int
+    MONTH_LIMIT: int
+    SOURCE_ACCOUNT: str
+    TOTAL_AMOUNT: int = 0
+    INTEREST_RATE: float
+    created_at: str
+    saving_rules: List[dict]  # 등록된 적금 규칙 정보
+
+class SavingsAccountInfo(BaseModel):
+    account_id: int
+    account_num: str
+    total_amount: int
+    interest_rate: float
+    saving_goal: int
+    progress_percentage: float
+    team_name: Optional[str] = None
+    created_at: datetime
+
+class SourceAccountInfo(BaseModel):
+    account_num: str
+    total_amount: int
+
+class UserAccountsResponse(BaseModel):
+    user_id: int
+    user_email: str
+    user_name: str
+    source_account: SourceAccountInfo
+    savings_accounts: List[SavingsAccountInfo]
