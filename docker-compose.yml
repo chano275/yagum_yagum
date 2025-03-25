@@ -50,7 +50,7 @@ services:
     volumes:
       # - ./nginx/nginx.conf:/etc/nginx/conf.d/custom.conf:ro
       # - ./nginx/html:/usr/share/nginx/html:ro
-      - ~/workspace/deploy-develop/nginx/nginx.conf:/etc/nginx/conf.d/custom.conf:ro
-      - ~/workspace/deploy-develop/nginx/html:/usr/share/nginx/html:ro
+      - /var/jenkins_home/workspace/deploy-develop/nginx/nginx.conf:/etc/nginx/conf.d/custom.conf:ro
+      - /var/jenkins_home/workspace/deploy-develop/nginx/html:/usr/share/nginx/html:ro
     ports:
       - "${NGINX_PORT}:${NGINX_PORT}"
