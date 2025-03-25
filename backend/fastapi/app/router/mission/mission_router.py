@@ -424,45 +424,6 @@ async def get_account_interest_rate(
             detail=f"계정 이자율 조회 중 오류 발생: {str(e)}"
         )
 
-# # 사용 가능한 미션 목록 조회 (계정에 아직 등록되지 않은 미션)
-# @router.get("/account/{account_id}/available", response_model=List[mission_schema.MissionResponse])
-# async def get_available_missions(
-#     account_id: int,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"사용 가능한 미션 목록 조회 요청: 계정 ID {account_id}")
-        
-#         # 계정 존재 여부 및 소유권 확인
-#         account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
-#         if not account:
-#             logger.warning(f"계정을 찾을 수 없음: {account_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="계정을 찾을 수 없습니다"
-#             )
-            
-#         if account.USER_ID != current_user.USER_ID:
-#             logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_403_FORBIDDEN,
-#                 detail="이 계정의 사용 가능한 미션을 조회할 권한이 없습니다"
-#             )
-            
-#         # 사용 가능한 미션 목록 조회
-#         available_missions = mission_crud.get_unused_missions(db, account_id)
-        
-#         return available_missions
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"사용 가능한 미션 목록 조회 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"사용 가능한 미션 목록 조회 중 오류 발생: {str(e)}"
-#         )
-
 # 계정의 미션 삭제 (미션 등록 취소)
 @router.delete("/account/{account_id}/mission/{mission_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_mission_from_account(
