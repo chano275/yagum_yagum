@@ -1,7 +1,7 @@
 {
   "name": "app",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "./index.ts",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -28,13 +28,8 @@
     "react-native-screens": "~4.4.0",
     "react-native-web": "~0.19.13",
     "styled-components": "^6.1.16",
-<<<<<<< HEAD
     "use-sync-external-store": "^1.4.0",
     "zustand": "^5.0.3"
-=======
-    "zustand": "^5.0.3",
-    "expo-font": "~13.0.4"
->>>>>>> adf3d1e48331c6eaef31cfaf12a9caaac1666b99
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
