@@ -38,7 +38,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 라우터 등록
+# 라우터 등록 
 app.include_router(user_router, prefix="/api/user", tags=["사용자"])
 app.include_router(account_router, prefix="/api/account", tags=["계정"])
 app.include_router(team_router, prefix="/api/team", tags=["팀"])
