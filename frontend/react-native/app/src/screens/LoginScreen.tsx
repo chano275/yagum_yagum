@@ -58,7 +58,7 @@ const LoginScreen = () => {
       formData.append('password', password);
 
       const response = await axios.post(
-        'http://localhost:8000/api/v1/auth/login',
+        'http://localhost:8000/api/user/login',
         formData,
         {
           headers: {

@@ -26,8 +26,9 @@ app = FastAPI(
 # CORS 설정
 origins = [
     "http://localhost",
-    "http://localhost:3000",  # 프론트엔드 주소
+    "http://localhost:8081",  # 프론트엔드 주소
     "http://localhost:8000",
+
 ]
 
 app.add_middleware(
