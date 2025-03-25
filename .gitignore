@@ -12,6 +12,7 @@ __pycache__/
 .venv/
 venv/
 env/
+data/
 
 # 4) Node / React Native
 node_modules/
