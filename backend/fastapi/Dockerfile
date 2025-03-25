@@ -6,9 +6,11 @@ ENV BACKEND_PORT=${BACKEND_PORT}
 
 WORKDIR /app
 COPY requirements.txt .
-RUN apt-get update && apt-get install -y netcat-openbsd && \
+RUN apt-get update && apt-get install -y netcat-openbsd && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/* && \
     pip install --upgrade pip && \
     pip install -r requirements.txt
+
+ENV TZ=Asia/Seoul
 
 # 애플리케이션 소스 복사 (bind mount을 사용할 경우 최신 소스는 호스트와 동기화)
 COPY app/ ./

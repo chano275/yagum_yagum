@@ -13,7 +13,6 @@ __pycache__/
 venv/
 env/
 data/
-
 # 4) Node / React Native
 node_modules/
 npm-debug.log
