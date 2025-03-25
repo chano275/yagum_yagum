@@ -14,8 +14,8 @@ export default function App() {
 
   return (
     <ThemeProvider theme={theme}>
+      <StatusBar style="auto" />
       <NavigationContainer>
-        <StatusBar style="auto" />
         <Stack.Navigator 
           initialRouteName="Home"
           screenOptions={{

@@ -40,6 +40,7 @@ const Header = styled.View<StyledProps>`
 const HeaderTitle = styled.Text<StyledProps>`
   font-size: ${({ width }) => width * 0.06}px;
   font-weight: bold;
+  color: #333;
 `;
 
 const IconContainer = styled.View`
@@ -117,6 +118,7 @@ const ServiceTitle = styled.Text<StyledProps>`
   line-height: ${props => props.width * 0.062}px;
   font-weight: bold;
   letter-spacing: -0.3px;
+  color: #333;
 `;
 
 const ColoredText = styled.Text`
@@ -305,9 +307,10 @@ const HomeScreen = () => {
                     />
                     <ServiceTextContainer width={width}>
                       <ServiceTitle width={width}>
-                        <LightText>나에게 딱 맞는 서비스,</LightText>{'\n'}
+                        <LightText>나에게 딱 맞는 서비스,</LightText>
+                        {'\n'}
                         <ColoredText>야금야금</ColoredText>
-                        <BlackText> 적금</BlackText>
+                        <BlackText>적금</BlackText>
                       </ServiceTitle>
                     </ServiceTextContainer>
                   </ContentContainer>
@@ -341,7 +344,9 @@ const HomeScreen = () => {
                 <ServiceTitleContainer>
                   <ServiceTextContainer width={width} style={{ flex: 1.2 }}>
                     <ServiceTitle width={width}>
-                      간편하게 <ColoredText>본인인증</ColoredText>하고{'\n'}서비스를 이용해보세요.
+                      간편하게 <ColoredText>본인인증</ColoredText>하고
+                      {'\n'}
+                      서비스를 이용해보세요.
                     </ServiceTitle>
                   </ServiceTextContainer>
                   <ServiceIcon 
@@ -381,7 +386,9 @@ const HomeScreen = () => {
                         <ColoredText style={{ fontWeight: '700' }}>야금야금</ColoredText>
                       </ServiceTitle>
                       <ServiceDescription width={width}>
-                        지루했던 금융에{'\n'}야구의 재미를 더하다!
+                        지루했던 금융에
+                        {'\n'}
+                        야구의 재미를 더하다!
                       </ServiceDescription>
                     </ServiceTextContainer>
                     <ServiceIcon 
