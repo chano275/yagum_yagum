@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Animated, Platform, useWindowDimensions } from 'react-native';
+import { View, TextInput, TouchableOpacity, Animated, Platform, useWindowDimensions, Alert } from 'react-native';
 import styled from 'styled-components/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,7 @@ import {
 } from '../constants/layout';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import axios from 'axios';
 
 type RootStackParamList = {
   Home: undefined;
@@ -119,17 +120,76 @@ const ForgotPasswordText = styled.Text<StyledProps>`
   font-size: ${({ width }) => width * 0.035}px;
 `;
 
+const ErrorText = styled.Text<StyledProps>`
+  color: #ff4444;
+  font-size: ${({ width }) => width * 0.035}px;
+  margin-top: 4px;
+  margin-left: ${({ width }) => width * 0.02}px;
+`;
+
 const LoginScreen = () => {
   const [id, setId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [idFocused, setIdFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [errors, setErrors] = useState({
+    id: '',
+    password: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
   const navigation = useNavigation<NavigationProp>();
 
   const { width: windowWidth } = useWindowDimensions();
   const width = getAdjustedWidth(windowWidth);
   const iconSize = width * 0.055;
+
+  const handleLogin = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('username', id);
+      formData.append('password', password);
+
+      const response = await axios.post('http://your-api-url/login', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.status === 200) {
+        const { access_token, user } = response.data;
+        // 토큰과 유저 정보 저장 로직 추가 예정
+        console.log('로그인 성공:', user);
+        navigation.navigate('Home');
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          Alert.alert('로그인 실패', '이메일 또는 비밀번호가 올바르지 않습니다');
+        } else {
+          Alert.alert('오류', '로그인 처리 중 오류가 발생했습니다');
+        }
+      }
+    }
+  };
+
+  const validateInputs = () => {
+    const newErrors = {
+      id: '',
+      password: ''
+    };
+
+    if (!id.trim()) {
+      newErrors.id = '아이디를 입력해주세요';
+    }
+
+    if (!password.trim()) {
+      newErrors.password = '비밀번호를 입력해주세요';
+    }
+
+    setErrors(newErrors);
+    return !newErrors.id && !newErrors.password;
+  };
 
   return (
     <AppWrapper>
@@ -173,12 +233,16 @@ const LoginScreen = () => {
                   width={width}
                   placeholder={idFocused ? "" : "아이디를 입력해주세요"}
                   value={id}
-                  onChangeText={setId}
+                  onChangeText={(text) => {
+                    setId(text);
+                    setErrors(prev => ({ ...prev, id: '' }));
+                  }}
                   autoCapitalize="none"
                   onFocus={() => setIdFocused(true)}
                   onBlur={() => setIdFocused(false)}
                 />
               </InputContainer>
+              {errors.id && <ErrorText width={width}>{errors.id}</ErrorText>}
 
               <InputContainer width={width}>
                 <MaterialIcons name="lock-outline" size={iconSize} color="#666" />
@@ -201,8 +265,15 @@ const LoginScreen = () => {
                 </TouchableOpacity>
               </InputContainer>
 
-              <LoginButton width={width}>
-                <ButtonText width={width}>로그인</ButtonText>
+              <LoginButton 
+                width={width} 
+                onPress={handleLogin}
+                disabled={isLoading}
+                style={{ opacity: isLoading ? 0.7 : 1 }}
+              >
+                <ButtonText width={width}>
+                  {isLoading ? '로그인 중...' : '로그인'}
+                </ButtonText>
               </LoginButton>
 
               <ForgotPassword>
