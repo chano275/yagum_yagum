@@ -16,4 +16,4 @@ RUN npm install
 COPY . .
 
 EXPOSE ${FRONTEND_METRO_PORT} ${FRONTEND_EXPO_PORT}
-CMD ["npx", "expo", "start", "--web"]
+# CMD ["npx", "expo", "start", "--web"]
