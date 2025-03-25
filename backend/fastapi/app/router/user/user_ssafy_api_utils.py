@@ -8,7 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # 환경 변수에서 API 정보 가져오기
-SSAFY_API_BASE_URL = os.getenv("SSAFY_API_BASE_URL", "https://finopenapi.ssafy.io/ssafy/api/v1").rstrip("/")
+SSAFY_API_BASE_URL = os.getenv("SSAFY_API_BASE_URL").rstrip("/")
 MEMBER_ENDPOINT = f"{SSAFY_API_BASE_URL}/member"
 MEMBER_SEARCH_ENDPOINT = f"{SSAFY_API_BASE_URL}/member/search"
 
