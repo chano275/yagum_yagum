@@ -48,9 +48,9 @@ services:
       - fastapi
     command: /bin/sh -c "ln -sf /etc/nginx/conf.d/custom.conf /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/custom.conf:ro
-      - ./nginx/html:/usr/share/nginx/html:ro
-      # - /home/ubuntu/jenkins-data/workspace/deploy-develop/nginx/default.conf:/etc/nginx/conf.d/custom.conf:ro
-      # - /home/ubuntu/jenkins-data/workspace/deploy-develop/nginx/html:/usr/share/nginx/html:ro
+      # - ./nginx/nginx.conf:/etc/nginx/conf.d/custom.conf:ro
+      # - ./nginx/html:/usr/share/nginx/html:ro
+      - /home/ubuntu/jenkins-data/workspace/deploy-develop/nginx/nginx.conf:/etc/nginx/conf.d/custom.conf:ro
+      - /home/ubuntu/jenkins-data/workspace/deploy-develop/nginx/html:/usr/share/nginx/html:ro
     ports:
       - "${NGINX_PORT}:${NGINX_PORT}"
