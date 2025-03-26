@@ -168,41 +168,82 @@ try:
 
                     # --- log_box 데이터 처리 ---
                     
-                    log_boxes = soup.find_all('div', class_='log_box')[:2]
-
-                    log_data = []
-                    max_div_count = 0
-
-                    for idx, log_box in enumerate(log_boxes):
-                        row_data = {}
-                        team_name = team_names[idx] if idx < len(team_names) else f"팀명 없음 {idx + 1}"
-                        row_data['팀명'] = team_name
-
-                        log_divs = log_box.find_all('div', class_='log_div')
-                        for div_idx, log_div in enumerate(log_divs, start=1):
-                            div_text = " ".join(log_div.stripped_strings)
-                            row_data[f'항목{div_idx}'] = div_text
-
-                        max_div_count = max(max_div_count, len(log_divs))
-                        log_data.append(row_data)
-
-                    columns_order = ['팀명'] + [f'항목{i}' for i in range(1, max_div_count + 1)]
-                    df_log_box = pd.DataFrame(log_data, columns=columns_order)
-
-                    def calculate_stolen_bases(row):
-                        for col in row.index:
-                            if isinstance(row[col], str) and '도루성공' in row[col]:
-                                stolen_bases_section = row[col].split('도루성공 : ')[-1]
-                                players = [p.strip() for p in stolen_bases_section.split(')') if p.strip()]
-                                return len(players)
-                        return 0
-
-                    df_log_box['도루'] = df_log_box.apply(calculate_stolen_bases, axis=1)
-
-                    file_path_log_box = f'{folder_name}/{away_team}-{home_team}_log_boxes.csv'
-                    df_log_box.to_csv(file_path_log_box, index=False, encoding='utf-8-sig')
+                    # log_boxes[:2]와 log_boxes[4:6] 데이터 처리
+                    log_boxes_1_2 = soup.find_all('div', class_='log_box')[:2]
+                    log_boxes_4_6 = soup.find_all('div', class_='log_box')[4:6]
                     
-                    print(f"✅ 로그 박스 데이터 저장 완료: {file_path_log_box}")
+                    # 데이터 처리 함수 정의
+                    def process_log_boxes(log_boxes, team_names=None, prefix=None):
+                        log_data = []
+                        max_div_count = 0
+                    
+                        for idx, log_box in enumerate(log_boxes):
+                            row_data = {}
+                            # 팀명은 [:2]에서만 추가, [4:6]에서는 추가하지 않음
+                            if team_names:
+                                team_name = team_names[idx] if idx < len(team_names) else f"팀명 없음 {idx + 1}"
+                                row_data['팀명'] = team_name
+                    
+                            # log_divs를 가져올 때 중복을 방지하기 위해 최상위 div만 선택
+                            log_divs = log_box.find_all('div', class_='log_div', recursive=False)  # recursive=False로 중첩 방지
+                            for div_idx, log_div in enumerate(log_divs, start=1):
+                                div_text = " ".join(log_div.stripped_strings)
+                                row_data[f'{prefix}{div_idx}'] = div_text  # 항목 이름에 prefix 추가
+                    
+                            max_div_count = max(max_div_count, len(log_divs))
+                            log_data.append(row_data)
+                    
+                        # 팀명이 없으면 '팀명' 컬럼을 제외
+                        columns_order = ['팀명'] + [f'{prefix}{i}' for i in range(1, max_div_count + 1)] if team_names else [f'{prefix}{i}' for i in range(1, max_div_count + 1)]
+                        return pd.DataFrame(log_data, columns=columns_order)
+                    
+                    # 각각의 데이터프레임 생성
+                    df_log_box_1_2 = process_log_boxes(log_boxes_1_2, team_names[:2], prefix="타자기록")  # '타자기록'으로 항목 이름 변경
+                    df_log_box_4_6 = process_log_boxes(log_boxes_4_6, prefix="수비기록")  # '수비기록'으로 항목 이름 변경
+                    
+                    # 두 데이터프레임을 가로로 병합
+                    df_log_box_combined = pd.concat([df_log_box_1_2, df_log_box_4_6], axis=1)
+                    
+                    # 병합된 데이터 저장
+                    file_path_combined_log_box = f'{folder_name}/{away_team}-{home_team}_log_boxes.csv'
+                    df_log_box_combined.to_csv(file_path_combined_log_box, index=False, encoding='utf-8-sig')
+                    
+                    print(f"✅ 병합된 로그 박스 데이터 저장 완료: {file_path_combined_log_box}")
+                    # log_boxes = soup.find_all('div', class_='log_box')[:2]
+
+                    # log_data = []
+                    # max_div_count = 0
+
+                    # for idx, log_box in enumerate(log_boxes):
+                    #     row_data = {}
+                    #     team_name = team_names[idx] if idx < len(team_names) else f"팀명 없음 {idx + 1}"
+                    #     row_data['팀명'] = team_name
+
+                    #     log_divs = log_box.find_all('div', class_='log_div')
+                    #     for div_idx, log_div in enumerate(log_divs, start=1):
+                    #         div_text = " ".join(log_div.stripped_strings)
+                    #         row_data[f'항목{div_idx}'] = div_text
+
+                    #     max_div_count = max(max_div_count, len(log_divs))
+                    #     log_data.append(row_data)
+
+                    # columns_order = ['팀명'] + [f'항목{i}' for i in range(1, max_div_count + 1)]
+                    # df_log_box = pd.DataFrame(log_data, columns=columns_order)
+
+                    # def calculate_stolen_bases(row):
+                    #     for col in row.index:
+                    #         if isinstance(row[col], str) and '도루성공' in row[col]:
+                    #             stolen_bases_section = row[col].split('도루성공 : ')[-1]
+                    #             players = [p.strip() for p in stolen_bases_section.split(')') if p.strip()]
+                    #             return len(players)
+                    #     return 0
+
+                    # df_log_box['도루'] = df_log_box.apply(calculate_stolen_bases, axis=1)
+
+                    # file_path_log_box = f'{folder_name}/{away_team}-{home_team}_log_boxes.csv'
+                    # df_log_box.to_csv(file_path_log_box, index=False, encoding='utf-8-sig')
+                    
+                    # print(f"✅ 로그 박스 데이터 저장 완료: {file_path_log_box}")
 
                 except Exception as e:
                     print(f"{href} 이동 중 오류 발생: {e}")
