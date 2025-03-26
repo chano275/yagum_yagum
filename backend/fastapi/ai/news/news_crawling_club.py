@@ -6,6 +6,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 import json
 import pandas as pd
+import os
 
 # 크롬 옵션 설정
 chrome_options = Options()
@@ -13,8 +14,18 @@ chrome_options.add_argument("--headless")  # GUI 없이 실행 (필요하면 제
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
+# 로그 관련 오류 메시지 비활성화를 위한 옵션 추가
+chrome_options.add_argument("--log-level=3")  # 가장 심각한 오류만 표시
+chrome_options.add_argument("--silent")
+chrome_options.add_argument("--disable-logging")
+chrome_options.add_argument("--disable-in-process-stack-traces")
+chrome_options.add_argument("--disable-crash-reporter")
+chrome_options.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+chrome_options.add_experimental_option("useAutomationExtension", False)
+
 # ChromeDriver를 자동으로 다운로드 및 설정
 service = Service(ChromeDriverManager().install())
+service.log_path = "NUL"  # 로그 출력 무시
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
 # 크롤링할 URL
@@ -63,12 +74,28 @@ def get_article_content(article_url):
     driver.get(article_url)
     time.sleep(2)  # 페이지 로딩 대기
 
+    news_content = ""
+    
     try:
+        # 일반적인 기사 내용 추출 시도 (span.article_p)
         paragraphs = driver.find_elements(By.CSS_SELECTOR, "span.article_p")
-        news_content = " ".join([p.text.strip() for p in paragraphs if p.text.strip()])
-    except:
-        news_content = "본문 없음"
+        if paragraphs:
+            news_content = " ".join([p.text.strip() for p in paragraphs if p.text.strip()])
+        
+        # 내용이 비어있다면 동영상 기사일 수 있으므로 다른 선택자 시도
+        if not news_content:
+            # 동영상 기사 내용 추출 시도 (#comp_news_article > div)
+            video_content = driver.find_element(By.CSS_SELECTOR, "#comp_news_article > div")
+            if video_content:
+                news_content = video_content.text.strip()
 
+    except Exception as e:
+        print(f"기사 내용 추출 중 오류 발생: {e}")
+    
+    # 여전히 내용이 없으면 메시지 설정
+    if not news_content:
+        news_content = "본문 추출 실패"
+    
     return {
         'news_content': news_content
     }
@@ -76,16 +103,16 @@ def get_article_content(article_url):
 # 뉴스 기사 크롤링
 def crawl_news(date, team):
     team_mapping = {
-    "HT": "KIA 타이거즈",
-    "SS": "삼성 라이온즈",
-    "OB": "두산 베어스",
-    "LT": "롯데 자이언츠",
-    "KT": "KT 위즈",
-    "SK": "SSG 랜더스",
-    "HH": "한화 이글스",
-    "NC": "NC 다이노스",
-    "WO": "키움 히어로즈",
-    "LG": "LG 트윈스"
+    "HT": "KIA",
+    "SS": "삼성",
+    "OB": "두산",
+    "LT": "롯데",
+    "KT": "KT",
+    "SK": "SSG",
+    "HH": "한화",
+    "NC": "NC",
+    "WO": "키움",
+    "LG": "LG"
     }
 
     published_date = date[:4] + "-" + date[4:6] + "-" + date[6:]
@@ -108,25 +135,35 @@ def crawl_news(date, team):
     return all_articles
 
 # CSV 저장 함수
-def save_to_csv(data, filename="news_results.csv"):
+def save_to_csv(date, data, filename="news_results.csv"):
     df = pd.DataFrame(data)
-    df.to_csv(f"news_csv/{filename}", index=False, encoding="utf-8-sig")  # 한글 깨짐 방지 위해 utf-8-sig 사용
+    df.to_csv(f"news_csv/{date}/{filename}", index=False, encoding="utf-8-sig")  # 한글 깨짐 방지 위해 utf-8-sig 사용
     print(f"CSV 파일 저장 완료: {filename}")
+
+# 디렉토리 생성 함수
+def makedirs(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 def main():
     date = input("크롤링할 날짜를 입력하세요 (YYYYMMDD 형식): ")
-    # KIA 타이거즈: HT, 삼성 라이온즈: SS, 두산 베어스: OB, 롯데 자이언츠: LT, KT 위즈: KT, SSG 랜더스: SK, 한화 이글스: HH, NC 다이노스: NC, 키움 히어로즈: WO, LG 트윈스: LG
-    team = input("크롤링할 팀 코드를 입력하세요 (예: HT): ")
-    
-    results = crawl_news(date, team)
-    
-    with open(f"news_json/news_{date}_{team}.json", "w", encoding="utf-8") as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
 
-    save_to_csv(results, f"news_{date}_{team}.csv")
+    # 디렉토리 없는 경우 생성
+    for path in [f"news_json/{date}", f"news_csv/{date}"]:
+        makedirs(path)
+
+    # KIA 타이거즈: HT, 삼성 라이온즈: SS, 두산 베어스: OB, 롯데 자이언츠: LT, KT 위즈: KT, SSG 랜더스: SK, 한화 이글스: HH, NC 다이노스: NC, 키움 히어로즈: WO, LG 트윈스: LG
+    for team in ["HT", "SS", "OB", "LT", "KT", "SK", "HH", "NC", "WO", "LG"]:
+        results = crawl_news(date, team)
+        
+        with open(f"news_json/{date}/news_{date}_{team}.json", "w", encoding="utf-8") as f:
+            json.dump(results, f, ensure_ascii=False, indent=2)
+
+        save_to_csv(date, results, f"news_{date}_{team}.csv")
+        
+        print(f"{date} {team} 크롤링 완료. 총 {len(results)}개의 기사를 저장했습니다.")
     
-    print(f"크롤링 완료. 총 {len(results)}개의 기사를 저장했습니다.")
-    driver.quit()
+    driver.quit()    
 
 if __name__ == "__main__":
     main()
