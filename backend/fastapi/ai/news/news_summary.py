@@ -102,7 +102,7 @@ team_mapping = {
 }
 
 # 날짜 설정
-date = "20250326"
+date = input("크롤링할 날짜를 입력하세요 (YYYYMMDD 형식): ")
 
 # JSON 파일 생성 및 저장
 result_json = generate_weekly_summary_json(date, team_mapping)
