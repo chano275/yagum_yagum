@@ -143,7 +143,7 @@ def process_savings_for_date(game_date=None, session=None):
                         session.add(daily_saving)
                         
                         # 계정 잔액 업데이트
-                        account.TOTAL_AMOUNT += saving_amount
+                        # account.TOTAL_AMOUNT += saving_amount
                         account_total_saved += saving_amount
                         account_savings_count += 1
                         
@@ -184,7 +184,7 @@ def process_savings_for_date(game_date=None, session=None):
                             session.add(daily_saving)
                             
                             # 계정 잔액 업데이트
-                            account.TOTAL_AMOUNT += saving_amount
+                            # account.TOTAL_AMOUNT += saving_amount
                             account_total_saved += saving_amount
                             account_savings_count += 1
                             
@@ -251,7 +251,7 @@ def process_savings_for_date(game_date=None, session=None):
                     session.add(daily_saving)
                     
                     # 계정 잔액 업데이트
-                    account.TOTAL_AMOUNT += saving_amount
+                    # account.TOTAL_AMOUNT += saving_amount
                     account_total_saved += saving_amount
                     account_savings_count += 1
                     
