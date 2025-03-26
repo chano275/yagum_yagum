@@ -3,7 +3,7 @@ import styled from 'styled-components/native';
 
 // 기본 너비 상수
 export const BASE_MOBILE_WIDTH = 390;  // iPhone 13 기준
-export const MAX_MOBILE_WIDTH = 428;   // 큰 폰 기준 최대 너비
+export const MAX_MOBILE_WIDTH = 512;   // 큰 폰 기준 최대 너비
 
 // 스타일드 컴포넌트용 인터페이스
 export interface StyledProps {
