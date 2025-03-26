@@ -20,5 +20,5 @@ RUN cat ./wait-for-it.sh | tr -d '\r' > ./wait-for-it-fixed.sh && \
 EXPOSE ${BACKEND_PORT}
 
 RUN chmod +x ./wait-for-it.sh
-CMD ["sh", "-c", "pwd && ./wait-for-it.sh mariadb:3306 -t 10 -- uvicorn main:app --host 0.0.0.0 --port ${BACKEND_PORT} --reload"]
-
+# CMD ["sh", "-c", "pwd && ./wait-for-it.sh mariadb:3306 -t 10 -- uvicorn main:app --host 0.0.0.0 --port ${BACKEND_PORT} --reload"]
+CMD ["bash", "-c", "pwd && ./wait-for-it.sh mariadb:3306 -t 10 -- uvicorn main:app --host 0.0.0.0 --port ${BACKEND_PORT} --reload"]
