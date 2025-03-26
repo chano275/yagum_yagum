@@ -6,8 +6,8 @@ import { AppWrapper, MobileContainer, getAdjustedWidth, StyledProps } from '../c
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import axios from 'axios';
-import { useAppStore } from '../store/useStore';
-import { AppState } from '../store/useStore';
+import { useStore } from '../store/useStore';
+import { AuthState } from '../store/useStore';
 
 type RootStackParamList = {
   Home: undefined;
@@ -33,7 +33,7 @@ const LoginScreen = () => {
   const width = getAdjustedWidth(windowWidth);
   const iconSize = width * 0.055;
   const passwordInputRef = useRef<TextInput>(null);
-  const setAuth = useAppStore((state: AppState) => state.setAuth);
+  const setAuth = useStore((state: AuthState) => state.setAuth);
 
   const validateInputs = () => {
     const newErrors = {
@@ -58,7 +58,7 @@ const LoginScreen = () => {
       formData.append('password', password);
 
       const response = await axios.post(
-        'http://localhost:8000/api/v1/auth/login',
+        `${process.env.REACT_APP_API_URL}/api/user/login`,
         formData,
         {
           headers: {
@@ -70,7 +70,7 @@ const LoginScreen = () => {
       if (response.status === 200) {
         const { access_token, user } = response.data;
         setAuth(access_token, user);
-        navigation.navigate('Home');
+        navigation.replace('Home');
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -103,7 +103,7 @@ const LoginScreen = () => {
     loginCard: {
       backgroundColor: 'white',
       borderRadius: width * 0.025,
-      padding: width * 0.045,
+      padding: width * 0.05,
       width: '100%',
       ...Platform.select({
         ios: {
@@ -121,58 +121,90 @@ const LoginScreen = () => {
       })
     },
     characterImage: {
-      width: width * 0.4,
-      height: width * 0.4,
+      width: width * 0.35,
+      height: width * 0.35,
       alignSelf: 'center',
-      marginBottom: width * 0.03,
+      marginBottom: width * 0.04,
     },
     inputContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       borderRadius: width * 0.015,
       backgroundColor: '#F5F6FF',
-      padding: width * 0.035,
-      marginBottom: width * 0.02,
+      padding: width * 0.04,
+      marginBottom: width * 0.025,
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+        },
+        android: {
+          elevation: 1,
+        },
+        web: {
+          boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)'
+        }
+      })
+    },
+    focusedInputContainer: {
+      backgroundColor: '#FFFFFF',
+      ...Platform.select({
+        ios: {
+          shadowColor: '#2D5BFF',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.2,
+          shadowRadius: 3,
+        },
+        android: {
+          elevation: 2,
+        },
+        web: {
+          boxShadow: '0px 0px 0px 2px rgba(45, 91, 255, 0.2), 0px 1px 2px rgba(0, 0, 0, 0.05)'
+        }
+      })
     },
     input: {
       flex: 1,
-      fontSize: width * 0.04,
-      marginLeft: width * 0.02,
+      fontSize: width * 0.042,
+      marginLeft: width * 0.025,
       color: '#333',
+      ...Platform.select({
+        web: {
+          outlineStyle: 'none',
+        }
+      })
     },
     loginButton: {
       backgroundColor: '#2D5BFF',
-      padding: width * 0.035,
+      padding: width * 0.04,
       borderRadius: width * 0.015,
       alignItems: 'center',
-      marginTop: width * 0.03,
-    },
-    forgotPassword: {
-      alignSelf: 'center',
-      marginTop: 16,
+      marginTop: width * 0.04,
     },
     errorText: {
-      color: '#ff4444',
+      color: '#FF4B4B',
       fontSize: width * 0.035,
-      marginTop: 4,
+      marginTop: 8,
       marginLeft: width * 0.02,
+      marginBottom: width * 0.02,
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'center',
+      opacity: 0.9,
     },
     titleText: {
-      fontSize: width * 0.055,
+      fontSize: width * 0.06,
       fontWeight: 'bold',
-      marginBottom: width * 0.035,
+      marginBottom: width * 0.04,
       textAlign: 'center',
       color: '#333',
     },
     buttonText: {
       color: 'white',
-      fontSize: width * 0.04,
+      fontSize: width * 0.042,
       fontWeight: 'bold',
-      textAlign: 'center',
-    },
-    forgotPasswordText: {
-      color: '#666',
-      fontSize: width * 0.04,
       textAlign: 'center',
     }
   });
@@ -199,7 +231,10 @@ const LoginScreen = () => {
                 resizeMode="contain"
               />
               <Text style={styles.titleText}>로그인</Text>
-              <View style={styles.inputContainer}>
+              <View style={[
+                styles.inputContainer,
+                idFocused && styles.focusedInputContainer
+              ]}>
                 <MaterialIcons name="person-outline" size={iconSize} color="#666" />
                 <TextInput
                   style={styles.input}
@@ -217,8 +252,16 @@ const LoginScreen = () => {
                   placeholderTextColor="#999"
                 />
               </View>
-              {errors.id ? <Text style={styles.errorText}>{errors.id}</Text> : null}
-              <View style={styles.inputContainer}>
+              {errors.id ? (
+                <Text style={styles.errorText}>
+                  <MaterialIcons name="error-outline" size={width * 0.035} color="#FF4B4B" />
+                  {" "}{errors.id}
+                </Text>
+              ) : null}
+              <View style={[
+                styles.inputContainer,
+                passwordFocused && styles.focusedInputContainer
+              ]}>
                 <MaterialIcons name="lock-outline" size={iconSize} color="#666" />
                 <TextInput
                   ref={passwordInputRef}
@@ -245,9 +288,14 @@ const LoginScreen = () => {
                   />
                 </TouchableOpacity>
               </View>
-              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+              {errors.password ? (
+                <Text style={styles.errorText}>
+                  <MaterialIcons name="error-outline" size={width * 0.035} color="#FF4B4B" />
+                  {" "}{errors.password}
+                </Text>
+              ) : null}
               <TouchableOpacity 
-                style={[styles.loginButton, { opacity: isLoading ? 0.7 : 1 }]}
+                style={styles.loginButton}
                 onPress={handleLogin}
                 disabled={isLoading}
               >
@@ -256,9 +304,6 @@ const LoginScreen = () => {
                 ) : (
                   <Text style={styles.buttonText}>로그인</Text>
                 )}
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.forgotPassword}>
-                <Text style={styles.forgotPasswordText}>아이디/비밀번호 찾기</Text>
               </TouchableOpacity>
             </View>
           </View>

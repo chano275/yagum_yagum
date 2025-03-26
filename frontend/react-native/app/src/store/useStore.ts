@@ -1,75 +1,51 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { Platform } from 'react-native';
+import { UserAccountsResponse } from '../types/account';
+import { getUserAccounts } from '../api/account';
 
-interface User {
-  id: string;
-  username: string;
-  email: string;
-}
-
-interface AuthState {
+export interface AuthState {
+  isLoggedIn: boolean;
   token: string | null;
-  user: User | null;
-  isAuthenticated: boolean;
-  setAuth: (token: string, user: User) => void;
+  user: { id: string; name: string } | null;
+  setAuth: (token: string, user: { id: string; name: string }) => void;
   logout: () => void;
 }
 
-interface CountState {
-  count: number;
-  increment: () => void;
-  decrement: () => void;
-  reset: () => void;
+export const useStore = create<AuthState>((set) => ({
+  isLoggedIn: false,
+  token: null,
+  user: null,
+  setAuth: (token: string, user: { id: string; name: string }) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    set({ isLoggedIn: true, token, user });
+  },
+  logout: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    set({ isLoggedIn: false, token: null, user: null });
+  }
+}));
+
+interface AccountStore {
+  accountInfo: UserAccountsResponse | null;
+  isLoading: boolean;
+  error: string | null;
+  fetchAccountInfo: () => Promise<void>;
 }
 
-export interface AppState extends AuthState, CountState {}
-
-// 웹 환경과 모바일 환경에 따라 다른 스토리지 사용
-const storage = Platform.select({
-  web: createJSONStorage(() => localStorage),
-  default: createJSONStorage(() => {
-    return {
-      getItem: (key: string) => {
-        const item = localStorage.getItem(key);
-        return item ? Promise.resolve(item) : Promise.resolve(null);
-      },
-      setItem: (key: string, value: string) => {
-        localStorage.setItem(key, value);
-        return Promise.resolve();
-      },
-      removeItem: (key: string) => {
-        localStorage.removeItem(key);
-        return Promise.resolve();
-      },
-    };
-  }),
-});
-
-export const useAppStore = create<AppState>()(
-  persist(
-    (set) => ({
-      // Auth state
-      token: null,
-      user: null,
-      isAuthenticated: false,
-      setAuth: (token, user) => set({ token, user, isAuthenticated: true }),
-      logout: () => set({ token: null, user: null, isAuthenticated: false }),
-
-      // Count state
-      count: 0,
-      increment: () => set((state) => ({ count: state.count + 1 })),
-      decrement: () => set((state) => ({ count: state.count - 1 })),
-      reset: () => set({ count: 0 })
-    }),
-    {
-      name: 'app-storage',
-      storage,
-      partialize: (state) => ({
-        token: state.token,
-        user: state.user,
-        isAuthenticated: state.isAuthenticated
-      })
+export const useAccountStore = create<AccountStore>((set) => ({
+  accountInfo: null,
+  isLoading: false,
+  error: null,
+  fetchAccountInfo: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const data = await getUserAccounts();
+      set({ accountInfo: data });
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : '계좌 정보를 가져오는데 실패했습니다.' });
+    } finally {
+      set({ isLoading: false });
     }
-  )
-);
+  },
+}));
