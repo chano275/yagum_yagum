@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # 오늘 날짜 기준 하루 전 구하기
-current_date = (datetime.now() - timedelta(days=4)).strftime('%Y%m%d')
+current_date = (datetime.now() - timedelta(days=1)).strftime('%Y%m%d')
 input_folder_path = f'crawled_data/{current_date}'
 output_folder_path = f'processed_data'
 
@@ -60,29 +60,29 @@ for batting_file, log_box_file in zip(batting_files, log_box_files):
                     '기록값': stat_value
                 })
 
-        # 경기 결과 계산 (득점 비교)
-        team_scores = df_team_total[['팀 이름', 'R']].set_index('팀 이름')['R'].to_dict()
-        away_score, home_score = team_scores.get(away_team, 0), team_scores.get(home_team, 0)
+    # 경기 결과 계산 (득점 비교)
+    team_scores = df_team_total[['팀 이름', 'R']].set_index('팀 이름')['R'].to_dict()
+    away_score, home_score = team_scores.get(away_team, 0), team_scores.get(home_team, 0)
 
-        if away_score > home_score:
-            away_result, home_result = 'W', 'L'
-        elif away_score < home_score:
-            away_result, home_result = 'L', 'W'
-        else:
-            away_result, home_result = 'D', 'D'
+    if away_score > home_score:
+        away_result, home_result = 'W', 'L'
+    elif away_score < home_score:
+        away_result, home_result = 'L', 'W'
+    else:
+        away_result, home_result = 'D', 'D'
 
-        result_data.append({
-            '날짜': current_date,
-            '팀': away_team,
-            '기록': '경기결과',
-            '기록값': away_result
-        })
-        result_data.append({
-            '날짜': current_date,
-            '팀': home_team,
-            '기록': '경기결과',
-            '기록값': home_result
-        })
+    result_data.append({
+        '날짜': current_date,
+        '팀': away_team,
+        '기록': '경기결과',
+        '기록값': away_result
+    })
+    result_data.append({
+        '날짜': current_date,
+        '팀': home_team,
+        '기록': '경기결과',
+        '기록값': home_result
+    })
 
     # 2. **log_box 데이터 정제**
     def count_keyword_occurrences(row, keyword):
@@ -120,7 +120,10 @@ for batting_file, log_box_file in zip(batting_files, log_box_files):
 
 # 최종 DataFrame 생성 및 저장
 df_log_combined = pd.DataFrame(result_data)
+# 날짜, 팀, 기록값 순으로 정렬
+df_log_combined_sorted = df_log_combined.sort_values(by=['날짜', '기록', '팀'])
+
 output_file_path = os.path.join(output_folder_path, f'{current_date}-play_log.csv')
-df_log_combined.to_csv(output_file_path, index=False, encoding='utf-8-sig')
+df_log_combined_sorted.to_csv(output_file_path, index=False, encoding='utf-8-sig')
 
 print(f"✅ {output_file_path} 파일이 성공적으로 생성되었습니다.")
