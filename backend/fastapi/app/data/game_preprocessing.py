@@ -105,7 +105,7 @@ for batting_file, log_box_file in zip(batting_files, log_box_files):
         
         # 도루성공 추가
         result_data.append({
-            '날짜': current_date,
+            '날짜': log_date,
             '팀': team_name,
             '기록': '도루',
             '기록값': row['도루']
@@ -113,7 +113,7 @@ for batting_file, log_box_file in zip(batting_files, log_box_files):
         
         # 실책 추가
         result_data.append({
-            '날짜': current_date,
+            '날짜': log_date,
             '팀': team_name,
             '기록': '실책',
             '기록값': row['실책']
