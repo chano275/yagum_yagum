@@ -12,11 +12,11 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
 instruction = """
-당신은 주간 뉴스를 요약해서 정리해주는 전문가입니다.
+당신은 일일 뉴스를 요약해서 정리해주는 전문가입니다.
 생성되는 텍스트는 순수한 일반 텍스트 형식이어야 하며, 어떠한 마크다운 문법(예: **, ## 등)도 사용하지 말아주세요.
 news_title, news_content, published_date 정보를 포함한 JSON 형식의 데이터를 입력받아, 요약된 내용을 생성해주세요.
 뉴스 중에서 중복되는 내용이 있는 경우에는 1개만 요약해야 합니다.
-주간 뉴스 중에서 가장 중요한 내용 4~5가지를 각각 한 줄로 요약해야 하고, 뉴스 제목과 같은 형태로 요약된 내용을 반환해야 합니다.
+일일 뉴스 중에서 가장 중요한 내용 4~5가지를 각각 한 줄로 요약해야 하고, 뉴스 제목과 같은 형태로 요약된 내용을 반환해야 합니다.
 
 **데이터 예시**
 {
@@ -41,51 +41,22 @@ model = genai.GenerativeModel(
     system_instruction=instruction
 )
 
-def summarize_weekly_news(start_date, end_date, team):
-    """주간 뉴스 요약"""
-    all_news = []
-    for current_date in range((end_date - start_date).days + 1):
-        target_date = start_date + datetime.timedelta(days=current_date)
-        json_file_path = f"news_json/{target_date.strftime('%Y%m%d')}/news_{target_date.strftime('%Y%m%d')}_{team}.json"
-        if os.path.exists(json_file_path):
-            with open(json_file_path, "r", encoding="utf-8") as json_file:
-                data = json.load(json_file)
-                all_news.append(data)
-
-    if not all_news:
-        return None
+def summarize_daily_news(date, team):
+    """일일 뉴스 요약"""
+    json_file_path = f"news_json/{date}/news_{date}_{team}.json"
+    if os.path.exists(json_file_path):
+        with open(json_file_path, "r", encoding="utf-8") as json_file:
+            data = json.load(json_file)
 
     prompt = f"""
     ## 뉴스 내용:
-    {all_news}
+    {data}
 
-    **주간 뉴스 요약된 결과**
+    **일일 뉴스 요약된 결과**
     """
 
     response = model.generate_content(prompt)
     return response.text
-
-def generate_weekly_summary_json(date, team_mapping, n_day=6):
-    """주간 뉴스 요약을 JSON 파일로 생성"""
-    target_date = datetime.date(int(date[:4]), int(date[4:6]), int(date[6:]))
-    start_date = target_date - datetime.timedelta(days=n_day - 1)
-
-    result_json = {
-        "header": {
-            "date": target_date.strftime("%Y-%m-%d"),
-        },
-        "body": []
-    }
-
-    for team_code, team_name in team_mapping.items():
-        summary = summarize_weekly_news(start_date, target_date, team_code)
-        if summary:
-            result_json["body"].append({
-                "team": team_name,
-                "news_summation": summary
-            })
-
-    return result_json
 
 # 팀 코드와 팀 이름 매핑
 team_mapping = {
@@ -103,12 +74,9 @@ team_mapping = {
 
 # 날짜 설정
 date = input("요약할 기준 날짜를 입력하세요 (YYYYMMDD 형식): ")
+team = input("요약할 팀 코드를 입력하세요 (예: HT): ")
 
-# JSON 파일 생성 및 저장
-result_json = generate_weekly_summary_json(date, team_mapping)
-file_name = f"news_summation/news_summation_{date}.json"
-
-with open(file_name, "w", encoding="utf-8") as json_file:
-    json.dump(result_json, json_file, ensure_ascii=False, indent=4)
-
-print(f"{file_name} 파일이 생성되었습니다.")
+# 요약된 결과 생성
+result = summarize_daily_news(date, team)
+team_mapping[team] + " " + result
+print(f"{date[:4]}-{date[4:6]}-{date[6:]} " + team_mapping[team] + " 뉴스 요약\n" + result)
