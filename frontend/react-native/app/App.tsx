@@ -1,36 +1,18 @@
+// App.tsx
+import "@expo/metro-runtime";
+import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { ThemeProvider } from "styled-components/native";
-import styled from "styled-components/native";
 import { theme } from "./src/styles/theme";
 import { useFonts } from "expo-font";
+import { NavigationContainer } from "@react-navigation/native";
+import { DimensionProvider } from "./src/context/DimensionContext";
+import AppNavigator from "./src/navigation/AppNavigator";
+import { TeamProvider } from "@/context/TeamContext";
+import { LogBox } from "react-native"; // 경고 무시용
 
-// 스타일 컴포넌트 정의
-const Container = styled.View`
-  flex: 1;
-  background-color: ${({ theme }) => theme.colors.background};
-  justify-content: center;
-  align-items: center;
-`;
-
-const Title = styled.Text`
-  font-size: ${({ theme }) => theme.fontSize.xxl};
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: bold;
-  font-family: "Pretendard-Bold";
-`;
-
-const StyledButton = styled.TouchableOpacity`
-  background-color: ${({ theme }) => theme.colors.primary};
-  padding: ${({ theme }) => theme.spacing.md};
-  border-radius: 8px;
-  margin-top: ${({ theme }) => theme.spacing.lg};
-`;
-
-const ButtonText = styled.Text`
-  color: white;
-  font-size: ${({ theme }) => theme.fontSize.md};
-  font-family: "Pretendard-Regular";
-`;
+// 안전한 개발을 위해 tintColor 경고 무시
+LogBox.ignoreLogs(["Image: style.tintColor is deprecated"]);
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -41,18 +23,18 @@ export default function App() {
   });
 
   if (!fontsLoaded) {
-    return null; // 폰트가 로드되지 않았을 때 빈 화면 표시
+    return null;
   }
 
   return (
     <ThemeProvider theme={theme}>
-      <Container>
-        <StatusBar style="auto" />
-        <Title>리액트 네이티브 시작하기</Title>
-        <StyledButton>
-          <ButtonText>시작하기</ButtonText>
-        </StyledButton>
-      </Container>
+      <DimensionProvider>
+        <TeamProvider>
+          <NavigationContainer>
+            <AppNavigator />
+          </NavigationContainer>
+        </TeamProvider>
+      </DimensionProvider>
     </ThemeProvider>
   );
 }
