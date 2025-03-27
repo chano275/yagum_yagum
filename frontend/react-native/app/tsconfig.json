@@ -6,6 +6,6 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "types": ["react", "react-native"]
+    "types": ["react", "react-native", "styled-components-react-native"]
   }
 }

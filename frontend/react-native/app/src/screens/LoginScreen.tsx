@@ -6,7 +6,6 @@ import { AppWrapper, MobileContainer, getAdjustedWidth, StyledProps } from '../c
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import axios from 'axios';
-import { api } from '../api/axios';
 import { useStore } from '../store/useStore';
 import { AuthState } from '../store/useStore';
 
@@ -58,8 +57,9 @@ const LoginScreen = () => {
       formData.append('username', id);
       formData.append('password', password);
 
-      const response = await api.post(
-        '/api/user/login',
+      const response = await axios.post(
+        'http://localhost:8000/api/user/login',
+        // 'http://3.38.183.156:8000/api/user/login',
         formData,
         {
           headers: {
@@ -71,7 +71,7 @@ const LoginScreen = () => {
       if (response.status === 200) {
         const { access_token, user } = response.data;
         setAuth(access_token, user);
-        navigation.navigate('Home');
+        navigation.replace('Home');
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -100,12 +100,15 @@ const LoginScreen = () => {
     contentContainer: {
       flex: 1,
       justifyContent: 'center',
+      alignItems: 'center',
     },
     loginCard: {
       backgroundColor: 'white',
       borderRadius: width * 0.025,
       padding: width * 0.05,
       width: '100%',
+      maxWidth: 420,
+      alignSelf: 'center',
       ...Platform.select({
         ios: {
           shadowColor: '#000',
@@ -185,15 +188,11 @@ const LoginScreen = () => {
       marginTop: width * 0.04,
     },
     errorText: {
-      color: '#FF4B4B',
+      color: '#ff4444',
       fontSize: width * 0.035,
-      marginTop: 8,
+      marginTop: 4,
       marginLeft: width * 0.02,
       marginBottom: width * 0.02,
-      display: 'flex',
-      flexDirection: 'row',
-      alignItems: 'center',
-      opacity: 0.9,
     },
     titleText: {
       fontSize: width * 0.06,
@@ -220,8 +219,14 @@ const LoginScreen = () => {
         />
         <View style={styles.container}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <MaterialIcons name="arrow-back-ios" size={iconSize} color="#333" />
+            <TouchableOpacity 
+              onPress={() => {
+                navigation.goBack();
+                // 또는 아래 방법을 시도해볼 수 있습니다
+                // navigation.pop();
+              }}
+            >
+              <MaterialIcons name="arrow-back" size={iconSize} color="black" />
             </TouchableOpacity>
           </View>
           <View style={styles.contentContainer}>
@@ -253,12 +258,7 @@ const LoginScreen = () => {
                   placeholderTextColor="#999"
                 />
               </View>
-              {errors.id ? (
-                <Text style={styles.errorText}>
-                  <MaterialIcons name="error-outline" size={width * 0.035} color="#FF4B4B" />
-                  {" "}{errors.id}
-                </Text>
-              ) : null}
+              {errors.id ? <Text style={styles.errorText}>{errors.id}</Text> : null}
               <View style={[
                 styles.inputContainer,
                 passwordFocused && styles.focusedInputContainer
@@ -289,12 +289,7 @@ const LoginScreen = () => {
                   />
                 </TouchableOpacity>
               </View>
-              {errors.password ? (
-                <Text style={styles.errorText}>
-                  <MaterialIcons name="error-outline" size={width * 0.035} color="#FF4B4B" />
-                  {" "}{errors.password}
-                </Text>
-              ) : null}
+              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
               <TouchableOpacity 
                 style={styles.loginButton}
                 onPress={handleLogin}

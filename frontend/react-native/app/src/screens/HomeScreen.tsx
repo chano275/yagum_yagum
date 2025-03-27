@@ -17,11 +17,7 @@ import { useStore } from '../store/useStore';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-root-toast';
 import { useAccountStore } from '../store/useStore';
-
-type RootStackParamList = {
-  Home: undefined;
-  Login: undefined;
-};
+import { RootStackParamList } from '../navigation/AppNavigator';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -132,8 +128,8 @@ const ServiceIcon = styled.Image`
 `;
 
 const ServiceTitle = styled.Text<StyledProps>`
-  font-size: ${props => props.width * 0.045}px;
-  line-height: ${props => props.width * 0.062}px;
+  font-size: ${(props: StyledProps) => props.width * 0.045}px;
+  line-height: ${(props: StyledProps) => props.width * 0.062}px;
   font-weight: bold;
   letter-spacing: -0.3px;
   color: #333;
@@ -373,6 +369,7 @@ const HomeScreen = () => {
   }, [fadeAnim, slideUpAnim]);
 
   const onFirstCardPress = () => {
+    // 카드 애니메이션 먼저 실행
     Animated.sequence([
       Animated.timing(firstCardScale, {
         toValue: 0.98,
@@ -384,10 +381,16 @@ const HomeScreen = () => {
         duration: 150,
         useNativeDriver: true
       })
-    ]).start();
+    ]).start(() => {
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      handleComponentPress(0);
+    });
   };
 
   const onRecommendCardPress = () => {
+    // 카드 애니메이션 먼저 실행
     Animated.sequence([
       Animated.timing(recommendCardScale, {
         toValue: 0.97,
@@ -399,7 +402,12 @@ const HomeScreen = () => {
         duration: 100,
         useNativeDriver: true
       })
-    ]).start();
+    ]).start(() => {
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      handleComponentPress(2);
+    });
   };
 
   const onStartButtonPress = () => {
@@ -445,18 +453,29 @@ const HomeScreen = () => {
           <ContentContainer>
             <ServiceIcon
               source={require('../../assets/baseball.png')}
-              width={width}
+              style={{ width: 40, height: 40 }}
               resizeMode="contain"
             />
             <ServiceTextContainer width={width}>
               <ServiceTitle width={width}>
-                <Text style={{ fontSize: width * 0.034 }}>
-                  <BlackText>{accountInfo?.user_name || '김싸피'}</BlackText>
-                  <LightText>님을 위한 맞춤 서비스,</LightText>
-                </Text>
-                {'\n'}
-                <ColoredText>야금야금</ColoredText>
-                <BlackText>적금</BlackText>
+                {isLoggedIn ? (
+                  <>
+                    <Text style={{ fontSize: width * 0.034 }}>
+                      <BlackText>{accountInfo?.user_name || '김싸피'}</BlackText>
+                      <LightText>님을 위한 맞춤 서비스,</LightText>
+                    </Text>
+                    {'\n'}
+                    <ColoredText>야금야금</ColoredText>
+                    <BlackText>적금</BlackText>
+                  </>
+                ) : (
+                  <>
+                    <Text style={{ fontSize: width * 0.036 }}>
+                      나만의 응원팀으로{'\n'}
+                      야금야금 적금 시작하기
+                    </Text>
+                  </>
+                )}
               </ServiceTitle>
             </ServiceTextContainer>
           </ContentContainer>
@@ -563,6 +582,14 @@ const HomeScreen = () => {
         </AuthCardContent>
       </AuthCard>
     );
+  };
+
+  const handleComponentPress = (index: number) => {
+    if ((index === 0 || index === 2) && isLoggedIn) {
+      navigation.navigate('SavingsJoin');
+    } else if ((index === 0 || index === 2) && !isLoggedIn) {
+      navigation.navigate('Login');
+    }
   };
 
   return (
