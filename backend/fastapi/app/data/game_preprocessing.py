@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # 오늘 날짜 기준 하루 전 구하기
-current_date = (datetime.now() - timedelta(days = 2)).strftime('%Y%m%d')
+current_date = (datetime.now() - timedelta(days=1)).strftime('%Y%m%d')
 input_folder_path = f'crawled_data/{current_date}'
 output_folder_path = f'processed_data'
 
