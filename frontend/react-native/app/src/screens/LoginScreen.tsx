@@ -6,6 +6,7 @@ import { AppWrapper, MobileContainer, getAdjustedWidth, StyledProps } from '../c
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import axios from 'axios';
+import { api } from '../api/axios';
 import { useStore } from '../store/useStore';
 import { AuthState } from '../store/useStore';
 
@@ -57,8 +58,8 @@ const LoginScreen = () => {
       formData.append('username', id);
       formData.append('password', password);
 
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/user/login`,
+      const response = await api.post(
+        '/api/user/login',
         formData,
         {
           headers: {
@@ -70,7 +71,7 @@ const LoginScreen = () => {
       if (response.status === 200) {
         const { access_token, user } = response.data;
         setAuth(access_token, user);
-        navigation.replace('Home');
+        navigation.navigate('Home');
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
