@@ -1,7 +1,7 @@
 // src/navigation/AppNavigator.tsx
 import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
-import HomeScreen from "../screens/HomeScreen";
+import HomeScreen from "../screens/Home_Screen";
 import TabNavigator from "./TabNavigator";
 
 const Stack = createStackNavigator();

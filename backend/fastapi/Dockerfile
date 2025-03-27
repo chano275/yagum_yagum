@@ -2,19 +2,23 @@
 FROM python:3.13
 
 ARG BACKEND_PORT
-ARG SERVER_IP
 ENV BACKEND_PORT=${BACKEND_PORT}
-ENV SERVER_IP=${SERVER_IP}
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN apt-get update && apt-get install -y netcat-openbsd && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/* && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+ENV TZ=Asia/Seoul
 
 # 애플리케이션 소스 복사 (bind mount을 사용할 경우 최신 소스는 호스트와 동기화)
 COPY app/ ./
-# app/
-
+RUN cat ./wait-for-it.sh | tr -d '\r' > ./wait-for-it-fixed.sh && \
+    mv ./wait-for-it-fixed.sh ./wait-for-it.sh && \
+    chmod +x ./wait-for-it.sh
 EXPOSE ${BACKEND_PORT}
 
-# uvicorn을 통해 FastAPI 서버 실행 (app/main.py 파일이 존재한다고 가정)
-CMD ["sh", "-c", "uvicorn main:app --host ${SERVER_IP} --port ${BACKEND_PORT} --reload"]
+RUN chmod +x ./wait-for-it.sh
+# CMD ["sh", "-c", "pwd && ./wait-for-it.sh mariadb:3306 -t 10 -- uvicorn main:app --host 0.0.0.0 --port ${BACKEND_PORT} --reload"]
+CMD ["bash", "-c", "pwd && ./wait-for-it.sh mariadb:3306 -t 10 -- uvicorn main:app --host 0.0.0.0 --port ${BACKEND_PORT} --reload"]
