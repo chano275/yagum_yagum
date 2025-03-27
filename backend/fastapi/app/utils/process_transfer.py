@@ -138,7 +138,8 @@ async def process_actual_transfers(db, date_param=None):
                         user_key=user.USER_KEY,
                         withdrawal_account=account.SOURCE_ACCOUNT,  # 출금 계좌 (입출금 계좌)
                         deposit_account=account.ACCOUNT_NUM,        # 입금 계좌 (적금 계좌)
-                        amount=saving_amount
+                        amount=saving_amount,
+                        llm_text="" # 입출금 메시지
                     )
                     
                     # 이체 성공 시 계정 잔액 업데이트

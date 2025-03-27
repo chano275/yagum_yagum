@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 
 # 현재 파일 (`DB/` 폴더)에 있으므로, 상위 디렉토리를 sys.path에 추가
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 # models 및 database 모듈 가져오기
 import models
@@ -27,7 +27,7 @@ missions_rate = [0.1,0.1,0.3]
 
 # 초기 데이터 생성
 initial_missions = [
-    models.Mission(MISSION_ID=i + 1, MISSION_NAME=missions_name[i], MISSION_MAX_COUNT = missions_max_count[i], MISSION_RATE = missions_rate[i])
+    models.Mission(MISSION_NAME=missions_name[i], MISSION_MAX_COUNT = missions_max_count[i], MISSION_RATE = missions_rate[i])
     for i in range(len(missions_name))
 ]
 

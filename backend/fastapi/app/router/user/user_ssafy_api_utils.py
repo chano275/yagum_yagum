@@ -283,7 +283,7 @@ async def create_demand_deposit_account(user_key, account_type_unique_no="999-1-
         )
     
 
-async def transfer_money(user_key, withdrawal_account, deposit_account, amount, api_key=None):
+async def transfer_money(user_key, withdrawal_account, deposit_account, amount, llm_text, api_key=None):
     """
     금융 API를 통해 계좌 간 송금 처리
     
@@ -320,8 +320,8 @@ async def transfer_money(user_key, withdrawal_account, deposit_account, amount, 
             "depositAccountNo": deposit_account,  # 입금계좌번호
             "transactionBalance": str(amount),    # 거래금액 (문자열로 변환)
             "withdrawalAccountNo": withdrawal_account,  # 출금계좌번호
-            "depositTransactionSummary": "(수시입출금) : 입금(이체)",  # 거래 요약정보 (입금계좌)
-            "withdrawalTransactionSummary": "(수시입출금) : 출금(이체)"  # 거래 요약정보 (출금계좌)
+            "depositTransactionSummary": llm_text,  # 거래 요약정보 (입금계좌)
+            "withdrawalTransactionSummary": llm_text  # 거래 요약정보 (출금계좌)
         }
         
         logger.info(f"송금 요청 URL: {api_url}")
