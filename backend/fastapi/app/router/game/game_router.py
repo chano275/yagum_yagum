@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List, Optional
 from datetime import date, datetime, timedelta
 import logging
@@ -14,58 +15,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# 게임 일정 생성
-@router.post("/schedule", response_model=game_schema.GameScheduleResponse)
-async def create_game_schedule(
-    game_schedule: game_schema.GameScheduleCreate,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    try:
-        logger.info(f"게임 일정 생성 시도: {game_schedule.DATE} - 홈팀 {game_schedule.HOME_TEAM_ID} vs 원정팀 {game_schedule.AWAY_TEAM_ID}")
-        
-        # TODO: 관리자 권한 확인 필요
-        
-        # 팀 존재 여부 확인
-        home_team = db.query(models.Team).filter(models.Team.TEAM_ID == game_schedule.HOME_TEAM_ID).first()
-        away_team = db.query(models.Team).filter(models.Team.TEAM_ID == game_schedule.AWAY_TEAM_ID).first()
-        
-        if not home_team or not away_team:
-            logger.warning(f"존재하지 않는 팀: 홈팀 {game_schedule.HOME_TEAM_ID} 또는 원정팀 {game_schedule.AWAY_TEAM_ID}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="존재하지 않는 팀입니다"
-            )
-        
-        # 중복 일정 확인
-        existing_schedule = db.query(models.GameSchedule).filter(
-            models.GameSchedule.DATE == game_schedule.DATE,
-            models.GameSchedule.HOME_TEAM_ID == game_schedule.HOME_TEAM_ID,
-            models.GameSchedule.AWAY_TEAM_ID == game_schedule.AWAY_TEAM_ID
-        ).first()
-        
-        if existing_schedule:
-            logger.warning(f"중복 일정: {game_schedule.DATE} - 홈팀 {game_schedule.HOME_TEAM_ID} vs 원정팀 {game_schedule.AWAY_TEAM_ID}")
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="이미 등록된 일정입니다"
-            )
-        
-        # 일정 생성
-        new_schedule = game_crud.create_game_schedule(db, game_schedule)
-        logger.info(f"게임 일정 생성 완료: ID {new_schedule.GAME_SCHEDULE_KEY}")
-        
-        return new_schedule
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"게임 일정 생성 중 예상치 못한 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"게임 일정 생성 중 오류 발생: {str(e)}"
-        )
 
 # 모든 게임 일정 조회
 @router.get("/schedule", response_model=List[game_schema.GameScheduleDetailResponse])
@@ -239,6 +188,183 @@ async def read_game_schedules_by_team(
             detail=f"게임 일정 조회 중 오류 발생: {str(e)}"
         )
 
+# 로그인한 사용자의 팀 전체 경기 일정 조회
+@router.get("/user-team-schedule/all", response_model=List[game_schema.UserTeamGameScheduleResponse])
+async def read_user_team_all_schedule(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"로그인 사용자 팀 전체 경기 일정 조회: 사용자 ID {current_user.USER_ID}")
+        
+        # 1. 사용자의 계정에서 팀 ID 조회
+        # 현재 사용자의 계정 목록 조회
+        accounts = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).all()
+        
+        if not accounts:
+            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 계정이 없습니다"
+            )
+        
+        # 첫 번째 계정의 팀 ID 사용 (여러 계정이 있을 경우)
+        team_id = accounts[0].TEAM_ID
+        
+        if not team_id:
+            logger.warning(f"사용자 계정에 연결된 팀 ID가 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 팀 정보가 없습니다"
+            )
+        
+        # 2. 팀 존재 확인
+        team = db.query(models.Team).filter(models.Team.TEAM_ID == team_id).first()
+        if not team:
+            logger.warning(f"팀 ID {team_id}를 찾을 수 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="팀 정보를 찾을 수 없습니다"
+            )
+        
+        # 3. 팀 경기 일정 조회 (전체)
+        schedules = db.query(models.GameSchedule).filter(
+            or_(
+                models.GameSchedule.HOME_TEAM_ID == team_id,
+                models.GameSchedule.AWAY_TEAM_ID == team_id
+            )
+        ).order_by(models.GameSchedule.DATE).all()
+        
+        # 4. 응답 데이터 구성
+        result = []
+        for schedule in schedules:
+            home_team = db.query(models.Team).filter(models.Team.TEAM_ID == schedule.HOME_TEAM_ID).first()
+            away_team = db.query(models.Team).filter(models.Team.TEAM_ID == schedule.AWAY_TEAM_ID).first()
+            
+            schedule_dict = {
+                "GAME_SCHEDULE_KEY": schedule.GAME_SCHEDULE_KEY,
+                "DATE": schedule.DATE,
+                "HOME_TEAM_ID": schedule.HOME_TEAM_ID,
+                "AWAY_TEAM_ID": schedule.AWAY_TEAM_ID,
+                "home_team_name": home_team.TEAM_NAME if home_team else None,
+                "away_team_name": away_team.TEAM_NAME if away_team else None,
+                "is_home": schedule.HOME_TEAM_ID == team_id  # 응원 팀이 홈 팀인지 여부
+            }
+            
+            result.append(schedule_dict)
+        
+        logger.info(f"조회된 전체 경기 일정 수: {len(result)}")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"팀 전체 경기 일정 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"팀 전체 경기 일정 조회 중 오류 발생: {str(e)}"
+        )
+
+# 로그인한 사용자의 팀 월별 경기 일정 조회
+@router.get("/user-team-schedule/month/{month}", response_model=List[game_schema.UserTeamGameScheduleResponse])
+async def read_user_team_monthly_schedule(
+    month: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"로그인 사용자 팀 월별 경기 일정 조회: 사용자 ID {current_user.USER_ID}, 월 {month}")
+        
+        # 월 범위 확인
+        if month < 1 or month > 12:
+            logger.warning(f"유효하지 않은 월: {month}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="월은 1부터 12 사이의 값이어야 합니다"
+            )
+        
+        # 1. 사용자의 계정에서 팀 ID 조회
+        # 현재 사용자의 계정 목록 조회
+        accounts = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).all()
+        
+        if not accounts:
+            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 계정이 없습니다"
+            )
+        
+        # 첫 번째 계정의 팀 ID 사용 (여러 계정이 있을 경우)
+        team_id = accounts[0].TEAM_ID
+        
+        if not team_id:
+            logger.warning(f"사용자 계정에 연결된 팀 ID가 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 팀 정보가 없습니다"
+            )
+        
+        # 2. 팀 존재 확인
+        team = db.query(models.Team).filter(models.Team.TEAM_ID == team_id).first()
+        if not team:
+            logger.warning(f"팀 ID {team_id}를 찾을 수 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="팀 정보를 찾을 수 없습니다"
+            )
+            
+        # 3. 현재 연도 가져오기
+        current_year = datetime.now().year
+        
+        # 4. 해당 월의 시작일과 종료일 계산
+        start_date = date(current_year, month, 1)
+        
+        # 월에 따라 종료일 계산
+        if month == 12:
+            end_date = date(current_year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(current_year, month + 1, 1) - timedelta(days=1)
+        
+        # 5. 팀 경기 일정 조회 (월별)
+        schedules = db.query(models.GameSchedule).filter(
+            or_(
+                models.GameSchedule.HOME_TEAM_ID == team_id,
+                models.GameSchedule.AWAY_TEAM_ID == team_id
+            ),
+            models.GameSchedule.DATE >= start_date,
+            models.GameSchedule.DATE <= end_date
+        ).order_by(models.GameSchedule.DATE).all()
+        
+        # 6. 응답 데이터 구성
+        result = []
+        for schedule in schedules:
+            home_team = db.query(models.Team).filter(models.Team.TEAM_ID == schedule.HOME_TEAM_ID).first()
+            away_team = db.query(models.Team).filter(models.Team.TEAM_ID == schedule.AWAY_TEAM_ID).first()
+            
+            schedule_dict = {
+                "GAME_SCHEDULE_KEY": schedule.GAME_SCHEDULE_KEY,
+                "DATE": schedule.DATE,
+                "HOME_TEAM_ID": schedule.HOME_TEAM_ID,
+                "AWAY_TEAM_ID": schedule.AWAY_TEAM_ID,
+                "home_team_name": home_team.TEAM_NAME if home_team else None,
+                "away_team_name": away_team.TEAM_NAME if away_team else None,
+                "is_home": schedule.HOME_TEAM_ID == team_id  # 응원 팀이 홈 팀인지 여부
+            }
+            
+            result.append(schedule_dict)
+        
+        logger.info(f"조회된 {month}월 경기 일정 수: {len(result)}")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"팀 월별 경기 일정 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"팀 월별 경기 일정 조회 중 오류 발생: {str(e)}"
+        )
+    
 # 모든 게임 로그 조회
 @router.get("/log", response_model=List[game_schema.GameLogDetailResponse])
 async def read_game_logs(
