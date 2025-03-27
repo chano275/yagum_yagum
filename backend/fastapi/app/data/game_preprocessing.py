@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # 오늘 날짜 기준 하루 전 구하기
-current_date = (datetime.now() - timedelta(days=1)).strftime('%Y%m%d')
+current_date = (datetime.now() - timedelta(days = 2)).strftime('%Y%m%d')
 input_folder_path = f'crawled_data/{current_date}'
 output_folder_path = f'processed_data'
 
@@ -121,7 +121,7 @@ for batting_file, log_box_file in zip(batting_files, log_box_files):
 # 최종 DataFrame 생성 및 저장
 df_log_combined = pd.DataFrame(result_data)
 # 날짜, 팀, 기록값 순으로 정렬
-df_log_combined_sorted = df_log_combined.sort_values(by=['날짜', '기록', '팀'])
+df_log_combined_sorted = df_log_combined.sort_values(by=['날짜', '팀', '기록'])
 
 output_file_path = os.path.join(output_folder_path, f'{current_date}-play_log.csv')
 df_log_combined_sorted.to_csv(output_file_path, index=False, encoding='utf-8-sig')
