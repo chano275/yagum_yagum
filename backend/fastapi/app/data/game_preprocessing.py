@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 # 오늘 날짜 기준 하루 전 구하기
 current_date = (datetime.now() - timedelta(days=1)).strftime('%Y%m%d')
+log_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 input_folder_path = f'crawled_data/{current_date}'
 output_folder_path = f'processed_data'
 
@@ -54,7 +55,7 @@ for batting_file, log_box_file in zip(batting_files, log_box_files):
             stat_value = row[stat]
             if pd.notna(stat_value):  # 값이 존재하는 경우만 추가
                 result_data.append({
-                    '날짜': current_date,
+                    '날짜': log_date,
                     '팀': team_name,
                     '기록': stat,
                     '기록값': stat_value
@@ -72,13 +73,13 @@ for batting_file, log_box_file in zip(batting_files, log_box_files):
         away_result, home_result = 'D', 'D'
 
     result_data.append({
-        '날짜': current_date,
+        '날짜': log_date,
         '팀': away_team,
         '기록': '경기결과',
         '기록값': away_result
     })
     result_data.append({
-        '날짜': current_date,
+        '날짜': log_date,
         '팀': home_team,
         '기록': '경기결과',
         '기록값': home_result
