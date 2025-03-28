@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 const BASE_URL = Platform.OS === 'web' 
   // ? 'http://localhost:8000'
-  ? 'http://3.38.183:8000' 
+  ? 'http://3.38.183.156:8000' 
   : 'http://10.0.2.2:8000';
 
 export const api = axios.create({
