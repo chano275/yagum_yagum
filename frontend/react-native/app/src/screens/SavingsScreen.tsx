@@ -6,6 +6,8 @@ import {
   Platform,
   TouchableOpacity,
   View,
+  Text,
+  StyleSheet,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
@@ -92,10 +94,10 @@ const ProgressBarContainer = styled.View<StyledProps>`
   overflow: hidden;
 `;
 
-const ProgressFill = styled.View`
+const ProgressFill = styled.View<{ percentage: number }>`
   height: 100%;
-  width: 100%;
-  background-color: #2196f3;
+  width: ${(props) => `${props.percentage}%`};
+  background-color: #ffffff;
   border-radius: 4px;
 `;
 
@@ -167,6 +169,7 @@ const ViewAllLink = styled.Text<StyledProps & { teamColor: string }>`
   color: ${(props) => props.teamColor};
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
+
 const CardContent = styled.View<StyledProps>`
   padding: ${({ width }) => width * 0.03}px;
 `;
@@ -242,7 +245,7 @@ const ScheduleTime = styled.Text<StyledProps>`
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
-const MainPage = () => {
+const SavingsScreen = () => {
   const { teamColor } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
   const width =
@@ -250,17 +253,24 @@ const MainPage = () => {
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
 
+  const [currentAmount, setCurrentAmount] = useState(300000);
+  const [targetAmount, setTargetAmount] = useState(500000);
+
+  const percentage = Math.min(
+    100,
+    Math.round((currentAmount / targetAmount) * 100)
+  );
+
   return (
     <AppWrapper>
       <MobileContainer width={width}>
         <StatusBar style="light" />
-        {/* 헤더 부분 - 팀 색상 적용 */}
         <Header width={width} teamColor={teamColor.primary}>
           <HeaderTitle width={width}>적금 내역 페이지</HeaderTitle>
           <TouchableOpacity>
             <BellIcon
               source={require("../../assets/icon.png")}
-              tintColor="yellow"
+              style={{ tintColor: "yellow" }}
             />
           </TouchableOpacity>
         </Header>
@@ -271,19 +281,17 @@ const MainPage = () => {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
           >
-            {/* 유니폼 구매 진행 상황 - 팀 색상 적용 */}
             <ProgressSection width={width} teamColor={teamColor.primary}>
               <ProgressTitle width={width}>유니폼 구매</ProgressTitle>
               <ProgressAmount width={width}>
-                487,000원 / 300,000원
+                {currentAmount.toLocaleString()}원 / {targetAmount.toLocaleString()}원
               </ProgressAmount>
               <ProgressBarContainer width={width}>
-                <ProgressFill />
+                <ProgressFill percentage={percentage} />
               </ProgressBarContainer>
-              <ProgressPercent width={width}>100% 달성</ProgressPercent>
+              <ProgressPercent width={width}>{percentage}% 달성</ProgressPercent>
             </ProgressSection>
 
-            {/* 금리 및 팀 순위 정보 */}
             <StatsRow width={width}>
               <StatText width={width}>
                 현재 금리: 3.5% <StatHighlight>+0.4%</StatHighlight>
@@ -294,7 +302,6 @@ const MainPage = () => {
             </StatsRow>
 
             <View style={{ padding: width * 0.04 }}>
-              {/* 카드 내용들 */}
               <Card width={width}>
                 <CardHeader width={width}>
                   <CardTitle width={width}>오늘의 적금 비교</CardTitle>
@@ -307,9 +314,7 @@ const MainPage = () => {
                 </CardContent>
               </Card>
 
-              {/* 적금 규칙 */}
               <Card width={width}>
-                {/* 카드 내용 유지 */}
                 <CardHeader width={width}>
                   <CardTitle width={width}>적금 규칙</CardTitle>
                 </CardHeader>
@@ -320,7 +325,6 @@ const MainPage = () => {
                 </CardContent>
               </Card>
 
-              {/* 최근 적금 내역 카드 - 링크와 금액에 팀 색상 적용 */}
               <Card width={width}>
                 <CardHeader width={width}>
                   <CardTitle width={width}>최근 적금 내역</CardTitle>
@@ -366,7 +370,6 @@ const MainPage = () => {
                 </CardContent>
               </Card>
 
-              {/* 다음 경기 일정 카드 - 링크에 팀 색상 적용 */}
               <Card width={width}>
                 <CardHeader width={width}>
                   <CardTitle width={width}>다음 경기 일정</CardTitle>
@@ -402,4 +405,18 @@ const MainPage = () => {
   );
 };
 
-export default MainPage;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+});
+
+export default SavingsScreen; 

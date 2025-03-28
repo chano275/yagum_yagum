@@ -2,25 +2,27 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../styles/theme";
-import MainPage from "../screens/MainPageScreen";
-import SavingsScreen from "../screens/SavingsScreen";
-import ReportScreen from "../screens/ReportScreen";
-import BenefitsScreen from "../screens/BenefitsScreen";
+import MainPage from "@/screens/MainPageScreen";
+import SavingsScreen from "@/screens/SavingsScreen";
+import ReportScreen from "@/screens/ReportScreen";
+import BenefitsScreen from "@/screens/BenefitsScreen";
 import { useDimension } from "../context/DimensionContext";
-import { useTeam } from "../context/TeamContext"; // TeamContext 추가
+import { useTeam } from "../context/TeamContext";
 import { Platform, View } from "react-native";
 
 const Tab = createBottomTabNavigator();
 
 const TabNavigator = () => {
   const { width } = useDimension();
-  const { teamColor } = useTeam(); // 팀 색상 가져오기
+  const { teamColor } = useTeam();
+
+  const deviceWidth = Platform.OS === "web" ? 390 : Math.min(width, 430);
 
   return (
     <View
       style={{
         flex: 1,
-        maxWidth: width,
+        maxWidth: deviceWidth,
         width: "100%",
         alignSelf: "center",
         position: "relative",
@@ -38,22 +40,22 @@ const TabNavigator = () => {
             backgroundColor: "white",
             borderTopWidth: 1,
             borderTopColor: "#eeeeee",
-            height: 60,
+            height: Platform.OS === "ios" ? 65 : 50,
+            paddingBottom: Platform.OS === "ios" ? 15 : 5,
             elevation: 0,
             shadowOpacity: 0,
             shadowOffset: { width: 0, height: 0 },
             shadowRadius: 0,
           },
-          // 하드코딩된 색상을 teamColor로 변경
-          tabBarActiveTintColor: teamColor.primary, // 팀 색상 동적 적용
+          tabBarActiveTintColor: teamColor.primary,
           tabBarInactiveTintColor: "#333333",
           tabBarLabelStyle: {
-            fontSize: 12,
+            fontSize: 10,
             fontWeight: "500",
-            marginBottom: 5,
+            marginBottom: Platform.OS === "ios" ? 0 : 3,
           },
           tabBarIcon: ({ focused, color, size }) => {
-            let iconName;
+            let iconName: keyof typeof Ionicons.glyphMap = "home";
 
             if (route.name === "홈") {
               iconName = focused ? "home" : "home-outline";
@@ -69,7 +71,7 @@ const TabNavigator = () => {
           },
         })}
         sceneContainerStyle={{
-          backgroundColor: "transparent",
+          backgroundColor: "#f8f9fa",
         }}
       >
         <Tab.Screen name="홈" component={MainPage} />
@@ -81,4 +83,4 @@ const TabNavigator = () => {
   );
 };
 
-export default TabNavigator;
+export default TabNavigator; 

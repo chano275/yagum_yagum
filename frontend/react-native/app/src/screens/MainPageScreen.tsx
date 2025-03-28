@@ -9,14 +9,24 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
-import { useTeam } from "@/context/TeamContext";
+import { useTeam } from "../context/TeamContext";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { RootStackParamList } from "../navigation/AppNavigator";
+import { useNavigation } from "@react-navigation/native";
 
-// 동적 스타일링을 위한 인터페이스
+type MainPageNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type TabNavigationProp = BottomTabNavigationProp<{
+  홈: undefined;
+  적금내역: undefined;
+  리포트: undefined;
+  혜택: undefined;
+}>;
+
 interface StyledProps {
   width: number;
 }
 
-// 모바일 기준 너비 설정 (HomeScreen과 동일)
 const BASE_MOBILE_WIDTH = 390;
 const MAX_MOBILE_WIDTH = 430;
 
@@ -167,6 +177,7 @@ const ViewAllLink = styled.Text<StyledProps & { teamColor: string }>`
   color: ${(props) => props.teamColor};
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
+
 const CardContent = styled.View<StyledProps>`
   padding: ${({ width }) => width * 0.03}px;
 `;
@@ -242,7 +253,8 @@ const ScheduleTime = styled.Text<StyledProps>`
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
-const MainPage = ({ navigation }) => {
+const MainPage = () => {
+  const navigation = useNavigation<MainPageNavigationProp>();
   const { teamColor } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
   const width =
@@ -250,17 +262,14 @@ const MainPage = ({ navigation }) => {
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
 
-  // 상태 변수로 금액 정보 관리 (추후 API에서 받아올 예정)
   const [currentAmount, setCurrentAmount] = useState(300000);
   const [targetAmount, setTargetAmount] = useState(500000);
 
-  // 진행률 계산 (최대 100%로 제한)
   const percentage = Math.min(
     100,
     Math.round((currentAmount / targetAmount) * 100)
   );
 
-  // 금액 포맷팅 함수
   const formatAmount = (amount: number) => {
     return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
@@ -269,13 +278,12 @@ const MainPage = ({ navigation }) => {
     <AppWrapper>
       <MobileContainer width={width}>
         <StatusBar style="light" />
-        {/* 헤더 부분 - 팀 색상 적용 */}
         <Header width={width} teamColor={teamColor.primary}>
           <HeaderTitle width={width}>야금야금 - KIA 타이거즈</HeaderTitle>
           <TouchableOpacity>
             <BellIcon
               source={require("../../assets/icon.png")}
-              tintColor="yellow"
+              // tintColor="yellow"
             />
           </TouchableOpacity>
         </Header>
@@ -286,7 +294,6 @@ const MainPage = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
           >
-            {/* 유니폼 구매 진행 상황 - 팀 색상 적용 */}
             <ProgressSection width={width} teamColor={teamColor.primary}>
               <ProgressTitle width={width}>유니폼 구매</ProgressTitle>
               <ProgressAmount width={width}>
@@ -300,7 +307,6 @@ const MainPage = ({ navigation }) => {
               </ProgressPercent>
             </ProgressSection>
 
-            {/* 금리 및 팀 순위 정보 */}
             <StatsRow width={width}>
               <StatText width={width}>
                 현재 금리: 3.5% <StatHighlight>+0.4%</StatHighlight>
@@ -311,7 +317,6 @@ const MainPage = ({ navigation }) => {
             </StatsRow>
 
             <View style={{ padding: width * 0.04 }}>
-              {/* 카드 내용들 */}
               <Card width={width}>
                 <CardHeader width={width}>
                   <CardTitle width={width}>오늘의 적금 비교</CardTitle>
@@ -324,9 +329,7 @@ const MainPage = ({ navigation }) => {
                 </CardContent>
               </Card>
 
-              {/* 적금 규칙 */}
               <Card width={width}>
-                {/* 카드 내용 유지 */}
                 <CardHeader width={width}>
                   <CardTitle width={width}>적금 규칙</CardTitle>
                 </CardHeader>
@@ -337,12 +340,14 @@ const MainPage = ({ navigation }) => {
                 </CardContent>
               </Card>
 
-              {/* 최근 적금 내역 카드 - 링크와 금액에 팀 색상 적용 */}
               <Card width={width}>
                 <CardHeader width={width}>
                   <CardTitle width={width}>최근 적금 내역</CardTitle>
                   <TouchableOpacity
-                    onPress={() => navigation.navigate("적금내역")} // 탭 이름으로 네비게이션
+                    onPress={() => {
+                      // @ts-ignore
+                      navigation.navigate("Main", { screen: "적금내역" });
+                    }}
                   >
                     <ViewAllLink width={width} teamColor={teamColor.primary}>
                       전체 내역 &gt;
@@ -385,7 +390,6 @@ const MainPage = ({ navigation }) => {
                 </CardContent>
               </Card>
 
-              {/* 다음 경기 일정 카드 - 링크에 팀 색상 적용 */}
               <Card width={width}>
                 <CardHeader width={width}>
                   <CardTitle width={width}>다음 경기 일정</CardTitle>

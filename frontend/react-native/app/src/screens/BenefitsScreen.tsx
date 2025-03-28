@@ -16,7 +16,7 @@ interface StyledProps {
   width: number;
 }
 
-// 모바일 기준 너비 설정 (HomeScreen과 동일)
+// 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
 const MAX_MOBILE_WIDTH = 430;
 
@@ -66,115 +66,9 @@ const BellIcon = styled.Image`
   height: 24px;
 `;
 
-const ProgressSection = styled.View<StyledProps & { teamColor: string }>`
-  background-color: ${(props) => props.teamColor};
-  padding: ${({ width }) => width * 0.04}px;
-  padding-top: ${({ width }) => width * 0.02}px;
-`;
-
-const ProgressTitle = styled.Text<StyledProps>`
-  color: white;
-  font-size: ${({ width }) => width * 0.04}px;
-  font-family: ${({ theme }) => theme.fonts.medium};
-`;
-
-const ProgressAmount = styled.Text<StyledProps>`
-  color: white;
-  font-size: ${({ width }) => width * 0.035}px;
-  margin-vertical: ${({ width }) => width * 0.02}px;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const ProgressBarContainer = styled.View<StyledProps>`
-  height: ${({ width }) => width * 0.02}px;
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: ${({ width }) => width * 0.01}px;
-  overflow: hidden;
-`;
-
-const ProgressFill = styled.View`
-  height: 100%;
-  width: 100%;
-  background-color: #2196f3;
-  border-radius: 4px;
-`;
-
-const ProgressPercent = styled.Text<StyledProps>`
-  color: white;
-  font-size: ${({ width }) => width * 0.03}px;
-  text-align: right;
-  margin-top: ${({ width }) => width * 0.01}px;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const StatsRow = styled.View<StyledProps>`
-  flex-direction: row;
-  justify-content: space-between;
-  padding: ${({ width }) => width * 0.04}px;
-  background-color: white;
-  border-bottom-width: 1px;
-  border-bottom-color: #eeeeee;
-`;
-
-const StatText = styled.Text<StyledProps>`
-  font-size: ${({ width }) => width * 0.035}px;
-  color: #333;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const StatHighlight = styled.Text`
-  color: #4caf50;
-  font-weight: bold;
-  font-family: ${({ theme }) => theme.fonts.bold};
-`;
-
-const CardsContainer = styled.ScrollView<StyledProps>`
-  flex: 1;
-  padding: ${({ width }) => width * 0.04}px;
-`;
-
-const Card = styled.View<StyledProps>`
-  background-color: white;
-  border-radius: ${({ width }) => width * 0.02}px;
-  margin-bottom: ${({ width }) => width * 0.04}px;
-  overflow: hidden;
-  border-width: 1px;
-  border-color: #eeeeee;
-  ${Platform.OS === "web" &&
-  `
-    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
-  `}
-`;
-
-const CardHeader = styled.View<StyledProps>`
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  padding: ${({ width }) => width * 0.03}px;
-  border-bottom-width: 1px;
-  border-bottom-color: #eeeeee;
-`;
-
-const CardTitle = styled.Text<StyledProps>`
-  font-size: ${({ width }) => width * 0.04}px;
-  font-weight: bold;
-  color: #333;
-  font-family: ${({ theme }) => theme.fonts.bold};
-`;
-
 const ViewAllLink = styled.Text<StyledProps & { teamColor: string }>`
   font-size: ${({ width }) => width * 0.03}px;
   color: ${(props) => props.teamColor};
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-const CardContent = styled.View<StyledProps>`
-  padding: ${({ width }) => width * 0.03}px;
-`;
-
-const CardText = styled.Text<StyledProps>`
-  font-size: ${({ width }) => width * 0.035}px;
-  color: #333;
-  line-height: ${({ width }) => width * 0.05}px;
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
@@ -242,7 +136,109 @@ const ScheduleTime = styled.Text<StyledProps>`
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
-const MainPage = () => {
+const ProgressSection = styled.View<StyledProps & { teamColor: string }>`
+  background-color: ${(props) => props.teamColor};
+  padding: ${({ width }) => width * 0.04}px;
+  padding-top: ${({ width }) => width * 0.02}px;
+`;
+
+const ProgressTitle = styled.Text<StyledProps>`
+  color: white;
+  font-size: ${({ width }) => width * 0.04}px;
+  font-family: ${({ theme }) => theme.fonts.medium};
+`;
+
+const ProgressAmount = styled.Text<StyledProps>`
+  color: white;
+  font-size: ${({ width }) => width * 0.035}px;
+  margin-vertical: ${({ width }) => width * 0.02}px;
+  font-family: ${({ theme }) => theme.fonts.regular};
+`;
+
+const ProgressBarContainer = styled.View<StyledProps>`
+  height: ${({ width }) => width * 0.02}px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: ${({ width }) => width * 0.01}px;
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.View`
+  height: 100%;
+  width: 100%;
+  background-color: #2196f3;
+  border-radius: 4px;
+`;
+
+const ProgressPercent = styled.Text<StyledProps>`
+  color: white;
+  font-size: ${({ width }) => width * 0.03}px;
+  text-align: right;
+  margin-top: ${({ width }) => width * 0.01}px;
+  font-family: ${({ theme }) => theme.fonts.regular};
+`;
+
+const StatsRow = styled.View<StyledProps>`
+  flex-direction: row;
+  justify-content: space-between;
+  padding: ${({ width }) => width * 0.04}px;
+  background-color: white;
+  border-bottom-width: 1px;
+  border-bottom-color: #eeeeee;
+`;
+
+const StatText = styled.Text<StyledProps>`
+  color: #333;
+  font-size: ${({ width }) => width * 0.035}px;
+  font-family: ${({ theme }) => theme.fonts.regular};
+`;
+
+const StatHighlight = styled.Text`
+  color: #4caf50;
+  font-weight: bold;
+  font-family: ${({ theme }) => theme.fonts.bold};
+`;
+
+const Card = styled.View<StyledProps>`
+  background-color: white;
+  border-radius: ${({ width }) => width * 0.02}px;
+  margin-bottom: ${({ width }) => width * 0.04}px;
+  overflow: hidden;
+  border-width: 1px;
+  border-color: #eeeeee;
+  ${Platform.OS === "web" &&
+  `
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
+  `}
+`;
+
+const CardHeader = styled.View<StyledProps>`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: ${({ width }) => width * 0.03}px;
+  border-bottom-width: 1px;
+  border-bottom-color: #eeeeee;
+`;
+
+const CardTitle = styled.Text<StyledProps>`
+  font-size: ${({ width }) => width * 0.04}px;
+  font-weight: bold;
+  color: #333;
+  font-family: ${({ theme }) => theme.fonts.bold};
+`;
+
+const CardContent = styled.View<StyledProps>`
+  padding: ${({ width }) => width * 0.03}px;
+`;
+
+const CardText = styled.Text<StyledProps>`
+  font-size: ${({ width }) => width * 0.035}px;
+  color: #333;
+  line-height: ${({ width }) => width * 0.05}px;
+  font-family: ${({ theme }) => theme.fonts.regular};
+`;
+
+const BenefitsScreen = () => {
   const { teamColor } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
   const width =
@@ -250,17 +246,24 @@ const MainPage = () => {
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
 
+  const [currentAmount, setCurrentAmount] = useState(300000);
+  const [targetAmount, setTargetAmount] = useState(500000);
+
+  const percentage = Math.min(
+    100,
+    Math.round((currentAmount / targetAmount) * 100)
+  );
+
   return (
     <AppWrapper>
       <MobileContainer width={width}>
         <StatusBar style="light" />
-        {/* 헤더 부분 - 팀 색상 적용 */}
         <Header width={width} teamColor={teamColor.primary}>
           <HeaderTitle width={width}>혜택 페이지</HeaderTitle>
           <TouchableOpacity>
             <BellIcon
               source={require("../../assets/icon.png")}
-              tintColor="yellow"
+              style={{ tintColor: "yellow" }}
             />
           </TouchableOpacity>
         </Header>
@@ -271,19 +274,17 @@ const MainPage = () => {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
           >
-            {/* 유니폼 구매 진행 상황 - 팀 색상 적용 */}
             <ProgressSection width={width} teamColor={teamColor.primary}>
               <ProgressTitle width={width}>유니폼 구매</ProgressTitle>
               <ProgressAmount width={width}>
-                487,000원 / 300,000원
+                {currentAmount.toLocaleString()}원 / {targetAmount.toLocaleString()}원
               </ProgressAmount>
               <ProgressBarContainer width={width}>
                 <ProgressFill />
               </ProgressBarContainer>
-              <ProgressPercent width={width}>100% 달성</ProgressPercent>
+              <ProgressPercent width={width}>{percentage}% 달성</ProgressPercent>
             </ProgressSection>
 
-            {/* 금리 및 팀 순위 정보 */}
             <StatsRow width={width}>
               <StatText width={width}>
                 현재 금리: 3.5% <StatHighlight>+0.4%</StatHighlight>
@@ -294,7 +295,6 @@ const MainPage = () => {
             </StatsRow>
 
             <View style={{ padding: width * 0.04 }}>
-              {/* 카드 내용들 */}
               <Card width={width}>
                 <CardHeader width={width}>
                   <CardTitle width={width}>오늘의 적금 비교</CardTitle>
@@ -307,9 +307,7 @@ const MainPage = () => {
                 </CardContent>
               </Card>
 
-              {/* 적금 규칙 */}
               <Card width={width}>
-                {/* 카드 내용 유지 */}
                 <CardHeader width={width}>
                   <CardTitle width={width}>적금 규칙</CardTitle>
                 </CardHeader>
@@ -320,7 +318,6 @@ const MainPage = () => {
                 </CardContent>
               </Card>
 
-              {/* 최근 적금 내역 카드 - 링크와 금액에 팀 색상 적용 */}
               <Card width={width}>
                 <CardHeader width={width}>
                   <CardTitle width={width}>최근 적금 내역</CardTitle>
@@ -366,7 +363,6 @@ const MainPage = () => {
                 </CardContent>
               </Card>
 
-              {/* 다음 경기 일정 카드 - 링크에 팀 색상 적용 */}
               <Card width={width}>
                 <CardHeader width={width}>
                   <CardTitle width={width}>다음 경기 일정</CardTitle>
@@ -402,4 +398,4 @@ const MainPage = () => {
   );
 };
 
-export default MainPage;
+export default BenefitsScreen; 

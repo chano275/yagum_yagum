@@ -1,4 +1,3 @@
-// src/screens/HomeScreen.tsx
 import React from "react";
 import {
   View,
@@ -8,8 +7,12 @@ import {
   SafeAreaView,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "@/navigation/AppNavigator";
 
-const HomeScreen = ({ navigation }) => {
+type ServiceScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, "Service">;
+
+const ServiceScreen = ({ navigation }: { navigation: ServiceScreenNavigationProp }) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="auto" />
@@ -49,4 +52,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen;
+export default ServiceScreen; 

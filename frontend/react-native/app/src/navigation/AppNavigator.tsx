@@ -1,24 +1,38 @@
-// src/navigation/AppNavigator.tsx
-import React from "react";
-import { createStackNavigator } from "@react-navigation/stack";
-import HomeScreen from "../screens/Home_Screen";
-import TabNavigator from "./TabNavigator";
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import HomeScreen from '../screens/HomeScreen';
+import LoginScreen from '../screens/LoginScreen';
+import SavingsJoinScreen from '../screens/SavingsJoinScreen';
+import ServiceScreen from '../screens/ServiceScreen';
+import TabNavigator from './TabNavigator';
 
-const Stack = createStackNavigator();
+export type RootStackParamList = {
+  Home: undefined;
+  Login: undefined;
+  SavingsJoin: undefined;
+  Service: undefined;
+  Main: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
   return (
-    <Stack.Navigator
-      initialRouteName="HomeScreen" // "Home"에서 "HomeScreen"으로 변경
-      screenOptions={{ headerShown: false }}
-    >
-      <Stack.Screen
-        name="HomeScreen" // "Home"에서 "HomeScreen"으로 변경
-        component={HomeScreen}
-      />
-      <Stack.Screen name="Main" component={TabNavigator} />
-    </Stack.Navigator>
+    <NavigationContainer>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="SavingsJoin" component={SavingsJoinScreen} />
+        <Stack.Screen name="Service" component={ServiceScreen} />
+        <Stack.Screen name="Main" component={TabNavigator} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 };
 
-export default AppNavigator;
+export default AppNavigator; 
