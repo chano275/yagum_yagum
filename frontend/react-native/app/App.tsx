@@ -14,8 +14,8 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import axios from "axios";
 
 // API 기본 URL 설정
-axios.defaults.baseURL = 'http://localhost:8000';
-
+// axios.defaults.baseURL = 'http://localhost:8000';
+axios.defaults.baseURL = 'http://3.38.183:8000';
 // 안전한 개발을 위해 tintColor 경고 무시
 LogBox.ignoreLogs(["Image: style.tintColor is deprecated"]);
 
