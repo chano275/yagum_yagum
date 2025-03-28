@@ -30,6 +30,7 @@ origins = [
     # "http://localhost:8000",
     "http://3.38.183.156",
     "http://3.38.183.156:8081",  # 프론트엔드 주소
+    "http://j12b206.p.ssafy.io",
 
 ]
 
