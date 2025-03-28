@@ -1,71 +1,46 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { Platform } from 'react-native';
-import { ThemeProvider } from 'styled-components/native';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { RootSiblingParent } from 'react-native-root-siblings';
-import { theme } from './src/styles/theme';
-import HomeScreen from './src/screens/HomeScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import SavingsJoinScreen from './src/screens/SavingsJoinScreen';
+// App.tsx
+import "@expo/metro-runtime";
+import React from "react";
+import { Platform, LogBox } from "react-native";
+import { ThemeProvider } from "styled-components/native";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { RootSiblingParent } from "react-native-root-siblings";
+import { useFonts } from "expo-font";
+import { theme } from "./src/styles/theme";
+import { DimensionProvider } from "./src/context/DimensionContext";
+import { TeamProvider } from "./src/context/TeamContext";
+import AppNavigator from "./src/navigation/AppNavigator";
+import axios from "axios";
 
-const Stack = createStackNavigator();
+// API 기본 URL 설정
+axios.defaults.baseURL = 'http://localhost:8000';
 
-const linking = {
-  prefixes: [],
-  config: {
-    screens: {
-      Home: '',
-      Login: 'login',
-      SavingsJoin: 'savings-join'
-    }
-  }
-};
+// 안전한 개발을 위해 tintColor 경고 무시
+LogBox.ignoreLogs(["Image: style.tintColor is deprecated"]);
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    "Pretendard-Bold": require("./assets/fonts/Pretendard-Bold.otf"),
+    "Pretendard-Light": require("./assets/fonts/Pretendard-Light.otf"),
+    "Pretendard-Medium": require("./assets/fonts/Pretendard-Medium.otf"),
+    "Pretendard-Regular": require("./assets/fonts/Pretendard-Regular.otf"),
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider>
       <RootSiblingParent>
         <ThemeProvider theme={theme}>
-          <StatusBar style="auto" />
-          <NavigationContainer linking={Platform.OS === 'web' ? linking : undefined}>
-            <Stack.Navigator
-              initialRouteName="Home"
-              screenOptions={{
-                headerShown: false,
-                cardStyle: { 
-                  backgroundColor: 'transparent',
-                  maxWidth: Platform.OS === 'web' ? 390 : '100%',
-                  alignSelf: 'center'
-                },
-                cardStyleInterpolator: ({ current }) => ({
-                  cardStyle: {
-                    opacity: current.progress
-                  }
-                }),
-                transitionSpec: {
-                  open: {
-                    animation: 'timing',
-                    config: {
-                      duration: 300
-                    }
-                  },
-                  close: {
-                    animation: 'timing',
-                    config: {
-                      duration: 300
-                    }
-                  }
-                }
-              }}
-            >
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="SavingsJoin" component={SavingsJoinScreen} />
-            </Stack.Navigator>
-          </NavigationContainer>
+          <DimensionProvider>
+            <TeamProvider>
+              <StatusBar style="auto" />
+              <AppNavigator />
+            </TeamProvider>
+          </DimensionProvider>
         </ThemeProvider>
       </RootSiblingParent>
     </SafeAreaProvider>

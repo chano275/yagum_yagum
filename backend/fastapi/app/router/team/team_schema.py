@@ -200,7 +200,7 @@ class TeamMonthlyStatsResponse(BaseModel):
 class TeamPlayerBasicInfo(BaseModel):
     PLAYER_ID: int
     PLAYER_NAME: str
-    PLAYER_NUM: int
+    PLAYER_NUM: str
     PLAYER_TYPE_ID: int
     player_type_name: str
     PLAYER_IMAGE_URL: Optional[str] = None

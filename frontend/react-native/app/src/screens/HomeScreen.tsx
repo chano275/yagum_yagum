@@ -679,6 +679,23 @@ const HomeScreen = () => {
                     </ServiceTitleContainer>
                   </AnimatedServiceCard>
                 </RecommendSection>
+                {isLoggedIn && (
+                  <TouchableOpacity 
+                    style={{ 
+                      backgroundColor: '#2D5BFF',
+                      padding: width * 0.03,
+                      borderRadius: width * 0.02,
+                      marginTop: width * 0.03
+                    }}
+                    onPress={() => {
+                      navigation.navigate('Service');
+                    }}
+                  >
+                    <ButtonLabel width={width} style={{ color: "#FFFFFF" }}>
+                      서비스 보기
+                    </ButtonLabel>
+                  </TouchableOpacity>
+                )}
               </Container>
             </AnimatedScrollView>
           </SafeAreaView>

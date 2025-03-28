@@ -105,3 +105,16 @@ class TeamRecordResponse(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+
+class UserTeamGameScheduleResponse(BaseModel):
+    GAME_SCHEDULE_KEY: int
+    DATE: date
+    HOME_TEAM_ID: int
+    AWAY_TEAM_ID: int
+    home_team_name: str
+    away_team_name: str
+    is_home: bool
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True

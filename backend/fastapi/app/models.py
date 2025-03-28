@@ -75,7 +75,7 @@ class Player(Base):
 
     PLAYER_ID = Column(Integer, primary_key=True)
     TEAM_ID = Column(Integer, ForeignKey("team.TEAM_ID"), nullable=False)
-    PLAYER_NUM = Column(Integer)
+    PLAYER_NUM = Column(String(10))
     PLAYER_TYPE_ID = Column(Integer, ForeignKey("player_type.PLAYER_TYPE_ID"), nullable=False)
     PLAYER_NAME = Column(String(20))
     PLAYER_IMAGE_URL = Column(String(255))
