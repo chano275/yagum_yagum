@@ -177,3 +177,33 @@ async def get_player_run_history(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"선수 출전 기록 조회 중 오류 발생: {str(e)}"
         )
+
+@router.get("/{team_id}", response_model=List[player_schema.PlayerResponse])
+async def read_players_by_team(
+    team_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    try:
+        logger.info(f"팀 ID {team_id}에 속한 선수 목록 조회: skip={skip}, limit={limit}")
+        
+        # 팀 존재 여부 확인
+        team = db.query(models.Team).filter(models.Team.TEAM_ID == team_id).first()
+        if not team:
+            logger.warning(f"존재하지 않는 팀: {team_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="존재하지 않는 팀입니다"
+            )
+            
+        players = player_crud.get_players_by_team(db, team_id, skip, limit)
+        return players
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"팀별 선수 목록 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"팀별 선수 목록 조회 중 오류 발생: {str(e)}"
+        )

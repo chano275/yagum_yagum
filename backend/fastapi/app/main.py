@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import os
 
 # 라우터 임포트
 from router.user.user_router import router as user_router
@@ -24,15 +25,9 @@ app = FastAPI(
 )
 
 # CORS 설정
-origins = [
-    # "http://localhost",
-    # "http://localhost:8081",  # 프론트엔드 주소
-    # "http://localhost:8000",
-    "http://3.38.183.156",
-    "http://3.38.183.156:8081",  # 프론트엔드 주소
-    "http://j12b206.p.ssafy.io",
-
-]
+# .env 파일에서 CORS_ORIGINS 가져오기
+origins_str = os.getenv("CORS_ORIGINS", "")
+origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,

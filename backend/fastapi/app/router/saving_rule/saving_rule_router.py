@@ -52,42 +52,88 @@ async def read_record_types(
         )
 
 # 모든 적금 규칙 조회
-@router.get("/rules", response_model=List[saving_rule_schema.SavingRuleListDetailResponse])
+@router.get("/rules", response_model=List[dict])
 async def read_saving_rules(
-    saving_rule_type_id: Optional[int] = None,
-    record_type_id: Optional[int] = None,
-    skip: int = 0,
-    limit: int = 100,
+    player_id: Optional[int] = None,  # 추가된 파라미터
     db: Session = Depends(get_db)
 ):
     try:
-        logger.info(f"적금 규칙 목록 조회: 타입={saving_rule_type_id}, 기록 타입={record_type_id}")
+        logger.info("적금 규칙 타입별 목록 조회")
         
-        # 필터에 따라 조회
-        if saving_rule_type_id:
-            rules = saving_rule_crud.get_saving_rules_by_type(db, saving_rule_type_id, skip, limit)
-        elif record_type_id:
-            rules = saving_rule_crud.get_saving_rules_by_record_type(db, record_type_id, skip, limit)
-        else:
-            rules = saving_rule_crud.get_all_saving_rules(db, skip, limit)
+        # 선수 정보 조회 (player_id가 제공된 경우)
+        player = None
+        if player_id:
+            player = db.query(models.Player).filter(models.Player.PLAYER_ID == player_id).first()
+            if not player:
+                logger.warning(f"존재하지 않는 선수 ID: {player_id}")
         
-        # 응답 형식에 맞게 변환
+        # 모든 적금 규칙 타입 조회
+        rule_types = saving_rule_crud.get_all_saving_rule_types(db)
+        
         result = []
-        for rule in rules:
-            # 적금 규칙 타입 정보 조회
-            rule_type = saving_rule_crud.get_saving_rule_type_by_id(db, rule.SAVING_RULE_TYPE_ID)
+        for rule_type in rule_types:
+            # 각 규칙 타입에 대한 상세 정보를 담을 딕셔너리
+            type_dict = {
+                "SAVING_RULE_TYPE_ID": rule_type.SAVING_RULE_TYPE_ID,
+                "SAVING_RULE_TYPE_NAME": rule_type.SAVING_RULE_TYPE_NAME,
+                "details": []
+            }
             
-            # 기록 타입 정보 조회
-            record_type = saving_rule_crud.get_record_type_by_id(db, rule.RECORD_TYPE_ID)
+            # 이 규칙 타입과 관련된 모든 상세 규칙 조회
+            rule_details = db.query(models.SavingRuleDetail).filter(
+                models.SavingRuleDetail.SAVING_RULE_TYPE_ID == rule_type.SAVING_RULE_TYPE_ID
+            ).all()
             
-            # 결과 구성
-            result.append({
-                "SAVING_RULE_ID": rule.SAVING_RULE_ID,
-                "SAVING_RULE_TYPE_ID": rule.SAVING_RULE_TYPE_ID,
-                "RECORD_TYPE_ID": rule.RECORD_TYPE_ID,
-                "saving_rule_type": rule_type,
-                "record_type": record_type
-            })
+            for detail in rule_details:
+                # 선수 타입 정보 조회 (있는 경우)
+                player_type = None
+                if detail.PLAYER_TYPE_ID:
+                    player_type = db.query(models.PlayerType).filter(
+                        models.PlayerType.PLAYER_TYPE_ID == detail.PLAYER_TYPE_ID
+                    ).first()
+                
+                # 적금 규칙 정보 조회
+                saving_rule = db.query(models.SavingRuleList).filter(
+                    models.SavingRuleList.SAVING_RULE_ID == detail.SAVING_RULE_ID
+                ).first()
+                
+                if not saving_rule:
+                    continue
+                
+                # 기록 타입 정보 조회
+                record_type = db.query(models.RecordType).filter(
+                    models.RecordType.RECORD_TYPE_ID == saving_rule.RECORD_TYPE_ID
+                ).first()
+                
+                if not record_type:
+                    continue
+                
+                # 기본 룰 설명 가져오기
+                rule_description = detail.RULE_DESCRIPTION
+                
+                # player_type_id가 None이 아니고 player_id가 제공되었다면, 선수 이름을 룰 설명 앞에 붙이기
+                if detail.PLAYER_TYPE_ID is not None and player:
+                    # player_type_id가 선수의 타입과 일치하는지 확인
+                    if player.PLAYER_TYPE_ID == detail.PLAYER_TYPE_ID:
+                        # 선수 이름을 룰 설명 앞에 붙이기
+                        if rule_description.startswith("이(가)"):
+                            rule_description = f"{player.PLAYER_NAME} {rule_description}"
+                
+                detail_dict = {
+                    "SAVING_RULE_DETAIL_ID": detail.SAVING_RULE_DETAIL_ID,
+                    "PLAYER_TYPE_ID": detail.PLAYER_TYPE_ID,
+                    "PLAYER_TYPE_NAME": player_type.PLAYER_TYPE_NAME if player_type else None,
+                    "SAVING_RULE_ID": detail.SAVING_RULE_ID,
+                    "RULE_DESCRIPTION": rule_description,
+                    "RECORD_TYPE_ID": saving_rule.RECORD_TYPE_ID,
+                    "RECORD_NAME": record_type.RECORD_NAME
+                }
+                
+                type_dict["details"].append(detail_dict)
+            
+            # 상세 정보가 있는 경우에만 결과에 추가
+            if type_dict["details"]:
+                result.append(type_dict)
         
         return result
     except Exception as e:
@@ -343,24 +389,22 @@ async def create_user_saving_rule_simplified(
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"간소화된 적금 규칙 생성 시도: 계정 ID {user_rule.ACCOUNT_ID}")
+        # 사용자의 계정 조회 (첫 번째 계정 사용)
+        accounts = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).all()
         
-        # 계정 존재 여부 및 권한 확인
-        account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == user_rule.ACCOUNT_ID).first()
-        if not account:
-            logger.warning(f"존재하지 않는 계정: {user_rule.ACCOUNT_ID}")
+        if not accounts:
+            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="존재하지 않는 계정입니다"
+                detail="연결된 계정이 없습니다"
             )
-            
-        if account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="이 계정에 적금 규칙을 생성할 권한이 없습니다"
-            )
-            
+        
+        # 첫 번째 계정 사용
+        account = accounts[0]
+        account_id = account.ACCOUNT_ID
+        
+        logger.info(f"간소화된 적금 규칙 생성 시도: 사용자 ID {current_user.USER_ID}, 계정 ID {account_id}")
+        
         # 적금 규칙 타입 확인
         rule_type = saving_rule_crud.get_saving_rule_type_by_id(db, user_rule.SAVING_RULE_TYPE_ID)
         if not rule_type:
@@ -434,7 +478,7 @@ async def create_user_saving_rule_simplified(
         
         # 중복 확인
         existing_query = db.query(models.UserSavingRule).filter(
-            models.UserSavingRule.ACCOUNT_ID == user_rule.ACCOUNT_ID,
+            models.UserSavingRule.ACCOUNT_ID == account_id,  # 수정된 부분
             models.UserSavingRule.SAVING_RULE_DETAIL_ID == rule_detail.SAVING_RULE_DETAIL_ID
         )
         
@@ -446,7 +490,7 @@ async def create_user_saving_rule_simplified(
         existing_rule = existing_query.first()
         
         if existing_rule:
-            logger.warning(f"이미 등록된 적금 규칙: 계정 ID {user_rule.ACCOUNT_ID}, 규칙 상세 ID {rule_detail.SAVING_RULE_DETAIL_ID}")
+            logger.warning(f"이미 등록된 적금 규칙: 계정 ID {account_id}, 규칙 상세 ID {rule_detail.SAVING_RULE_DETAIL_ID}")
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="이미 등록된 적금 규칙입니다"
@@ -462,7 +506,7 @@ async def create_user_saving_rule_simplified(
         
         # 완성된 사용자 적금 규칙 생성 객체
         complete_user_rule = {
-            "ACCOUNT_ID": user_rule.ACCOUNT_ID,
+            "ACCOUNT_ID": account_id,  # 수정된 부분
             "SAVING_RULE_TYPE_ID": user_rule.SAVING_RULE_TYPE_ID,
             "SAVING_RULE_DETAIL_ID": rule_detail.SAVING_RULE_DETAIL_ID,
             "USER_SAVING_RULED_AMOUNT": user_rule.USER_SAVING_RULED_AMOUNT,

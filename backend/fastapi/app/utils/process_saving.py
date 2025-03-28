@@ -121,9 +121,77 @@ def process_savings_for_date(game_date=None, session=None):
                     # 응원 팀의 통계 조회
                     team_id = account.TEAM_ID
                     
-                    if (team_id in team_stats and 
-                        record_type_id in team_stats[team_id] and 
-                        team_stats[team_id][record_type_id] > 0):
+                    # 스윕 규칙 처리 (기록 유형 ID가 7인 경우, 스윕)
+                    if record_type_id == 7:  # 스윕 기록 처리
+                        # 최근 3일간의 날짜 계산
+                        three_days_ago = game_date - timedelta(days=2)  # 오늘 포함 3일
+                        
+                        # 최근 3일간의 게임 일정 조회
+                        recent_games = session.query(models.GameSchedule).filter(
+                            models.GameSchedule.DATE >= three_days_ago,
+                            models.GameSchedule.DATE <= game_date,
+                            ((models.GameSchedule.HOME_TEAM_ID == team_id) | 
+                             (models.GameSchedule.AWAY_TEAM_ID == team_id))
+                        ).order_by(models.GameSchedule.DATE).all()
+                        
+                        # 최근 3일간의 승리 기록 조회 (기록 유형 ID가 1인 경우, 승리)
+                        recent_wins = session.query(models.GameLog).filter(
+                            models.GameLog.DATE >= three_days_ago,
+                            models.GameLog.DATE <= game_date,
+                            models.GameLog.TEAM_ID == team_id,
+                            models.GameLog.RECORD_TYPE_ID == 1  # 승리 기록 유형
+                        ).order_by(models.GameLog.DATE).all()
+                        
+                        # 스윕 확인
+                        sweep_count = 0
+                        
+                        # 최근 3경기가 있는지 확인
+                        if len(recent_games) >= 3:
+                            # 경기 상대팀 확인
+                            opponents = []
+                            for game in recent_games:
+                                if game.HOME_TEAM_ID == team_id:
+                                    opponents.append(game.AWAY_TEAM_ID)
+                                else:
+                                    opponents.append(game.HOME_TEAM_ID)
+                            
+                            # 최근 3경기의 상대팀이 모두 같은지 확인
+                            if len(set(opponents[:3])) == 1:  # 첫 3개의 상대팀이 동일한지 확인
+                                # 최근 3일간 이 팀의 승리 횟수 확인
+                                if len(recent_wins) >= 3:
+                                    # 동일한 상대에 대한 3연승 확인
+                                    # 여기서는 단순화를 위해 3일 연속 승리가 있으면 스윕으로 간주
+                                    # 실제로는 각 경기 일정과 승리 기록을 보다 정확히 매칭해야 함
+                                    sweep_count = 1
+                                    print(f"스윕 감지: 팀 {team_id}가 최근 3일간 동일한 상대팀 {opponents[0]}에 대해 연승")
+                        
+                        # 스윕이 확인되면 적립금 처리
+                        if sweep_count > 0:
+                            # 적립 금액 계산
+                            saving_amount = rule.USER_SAVING_RULED_AMOUNT * sweep_count
+                            
+                            # DailySaving에 기록
+                            daily_saving = models.DailySaving(
+                                ACCOUNT_ID=account.ACCOUNT_ID,
+                                DATE=game_date,
+                                SAVING_RULED_DETAIL_ID=rule.SAVING_RULE_DETAIL_ID,
+                                SAVING_RULED_TYPE_ID=rule.SAVING_RULE_TYPE_ID,
+                                COUNT=sweep_count,
+                                DAILY_SAVING_AMOUNT=saving_amount,
+                                created_at=datetime.now()
+                            )
+                            session.add(daily_saving)
+                            
+                            # 계정 잔액 업데이트
+                            account_total_saved += saving_amount
+                            account_savings_count += 1
+                            
+                            print(f"계정 {account.ACCOUNT_ID}: 기본 규칙 - 스윕 {sweep_count}회 발생, {saving_amount}원 적립")
+                    
+                    # 일반 기록 처리 (스윕 외 다른 기록)
+                    elif (team_id in team_stats and 
+                          record_type_id in team_stats[team_id] and 
+                          team_stats[team_id][record_type_id] > 0):
                         
                         count = team_stats[team_id][record_type_id]
                         
@@ -297,7 +365,7 @@ def process_savings_for_date(game_date=None, session=None):
     finally:
         if close_session:
             session.close()
-
+            
 def process_recent_days(days=7):
    """
    최근 n일간의 적금 적립을 처리합니다.
