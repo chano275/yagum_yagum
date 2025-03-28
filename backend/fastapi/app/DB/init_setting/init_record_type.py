@@ -17,65 +17,48 @@ session = Session()
 record_type = [
     {
         "name":"승리",
-        "comment":"팀이 승리할 경우"
+    },
+    {
+        "name":"패배",
+    },
+    {
+        "name":"무승부",
     },
     {
         "name":"안타",
-        "comment":"팀이 안타를 칠 경우"
     },
-        {
+    {
         "name":"홈런",
-        "comment":"팀이 홈런을 칠 경우"
     },
-        {
-        "name":"3연승",
-        "comment":"3연승을 달성할 경우"
+    {
+        "name":"득점",
     },
-        {
-        "name":"퀄리티 스타트",
-        "comment":"6이닝 이상 3자책점 이하로 던질 경우"
+    {
+        "name":"스윕",
     },
-        {
+    {
         "name":"삼진",
-        "comment":"삼진을 잡을 경우"
     },
-        {
-        "name":"볼넷",
-        "comment":"볼넷을 내줄 경우"
-    },
-        {
-        "name":"타점",
-        "comment":"타점을 기록할 경우"
-    },
-        {
+    {
         "name":"볼넷/몸맞공",
-        "comment":"볼넷이나 몸에 맞는 공으로 출루할 경우"
     },
-        {
-        "name":"삼진",
-        "comment":"삼진으로 아웃될 경우"
+    {
+        "name":"자책",
     },
-        {
+    {
         "name":"병살타",
-        "comment":"병살타를 칠 경우"
     },
-        {
-        "name":"안타",
-        "comment":"상대팀이 안타를 칠 경우"
-    },
-        {
-        "name":"홈런",
-        "comment":"상대팀이 홈런을 칠 경우"
-    },
-        {
+    {
         "name":"실책",
-        "comment":"상대팀이 실책을 할 경우"
     },
+    {
+        "name":"도루",
+    }
 ]
 
 # 초기 데이터 생성
 initial_record_type = [
-    models.RecordType(RECORD_TYPE_ID=i + 1, RECORD_NAME = type["name"],RECORD_COMMENT=type["comment"])
+    models.RecordType(RECORD_TYPE_ID=i + 1, RECORD_NAME = type["name"])
     for i, type in enumerate(record_type)
 ]
 
