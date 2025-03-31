@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   useWindowDimensions,
   SafeAreaView,
@@ -6,10 +6,12 @@ import {
   Platform,
   TouchableOpacity,
   View,
+  Text,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
 import { useTeam } from "@/context/TeamContext";
+import { Ionicons } from "@expo/vector-icons";
 
 // 동적 스타일링을 위한 인터페이스
 interface StyledProps {
@@ -61,71 +63,8 @@ const HeaderTitle = styled.Text<StyledProps>`
   font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
-const BellIcon = styled.Image`
-  width: 24px;
-  height: 24px;
-`;
-
-const ProgressSection = styled.View<StyledProps & { teamColor: string }>`
-  background-color: ${(props) => props.teamColor};
-  padding: ${({ width }) => width * 0.04}px;
-  padding-top: ${({ width }) => width * 0.02}px;
-`;
-
-const ProgressTitle = styled.Text<StyledProps>`
-  color: white;
-  font-size: ${({ width }) => width * 0.04}px;
-  font-family: ${({ theme }) => theme.fonts.medium};
-`;
-
-const ProgressAmount = styled.Text<StyledProps>`
-  color: white;
-  font-size: ${({ width }) => width * 0.035}px;
-  margin-vertical: ${({ width }) => width * 0.02}px;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const ProgressBarContainer = styled.View<StyledProps>`
-  height: ${({ width }) => width * 0.02}px;
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: ${({ width }) => width * 0.01}px;
-  overflow: hidden;
-`;
-
-const ProgressFill = styled.View<{ percentage: number }>`
-  height: 100%;
-  width: ${(props) => `${props.percentage}%`};
-  background-color: #ffffff;
-  border-radius: 4px;
-`;
-
-const ProgressPercent = styled.Text<StyledProps>`
-  color: white;
-  font-size: ${({ width }) => width * 0.03}px;
-  text-align: right;
-  margin-top: ${({ width }) => width * 0.01}px;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const StatsRow = styled.View<StyledProps>`
-  flex-direction: row;
-  justify-content: space-between;
-  padding: ${({ width }) => width * 0.04}px;
-  background-color: white;
-  border-bottom-width: 1px;
-  border-bottom-color: #eeeeee;
-`;
-
-const StatText = styled.Text<StyledProps>`
-  font-size: ${({ width }) => width * 0.035}px;
-  color: #333;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const StatHighlight = styled.Text`
-  color: #4caf50;
-  font-weight: bold;
-  font-family: ${({ theme }) => theme.fonts.bold};
+const BackButton = styled.TouchableOpacity`
+  padding: 8px;
 `;
 
 const Card = styled.View<StyledProps>`
@@ -161,84 +100,249 @@ const CardContent = styled.View<StyledProps>`
   padding: ${({ width }) => width * 0.03}px;
 `;
 
-const CardText = styled.Text<StyledProps>`
-  font-size: ${({ width }) => width * 0.035}px;
-  color: #333;
-  line-height: ${({ width }) => width * 0.05}px;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const ViewAllLink = styled.Text<StyledProps & { teamColor: string }>`
-  font-size: ${({ width }) => width * 0.03}px;
-  color: ${(props) => props.teamColor};
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const RedText = styled.Text<{ teamColor: string }>`
-  color: ${(props) => props.teamColor};
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const RuleText = styled.Text<StyledProps>`
-  font-size: ${({ width }) => width * 0.035}px;
-  color: #333;
-  margin-bottom: ${({ width }) => width * 0.01}px;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const HistoryItem = styled.View<StyledProps>`
+const SummaryItem = styled.View`
   flex-direction: row;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: ${({ width }) => width * 0.02}px;
+  padding: 8px 0;
+  border-bottom-width: 1px;
+  border-bottom-color: #f0f0f0;
 `;
 
-const TeamLogo = styled.Image<StyledProps>`
-  width: ${({ width }) => width * 0.06}px;
-  height: ${({ width }) => width * 0.06}px;
-  margin-right: ${({ width }) => width * 0.02}px;
-`;
-
-const HistoryText = styled.Text<StyledProps>`
-  flex: 1;
-  font-size: ${({ width }) => width * 0.035}px;
-  color: #333;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const HistoryAmount = styled.Text<StyledProps & { teamColor: string }>`
-  font-size: ${({ width }) => width * 0.035}px;
-  color: ${(props) => props.teamColor};
-  font-weight: bold;
-  font-family: ${({ theme }) => theme.fonts.bold};
-`;
-
-const ScheduleItem = styled.View<StyledProps>`
-  flex-direction: row;
-  align-items: center;
-  margin-bottom: ${({ width }) => width * 0.02}px;
-`;
-
-const ScheduleDate = styled.Text<StyledProps>`
-  width: ${({ width }) => width * 0.1}px;
-  font-size: ${({ width }) => width * 0.035}px;
-  color: #333;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const ScheduleTeam = styled.Text<StyledProps>`
-  flex: 1;
-  font-size: ${({ width }) => width * 0.035}px;
-  color: #333;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const ScheduleTime = styled.Text<StyledProps>`
-  font-size: ${({ width }) => width * 0.035}px;
+const SummaryLabel = styled.Text`
+  font-size: 14px;
   color: #666;
-  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
-const ReportScreen = () => {
+const SummaryValue = styled.Text<{ teamColor?: string; positive?: boolean }>`
+  font-size: 16px;
+  font-weight: bold;
+  color: ${(props) =>
+    props.positive ? "#4CAF50" : props.teamColor ? props.teamColor : "#333"};
+`;
+
+const ChartContainer = styled.View`
+  align-items: center;
+  margin-vertical: 10px;
+`;
+
+const LegendContainer = styled.View`
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 10px;
+`;
+
+const LegendItem = styled.View`
+  flex-direction: row;
+  align-items: center;
+  margin-horizontal: 10px;
+  margin-vertical: 5px;
+`;
+
+const LegendColor = styled.View<{ color: string }>`
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  background-color: ${(props) => props.color};
+  margin-right: 5px;
+`;
+
+const LegendText = styled.Text`
+  font-size: 12px;
+  color: #666;
+`;
+
+const TeamStatItem = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom-width: 1px;
+  border-bottom-color: #f0f0f0;
+`;
+
+const TeamStatLabel = styled.Text`
+  font-size: 14px;
+  color: #333;
+`;
+
+const TeamStatValue = styled.Text<{ highlight?: boolean }>`
+  font-size: 14px;
+  font-weight: ${(props) => (props.highlight ? "bold" : "normal")};
+  color: ${(props) => (props.highlight ? "#4CAF50" : "#333")};
+`;
+
+const NewsItem = styled.TouchableOpacity`
+  padding: 10px 0;
+  border-bottom-width: 1px;
+  border-bottom-color: #f0f0f0;
+`;
+
+const NewsTitle = styled.Text`
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 4px;
+`;
+
+const NewsDate = styled.Text`
+  font-size: 12px;
+  color: #999;
+`;
+
+// 막대 차트 컴포넌트
+const BarChartFallback = ({ data, width, teamColor }) => {
+  const maxValue = Math.max(...data.datasets[0].data);
+
+  return (
+    <View style={{ width: width * 0.85, height: 220 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          height: 180,
+          alignItems: "flex-end",
+        }}
+      >
+        {data.labels.map((label, index) => {
+          const value = data.datasets[0].data[index];
+          const barHeight = (value / maxValue) * 160;
+
+          return (
+            <View key={index} style={{ alignItems: "center", flex: 1 }}>
+              <View
+                style={{
+                  width: 30,
+                  height: barHeight,
+                  backgroundColor: teamColor,
+                  borderTopLeftRadius: 4,
+                  borderTopRightRadius: 4,
+                }}
+              />
+              <Text style={{ marginTop: 5, fontSize: 12, color: "#666" }}>
+                {label}
+              </Text>
+              <Text style={{ fontSize: 10, color: "#999" }}>
+                {value.toLocaleString()}원
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+// 커스텀 도넛 차트 (SVG 대신 React Native View 사용)
+const CustomDonutChart = ({ data, width }) => {
+  const totalAmount = 78500;
+  const total = data.reduce((sum, item) => sum + item.population, 0);
+
+  return (
+    <View style={{ width: width * 0.85, alignItems: "center" }}>
+      {/* 차트 상단 정보 */}
+      <View style={{ marginBottom: 20, alignItems: "center" }}>
+        <Text style={{ fontSize: 16, fontWeight: "bold", color: "#333" }}>
+          적금 유형별 분석
+        </Text>
+      </View>
+
+      {/* 데이터 표시 */}
+      <View
+        style={{
+          width: "100%",
+          padding: 10,
+          backgroundColor: "#f8f9fa",
+          borderRadius: 8,
+          marginBottom: 15,
+        }}
+      >
+        {data.map((item, index) => {
+          const amount = Math.round((item.population / 100) * totalAmount);
+
+          return (
+            <View key={index} style={{ marginBottom: 12 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  marginBottom: 4,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <View
+                    style={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: 6,
+                      backgroundColor: item.color,
+                      marginRight: 6,
+                    }}
+                  />
+                  <Text style={{ fontWeight: "bold", color: "#333" }}>
+                    {item.name}
+                  </Text>
+                </View>
+                <Text style={{ fontWeight: "bold", color: "#333" }}>
+                  {item.population}%
+                </Text>
+              </View>
+
+              {/* 프로그레스 바 */}
+              <View
+                style={{
+                  height: 8,
+                  backgroundColor: "#e9ecef",
+                  borderRadius: 4,
+                  overflow: "hidden",
+                }}
+              >
+                <View
+                  style={{
+                    width: `${item.population}%`,
+                    height: "100%",
+                    backgroundColor: item.color,
+                    borderRadius: 4,
+                  }}
+                />
+              </View>
+
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: "#666",
+                  alignSelf: "flex-end",
+                  marginTop: 2,
+                }}
+              >
+                {amount.toLocaleString()}원
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* 총 금액 표시 */}
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          width: "100%",
+          padding: 10,
+          backgroundColor: "#e9ecef",
+          borderRadius: 8,
+        }}
+      >
+        <Text style={{ fontWeight: "bold", color: "#333" }}>총 적립액</Text>
+        <Text style={{ fontWeight: "bold", color: "#1E3A8A" }}>
+          {totalAmount.toLocaleString()}원
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+const WeeklyReportScreen = ({ navigation }) => {
   const { teamColor } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
   const width =
@@ -246,151 +350,204 @@ const ReportScreen = () => {
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
 
-  const [currentAmount, setCurrentAmount] = useState(300000);
-  const [targetAmount, setTargetAmount] = useState(500000);
+  // 주간 요약 데이터
+  const weekSummary = {
+    period: "3.1 - 3.7",
+    totalAmount: "50,000원",
+    games: "4승 2패",
+  };
 
-  const percentage = Math.min(
-    100,
-    Math.round((currentAmount / targetAmount) * 100)
-  );
+  // 주간 적금 현황 데이터 (막대 그래프)
+  const barData = {
+    labels: ["월", "화", "수", "목", "금", "토", "일"],
+    datasets: [
+      {
+        data: [5000, 15000, 7500, 12000, 10000, 18000, 13000],
+      },
+    ],
+  };
+
+  // 적금 유형별 분석 데이터 (파이 차트)
+  const pieData = [
+    {
+      name: "승리",
+      population: 35,
+      color: "#1E3A8A",
+      legendFontColor: "#7F7F7F",
+      legendFontSize: 12,
+    },
+    {
+      name: "안타",
+      population: 28,
+      color: "#93C5FD",
+      legendFontColor: "#7F7F7F",
+      legendFontSize: 12,
+    },
+    {
+      name: "홈런",
+      population: 22,
+      color: "#BFDBFE",
+      legendFontColor: "#7F7F7F",
+      legendFontSize: 12,
+    },
+    {
+      name: "3연전 승리",
+      population: 15,
+      color: "#DBEAFE",
+      legendFontColor: "#7F7F7F",
+      legendFontSize: 12,
+    },
+  ];
+
+  // 팀 성적 요약 데이터
+  const teamStats = {
+    record: "4승 2패",
+    teamBatting: "0.289",
+    teamHomeRuns: "8개",
+    rankChange: "+2",
+  };
+
+  // 주간 뉴스 하이라이트
+  const newsHighlights = [
+    {
+      id: 1,
+      title: "김도영 선수, 주간 4경기 연속 안타 기록 달성",
+      date: "2025.03.07",
+    },
+    {
+      id: 2,
+      title: "최형우 선수, 주간 타율 0.423으로 팀 내 최고 성적",
+      date: "2025.03.06",
+    },
+    {
+      id: 3,
+      title: "홍상삼 선수, 7이닝 무실점 호투로 팀 승리 견인",
+      date: "2025.03.05",
+    },
+    {
+      id: 4,
+      title: "한승택 선수, 주간 도루 5개로 리그 선두 유지",
+      date: "2025.03.04",
+    },
+  ];
 
   return (
     <AppWrapper>
       <MobileContainer width={width}>
         <StatusBar style="light" />
         <Header width={width} teamColor={teamColor.primary}>
-          <HeaderTitle width={width}>리포트 페이지</HeaderTitle>
-          <TouchableOpacity>
-            <BellIcon
-              source={require("../../assets/icon.png")}
-              style={{ tintColor: "yellow" }}
-            />
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </BackButton>
+          <HeaderTitle width={width}>리포트</HeaderTitle>
+          <View style={{ width: 24 }} />
         </Header>
 
         <SafeAreaView style={{ flex: 1, paddingBottom: 60 }}>
           <ScrollView
             style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 20 }}
+            contentContainerStyle={{ padding: width * 0.04, paddingBottom: 20 }}
           >
-            <ProgressSection width={width} teamColor={teamColor.primary}>
-              <ProgressTitle width={width}>유니폼 구매</ProgressTitle>
-              <ProgressAmount width={width}>
-                {currentAmount.toLocaleString()}원 / {targetAmount.toLocaleString()}원
-              </ProgressAmount>
-              <ProgressBarContainer width={width}>
-                <ProgressFill percentage={percentage} />
-              </ProgressBarContainer>
-              <ProgressPercent width={width}>{percentage}% 달성</ProgressPercent>
-            </ProgressSection>
+            {/* 주간 요약 */}
+            <Card width={width}>
+              <CardHeader width={width}>
+                <CardTitle width={width}>
+                  주간 요약 ({weekSummary.period})
+                </CardTitle>
+              </CardHeader>
+              <CardContent width={width}>
+                <SummaryItem>
+                  <SummaryLabel>주간 적립액</SummaryLabel>
+                  <SummaryValue teamColor={teamColor.primary}>
+                    {weekSummary.totalAmount}
+                  </SummaryValue>
+                </SummaryItem>
+                <SummaryItem>
+                  <SummaryLabel>주간 경기</SummaryLabel>
+                  <SummaryValue>{weekSummary.games}</SummaryValue>
+                </SummaryItem>
+                <SummaryItem style={{ borderBottomWidth: 0 }}>
+                  <SummaryLabel>이번 주 증가율</SummaryLabel>
+                  <SummaryValue positive>+23%</SummaryValue>
+                </SummaryItem>
+              </CardContent>
+            </Card>
 
-            <StatsRow width={width}>
-              <StatText width={width}>
-                현재 금리: 3.5% <StatHighlight>+0.4%</StatHighlight>
-              </StatText>
-              <StatText width={width}>
-                팀 순위: 3위 <StatHighlight>+2</StatHighlight>
-              </StatText>
-            </StatsRow>
+            {/* 주간 적금 현황 (막대 그래프) */}
+            <Card width={width}>
+              <CardHeader width={width}>
+                <CardTitle width={width}>주간 적금 현황</CardTitle>
+              </CardHeader>
+              <CardContent width={width}>
+                <ChartContainer>
+                  <BarChartFallback
+                    data={barData}
+                    width={width}
+                    teamColor={teamColor.primary}
+                  />
+                </ChartContainer>
+                <View style={{ alignItems: "flex-end", marginTop: 10 }}>
+                  <SummaryValue teamColor={teamColor.primary}>
+                    주간 총 적금액: 78,500원
+                  </SummaryValue>
+                </View>
+              </CardContent>
+            </Card>
 
-            <View style={{ padding: width * 0.04 }}>
-              <Card width={width}>
-                <CardHeader width={width}>
-                  <CardTitle width={width}>오늘의 적금 비교</CardTitle>
-                </CardHeader>
-                <CardContent width={width}>
-                  <CardText width={width}>
-                    <RedText teamColor={teamColor.primary}>↗</RedText> 두산이
-                    승리했지만, 우리팀의 적금이 2배 더 많네요!
-                  </CardText>
-                </CardContent>
-              </Card>
+            {/* 적금 유형별 분석 (파이 차트) */}
+            <Card width={width}>
+              <CardHeader width={width}>
+                <CardTitle width={width}>적금 유형별 분석</CardTitle>
+              </CardHeader>
+              <CardContent width={width}>
+                <ChartContainer>
+                  <CustomDonutChart data={pieData} width={width} />
+                </ChartContainer>
+              </CardContent>
+            </Card>
 
-              <Card width={width}>
-                <CardHeader width={width}>
-                  <CardTitle width={width}>적금 규칙</CardTitle>
-                </CardHeader>
-                <CardContent width={width}>
-                  <RuleText width={width}>안타 1개당: 1,000원</RuleText>
-                  <RuleText width={width}>홈런 1개당: 5,000원</RuleText>
-                  <RuleText width={width}>팀 승리 시: 3,000원</RuleText>
-                </CardContent>
-              </Card>
+            {/* 팀 성적 요약 */}
+            <Card width={width}>
+              <CardHeader width={width}>
+                <CardTitle width={width}>팀 성적 요약</CardTitle>
+              </CardHeader>
+              <CardContent width={width}>
+                <TeamStatItem>
+                  <TeamStatLabel>주간 성적</TeamStatLabel>
+                  <TeamStatValue>{teamStats.record}</TeamStatValue>
+                </TeamStatItem>
+                <TeamStatItem>
+                  <TeamStatLabel>팀 타율</TeamStatLabel>
+                  <TeamStatValue>{teamStats.teamBatting}</TeamStatValue>
+                </TeamStatItem>
+                <TeamStatItem>
+                  <TeamStatLabel>팀 홈런</TeamStatLabel>
+                  <TeamStatValue>{teamStats.teamHomeRuns}</TeamStatValue>
+                </TeamStatItem>
+                <TeamStatItem style={{ borderBottomWidth: 0 }}>
+                  <TeamStatLabel>순위 변동</TeamStatLabel>
+                  <TeamStatValue highlight>
+                    {teamStats.rankChange}
+                  </TeamStatValue>
+                </TeamStatItem>
+              </CardContent>
+            </Card>
 
-              <Card width={width}>
-                <CardHeader width={width}>
-                  <CardTitle width={width}>최근 적금 내역</CardTitle>
-                  <TouchableOpacity>
-                    <ViewAllLink width={width} teamColor={teamColor.primary}>
-                      전체 내역 &gt;
-                    </ViewAllLink>
-                  </TouchableOpacity>
-                </CardHeader>
-                <CardContent width={width}>
-                  <HistoryItem width={width}>
-                    <TeamLogo
-                      width={width}
-                      source={require("../../assets/icon.png")}
-                    />
-                    <HistoryText width={width}>3/11 승리</HistoryText>
-                    <HistoryAmount width={width} teamColor={teamColor.primary}>
-                      +15,000원
-                    </HistoryAmount>
-                  </HistoryItem>
-                  <HistoryItem width={width}>
-                    <TeamLogo
-                      width={width}
-                      source={require("../../assets/icon.png")}
-                    />
-                    <HistoryText width={width}>3/9 안타 7개</HistoryText>
-                    <HistoryAmount width={width} teamColor={teamColor.primary}>
-                      +7,000원
-                    </HistoryAmount>
-                  </HistoryItem>
-                  <HistoryItem width={width}>
-                    <TeamLogo
-                      width={width}
-                      source={require("../../assets/icon.png")}
-                    />
-                    <HistoryText width={width}>
-                      3/8 승리, 안타 9개, 홈런 1개
-                    </HistoryText>
-                    <HistoryAmount width={width} teamColor={teamColor.primary}>
-                      +12,000원
-                    </HistoryAmount>
-                  </HistoryItem>
-                </CardContent>
-              </Card>
-
-              <Card width={width}>
-                <CardHeader width={width}>
-                  <CardTitle width={width}>다음 경기 일정</CardTitle>
-                  <TouchableOpacity>
-                    <ViewAllLink width={width} teamColor={teamColor.primary}>
-                      전체 일정 &gt;
-                    </ViewAllLink>
-                  </TouchableOpacity>
-                </CardHeader>
-                <CardContent width={width}>
-                  <ScheduleItem width={width}>
-                    <ScheduleDate width={width}>3/22</ScheduleDate>
-                    <ScheduleTeam width={width}>vs NC 다이노스</ScheduleTeam>
-                    <ScheduleTime width={width}>14:00 광주</ScheduleTime>
-                  </ScheduleItem>
-                  <ScheduleItem width={width}>
-                    <ScheduleDate width={width}>3/23</ScheduleDate>
-                    <ScheduleTeam width={width}>vs NC 다이노스</ScheduleTeam>
-                    <ScheduleTime width={width}>14:00 광주</ScheduleTime>
-                  </ScheduleItem>
-                  <ScheduleItem width={width}>
-                    <ScheduleDate width={width}>3/25</ScheduleDate>
-                    <ScheduleTeam width={width}>vs LG 트윈스</ScheduleTeam>
-                    <ScheduleTime width={width}>18:30 광주</ScheduleTime>
-                  </ScheduleItem>
-                </CardContent>
-              </Card>
-            </View>
+            {/* 주간 뉴스 하이라이트 */}
+            <Card width={width}>
+              <CardHeader width={width}>
+                <CardTitle width={width}>주간 뉴스 하이라이트</CardTitle>
+              </CardHeader>
+              <CardContent width={width}>
+                {newsHighlights.map((news) => (
+                  <NewsItem key={news.id}>
+                    <NewsTitle>• {news.title}</NewsTitle>
+                    <NewsDate>{news.date}</NewsDate>
+                  </NewsItem>
+                ))}
+              </CardContent>
+            </Card>
           </ScrollView>
         </SafeAreaView>
       </MobileContainer>
@@ -398,4 +555,4 @@ const ReportScreen = () => {
   );
 };
 
-export default ReportScreen; 
+export default WeeklyReportScreen;
