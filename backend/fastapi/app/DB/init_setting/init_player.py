@@ -104,7 +104,7 @@ try:
                     # CSV 형식에 따라 인덱스 조정
                     number_str = row[0].strip()
                     name = row[1].strip() if len(row) > 1 else ""
-                    
+                    if not number_str:continue
                     # 타입 결정 (2번째 인덱스가 있으면 그 값 사용, 없으면 기본값 2(타자))
                     player_type = int(row[2].strip()) if len(row) > 2 and row[2].strip().isdigit() else 2
                     
