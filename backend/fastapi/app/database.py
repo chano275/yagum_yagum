@@ -21,8 +21,11 @@ logger.info(f"Using DATABASE_URL: {DATABASE_URL}")
 # 엔진 생성 시 MariaDB 특화 옵션 설정
 engine = create_engine(
     DATABASE_URL,
-    pool_recycle=3600,  # MariaDB 연결 timeout 방지
-    pool_pre_ping=True,  # 연결이 유효한지 확인
+    pool_size=20,           # 연결 풀 크기 설정
+    max_overflow=30,        # 최대 초과 연결 수
+    pool_timeout=10,        # 풀에서 연결을 기다리는 시간(초)
+    pool_recycle=3600,      # MariaDB 연결 timeout 방지
+    pool_pre_ping=True,     # 연결이 유효한지 확인
     connect_args={"connect_timeout": 60}  # 연결 타임아웃 설정
 )
 

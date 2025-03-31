@@ -18,10 +18,9 @@ load_dotenv()
 
 # models 모듈 import
 import models
+from database import engine
 
 # 데이터베이스 연결 설정
-DATABASE_URL = f'{os.getenv("DATABASE_TYPE")}://{os.getenv("DATABASE_USER")}:{os.getenv("DATABASE_PASSWORD")}@{os.getenv("DATABASE_IP")}:{os.getenv("DATABASE_PORT")}/{os.getenv("DATABASE_DB")}?charset=utf8mb4'
-engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()
 

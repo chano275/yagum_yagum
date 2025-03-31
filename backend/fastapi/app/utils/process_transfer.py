@@ -19,7 +19,7 @@ load_dotenv()
 import sys
 sys.path.append(project_root)
 import models
-
+from database import engine
 # 로깅 설정
 logging.basicConfig(
     level=logging.INFO,
@@ -201,8 +201,6 @@ async def process_transfers_for_range(start_date=None, end_date=None, db_session
     # DB 세션 설정
     close_session = False
     if db_session is None:
-        DATABASE_URL = f'{os.getenv("DATABASE_TYPE")}://{os.getenv("DATABASE_USER")}:{os.getenv("DATABASE_PASSWORD")}@{os.getenv("DATABASE_IP")}:{os.getenv("DATABASE_PORT")}/{os.getenv("DATABASE_DB")}?charset=utf8mb4'
-        engine = create_engine(DATABASE_URL)
         Session = sessionmaker(bind=engine)
         db_session = Session()
         close_session = True
@@ -230,8 +228,6 @@ async def main():
     args = parser.parse_args()
     
     # 데이터베이스 연결
-    DATABASE_URL = f'{os.getenv("DATABASE_TYPE")}://{os.getenv("DATABASE_USER")}:{os.getenv("DATABASE_PASSWORD")}@{os.getenv("DATABASE_IP")}:{os.getenv("DATABASE_PORT")}/{os.getenv("DATABASE_DB")}?charset=utf8mb4'
-    engine = create_engine(DATABASE_URL)
     Session = sessionmaker(bind=engine)
     db = Session()
     

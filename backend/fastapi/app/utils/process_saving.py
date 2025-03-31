@@ -16,7 +16,7 @@ load_dotenv()
 import sys
 sys.path.append(project_root)
 import models
-
+from database import engine
 def process_savings_for_date(game_date=None, session=None):
     """
     특정 날짜의 게임 기록을 기반으로 사용자 적금 규칙에 따라 적립금을 처리합니다.
@@ -35,8 +35,6 @@ def process_savings_for_date(game_date=None, session=None):
     # 세션 관리
     close_session = False
     if session is None:
-        DATABASE_URL = f'{os.getenv("DATABASE_TYPE")}://{os.getenv("DATABASE_USER")}:{os.getenv("DATABASE_PASSWORD")}@{os.getenv("DATABASE_IP")}:{os.getenv("DATABASE_PORT")}/{os.getenv("DATABASE_DB")}?charset=utf8mb4'
-        engine = create_engine(DATABASE_URL)
         Session = sessionmaker(bind=engine)
         session = Session()
         close_session = True
@@ -373,8 +371,6 @@ def process_recent_days(days=7):
    today = date.today()
    
    # 데이터베이스 세션 생성
-   DATABASE_URL = f'{os.getenv("DATABASE_TYPE")}://{os.getenv("DATABASE_USER")}:{os.getenv("DATABASE_PASSWORD")}@{os.getenv("DATABASE_IP")}:{os.getenv("DATABASE_PORT")}/{os.getenv("DATABASE_DB")}?charset=utf8mb4'
-   engine = create_engine(DATABASE_URL)
    Session = sessionmaker(bind=engine)
    session = Session()
    
@@ -404,8 +400,6 @@ def clear_existing_savings(game_date=None, session=None):
    # 세션 관리
    close_session = False
    if session is None:
-       DATABASE_URL = f'{os.getenv("DATABASE_TYPE")}://{os.getenv("DATABASE_USER")}:{os.getenv("DATABASE_PASSWORD")}@{os.getenv("DATABASE_IP")}:{os.getenv("DATABASE_PORT")}/{os.getenv("DATABASE_DB")}?charset=utf8mb4'
-       engine = create_engine(DATABASE_URL)
        Session = sessionmaker(bind=engine)
        session = Session()
        close_session = True
