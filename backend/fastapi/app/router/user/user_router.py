@@ -146,6 +146,23 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             expires_delta=access_token_expires
         )
 
+        # 사용자의 계정 정보 조회
+        accounts = db.query(models.Account).filter(models.Account.USER_ID == user.USER_ID).all()
+        
+        # 팀 정보 추가
+        team_info = None
+        if accounts:
+            for account in accounts:
+                if account.TEAM_ID:
+                    team = db.query(models.Team).filter(models.Team.TEAM_ID == account.TEAM_ID).first()
+                    if team:
+                        team_info = {
+                            "team_id": team.TEAM_ID,
+                            "team_name": team.TEAM_NAME,
+                            "account_id": account.ACCOUNT_ID
+                        }
+                        break
+
         logger.info(f"로그인 성공: {form_data.username}")
 
         return {
@@ -156,7 +173,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
                 "id": user.USER_ID,
                 "name": user.NAME,
                 "email": user.USER_EMAIL
-            }
+            },
+            "team": team_info  # 팀 정보 추가
         }
     except HTTPException:
         raise
