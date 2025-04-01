@@ -437,3 +437,75 @@ async def get_account_balance(user_key, account_num, api_key=None):
     except Exception as e:
         logger.error(f"계좌 잔액 조회 중 오류: {str(e)}")
         raise
+
+async def init_money(user_key, account_num,api_key=None):
+    """
+    금융 API를 통해 초기 입출금 계좌 금액 생성
+    
+    Args:
+        user_key (str): 사용자 키
+        account_num (str): 계좌번호
+        api_key (str, optional): API 키
+    
+    Returns:
+        dict: 입금 결과
+    """
+    try:
+        # API 이름 및 URL 설정
+        api_name = "updateDemandDepositAccountDeposit"  # API 이름도 수정
+        api_url = f"{SSAFY_API_BASE_URL}/edu/demandDeposit/updateDemandDepositAccountDeposit"  # URL도 수정
+        
+        # API 키 설정
+        if api_key is None:
+            api_key = DEFAULT_API_KEY
+        
+        # 헤더 생성
+        from utils.api_header_utils import generate_api_header
+        header = generate_api_header(
+            api_name=api_name,
+            user_key=user_key,
+            api_key=api_key
+        )
+        
+        # 전체 요청 데이터 구성
+        request_data = {
+            "Header": header,
+            "accountNo": account_num,
+            "transactionBalance": "30000000",
+            "transactionSummary": "초기 금액액"
+        }
+        
+        logger.info(f"계좌 입금 요청 URL: {api_url}")
+        logger.info(f"계좌 입금 요청 데이터: {json.dumps(request_data)}")
+        
+        # API 요청
+        response = requests.post(
+            api_url,
+            json=request_data,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        logger.info(f"API 응답 상태 코드: {response.status_code}")
+        logger.info(f"API 응답 본문: {response.text}")
+        
+        # 응답 확인
+        response_data = response.json()
+        
+        # 응답 코드 확인
+        header = response_data.get("Header", {})
+        response_code = header.get("responseCode")
+        
+        if response_code != "H0000":
+            response_message = header.get("responseMessage", "알 수 없는 오류")
+            logger.error(f"API 오류 응답: {response_code} - {response_message}")
+            raise Exception(f"금융 API 오류: {response_code} - {response_message}")
+        
+        # 계좌 잔액 정보 - 여기를 수정
+        rec = response_data.get("REC", {})
+        
+        logger.info(f"계좌 입금 요청 완료: {rec}")
+        return rec
+            
+    except Exception as e:
+        logger.error(f"계좌 입금 요청청 중 오류: {str(e)}")
+        raise

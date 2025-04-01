@@ -98,6 +98,12 @@ async def signup(user: UserCreate, db: Session = Depends(get_db)):
         account_no = await create_demand_deposit_account(user_key)
         logger.info(f"입출금 계좌 개설 완료: 계좌번호 {account_no}")
         
+
+        # 2-2. 입출금 계좌 자동 입금 (3000만원)
+        from router.user.user_ssafy_api_utils import init_money
+        logger.info(f"입출금 계좌 초기 자금 입금: userKey{user_key}")
+        money_log = await init_money(user_key,account_no)
+
         # 3. 사용자 생성 (SOURCE_ACCOUNT 포함)
         logger.info("새 사용자 생성 시작")
         new_user = user_crud.create_user(
