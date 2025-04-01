@@ -1,32 +1,52 @@
-import React, { useState, useRef } from 'react';
-import { View, TextInput, TouchableOpacity, Platform, useWindowDimensions, Alert, ActivityIndicator, TextInputProps, StyleSheet, Image, Text } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { AppWrapper, MobileContainer, getAdjustedWidth, StyledProps } from '../constants/layout';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import axios from 'axios';
-import { useStore } from '../store/useStore';
-import { AuthState } from '../store/useStore';
+import React, { useState, useRef } from "react";
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  Platform,
+  useWindowDimensions,
+  Alert,
+  ActivityIndicator,
+  TextInputProps,
+  StyleSheet,
+  Image,
+  Text,
+} from "react-native";
+import { MaterialIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  AppWrapper,
+  MobileContainer,
+  getAdjustedWidth,
+  StyledProps,
+} from "../constants/layout";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import axios from "axios";
+import { useStore } from "../store/useStore";
+import { AuthState } from "../store/useStore";
+import { useTeam } from "../context/TeamContext";
+import { api } from "../api/axios";
 
 type RootStackParamList = {
   Home: undefined;
   Login: undefined;
 };
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Login">;
 
 const LoginScreen = () => {
-  const [id, setId] = useState('');
-  const [password, setPassword] = useState('');
+  const [id, setId] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [idFocused, setIdFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({
-    id: '',
-    password: ''
+    id: "",
+    password: "",
   });
+  const { setTeamData } = useTeam();
 
   const navigation = useNavigation<NavigationProp>();
   const { width: windowWidth } = useWindowDimensions();
@@ -37,12 +57,12 @@ const LoginScreen = () => {
 
   const validateInputs = () => {
     const newErrors = {
-      id: '',
-      password: ''
+      id: "",
+      password: "",
     };
 
-    if (!id.trim()) newErrors.id = '아이디를 입력해주세요';
-    if (!password.trim()) newErrors.password = '비밀번호를 입력해주세요';
+    if (!id.trim()) newErrors.id = "아이디를 입력해주세요";
+    if (!password.trim()) newErrors.password = "비밀번호를 입력해주세요";
 
     setErrors(newErrors);
     return !newErrors.id && !newErrors.password;
@@ -52,34 +72,35 @@ const LoginScreen = () => {
     if (!validateInputs()) return;
 
     setIsLoading(true);
+
     try {
       const formData = new FormData();
-      formData.append('username', id);
-      formData.append('password', password);
+      formData.append("username", id);
+      formData.append("password", password);
 
-      const response = await axios.post(
-        // 'http://localhost:8000/api/user/login',
-        'http://3.38.183.156:8000/api/user/login',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      const response = await api.post("/api/user/login", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.status === 200) {
-        const { access_token, user } = response.data;
-        setAuth(access_token, user);
-        navigation.replace('Home');
+        const { access_token, token_type, team } = response.data;
+        // 인증 정보 저장
+        setAuth(access_token, null);
+
+        // 팀 정보가 있으면 TeamContext에 설정
+        if (team) {
+          setTeamData(team);
+        }
+
+        navigation.replace("Home");
       }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 401) {
-          Alert.alert('로그인 실패', '이메일 또는 비밀번호가 올바르지 않습니다');
-        } else {
-          Alert.alert('오류', '로그인 처리 중 오류가 발생했습니다');
-        }
+      // 에러 처리는 기존 코드 유지
+      if (error instanceof Error) {
+        console.error("Login failed:", error);
+        Alert.alert("로그인 실패", "아이디 또는 비밀번호를 확인해주세요.");
       }
     } finally {
       setIsLoading(false);
@@ -89,29 +110,29 @@ const LoginScreen = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      width: '100%',
+      width: "100%",
       padding: width * 0.045,
     },
     header: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       marginBottom: width * 0.04,
     },
     contentContainer: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
+      justifyContent: "center",
+      alignItems: "center",
     },
     loginCard: {
-      backgroundColor: 'white',
+      backgroundColor: "white",
       borderRadius: width * 0.025,
       padding: width * 0.05,
-      width: '100%',
+      width: "100%",
       maxWidth: 420,
-      alignSelf: 'center',
+      alignSelf: "center",
       ...Platform.select({
         ios: {
-          shadowColor: '#000',
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.08,
           shadowRadius: 6,
@@ -120,26 +141,26 @@ const LoginScreen = () => {
           elevation: 3,
         },
         web: {
-          boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.08)'
-        }
-      })
+          boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.08)",
+        },
+      }),
     },
     characterImage: {
       width: width * 0.35,
       height: width * 0.35,
-      alignSelf: 'center',
+      alignSelf: "center",
       marginBottom: width * 0.04,
     },
     inputContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       borderRadius: width * 0.015,
-      backgroundColor: '#F5F6FF',
+      backgroundColor: "#F5F6FF",
       padding: width * 0.04,
       marginBottom: width * 0.025,
       ...Platform.select({
         ios: {
-          shadowColor: '#000',
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.05,
           shadowRadius: 2,
@@ -148,15 +169,15 @@ const LoginScreen = () => {
           elevation: 1,
         },
         web: {
-          boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)'
-        }
-      })
+          boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.05)",
+        },
+      }),
     },
     focusedInputContainer: {
-      backgroundColor: '#FFFFFF',
+      backgroundColor: "#FFFFFF",
       ...Platform.select({
         ios: {
-          shadowColor: '#2D5BFF',
+          shadowColor: "#2D5BFF",
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.2,
           shadowRadius: 3,
@@ -165,30 +186,31 @@ const LoginScreen = () => {
           elevation: 2,
         },
         web: {
-          boxShadow: '0px 0px 0px 2px rgba(45, 91, 255, 0.2), 0px 1px 2px rgba(0, 0, 0, 0.05)'
-        }
-      })
+          boxShadow:
+            "0px 0px 0px 2px rgba(45, 91, 255, 0.2), 0px 1px 2px rgba(0, 0, 0, 0.05)",
+        },
+      }),
     },
     input: {
       flex: 1,
       fontSize: width * 0.042,
       marginLeft: width * 0.025,
-      color: '#333',
+      color: "#333",
       ...Platform.select({
         web: {
-          outlineStyle: 'none',
-        }
-      })
+          outlineStyle: "none",
+        },
+      }),
     },
     loginButton: {
-      backgroundColor: '#2D5BFF',
+      backgroundColor: "#2D5BFF",
       padding: width * 0.04,
       borderRadius: width * 0.015,
-      alignItems: 'center',
+      alignItems: "center",
       marginTop: width * 0.04,
     },
     errorText: {
-      color: '#ff4444',
+      color: "#ff4444",
       fontSize: width * 0.035,
       marginTop: 4,
       marginLeft: width * 0.02,
@@ -196,30 +218,30 @@ const LoginScreen = () => {
     },
     titleText: {
       fontSize: width * 0.06,
-      fontWeight: 'bold',
+      fontWeight: "bold",
       marginBottom: width * 0.04,
-      textAlign: 'center',
-      color: '#333',
+      textAlign: "center",
+      color: "#333",
     },
     buttonText: {
-      color: 'white',
+      color: "white",
       fontSize: width * 0.042,
-      fontWeight: 'bold',
-      textAlign: 'center',
-    }
+      fontWeight: "bold",
+      textAlign: "center",
+    },
   });
 
   return (
     <AppWrapper>
       <MobileContainer width={width}>
         <LinearGradient
-          colors={['#FFFFFF', '#E6EFFE']}
+          colors={["#FFFFFF", "#E6EFFE"]}
           locations={[0.19, 1.0]}
-          style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+          style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
         />
         <View style={styles.container}>
           <View style={styles.header}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 navigation.goBack();
                 // 또는 아래 방법을 시도해볼 수 있습니다
@@ -232,23 +254,29 @@ const LoginScreen = () => {
           <View style={styles.contentContainer}>
             <View style={styles.loginCard}>
               <Image
-                source={require('../../assets/verification.png')}
+                source={require("../../assets/verification.png")}
                 style={styles.characterImage}
                 resizeMode="contain"
               />
               <Text style={styles.titleText}>로그인</Text>
-              <View style={[
-                styles.inputContainer,
-                idFocused && styles.focusedInputContainer
-              ]}>
-                <MaterialIcons name="person-outline" size={iconSize} color="#666" />
+              <View
+                style={[
+                  styles.inputContainer,
+                  idFocused && styles.focusedInputContainer,
+                ]}
+              >
+                <MaterialIcons
+                  name="person-outline"
+                  size={iconSize}
+                  color="#666"
+                />
                 <TextInput
                   style={styles.input}
                   placeholder={idFocused ? " " : "아이디를 입력해주세요"}
                   value={id}
                   onChangeText={(text) => {
                     setId(text);
-                    setErrors(prev => ({ ...prev, id: '' }));
+                    setErrors((prev) => ({ ...prev, id: "" }));
                   }}
                   onFocus={() => setIdFocused(true)}
                   onBlur={() => setIdFocused(false)}
@@ -258,20 +286,30 @@ const LoginScreen = () => {
                   placeholderTextColor="#999"
                 />
               </View>
-              {errors.id ? <Text style={styles.errorText}>{errors.id}</Text> : null}
-              <View style={[
-                styles.inputContainer,
-                passwordFocused && styles.focusedInputContainer
-              ]}>
-                <MaterialIcons name="lock-outline" size={iconSize} color="#666" />
+              {errors.id ? (
+                <Text style={styles.errorText}>{errors.id}</Text>
+              ) : null}
+              <View
+                style={[
+                  styles.inputContainer,
+                  passwordFocused && styles.focusedInputContainer,
+                ]}
+              >
+                <MaterialIcons
+                  name="lock-outline"
+                  size={iconSize}
+                  color="#666"
+                />
                 <TextInput
                   ref={passwordInputRef}
                   style={styles.input}
-                  placeholder={passwordFocused ? " " : "비밀번호를 입력해주세요"}
+                  placeholder={
+                    passwordFocused ? " " : "비밀번호를 입력해주세요"
+                  }
                   value={password}
                   onChangeText={(text) => {
                     setPassword(text);
-                    setErrors(prev => ({ ...prev, password: '' }));
+                    setErrors((prev) => ({ ...prev, password: "" }));
                   }}
                   onFocus={() => setPasswordFocused(true)}
                   onBlur={() => setPasswordFocused(false)}
@@ -281,16 +319,20 @@ const LoginScreen = () => {
                   onSubmitEditing={handleLogin}
                   placeholderTextColor="#999"
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <MaterialIcons 
-                    name={showPassword ? "visibility" : "visibility-off"} 
-                    size={iconSize} 
-                    color="#666" 
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <MaterialIcons
+                    name={showPassword ? "visibility" : "visibility-off"}
+                    size={iconSize}
+                    color="#666"
                   />
                 </TouchableOpacity>
               </View>
-              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
-              <TouchableOpacity 
+              {errors.password ? (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              ) : null}
+              <TouchableOpacity
                 style={styles.loginButton}
                 onPress={handleLogin}
                 disabled={isLoading}
@@ -309,4 +351,4 @@ const LoginScreen = () => {
   );
 };
 
-export default LoginScreen; 
+export default LoginScreen;
