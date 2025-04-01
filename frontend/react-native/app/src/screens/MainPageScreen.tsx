@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   useWindowDimensions,
   SafeAreaView,
@@ -14,6 +14,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { useNavigation } from "@react-navigation/native";
+import Carousel from "react-native-reanimated-carousel";
+import { Ionicons } from "@expo/vector-icons";
 
 type MainPageNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type TabNavigationProp = BottomTabNavigationProp<{
@@ -253,9 +255,57 @@ const ScheduleTime = styled.Text<StyledProps>`
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
+// 캐러셀 관련 새로운 스타일 컴포넌트
+const RuleCarouselCard = styled.View<StyledProps>`
+  background-color: white;
+  border-radius: ${({ width }) => width * 0.02}px;
+  overflow: hidden;
+  margin: 0 5px;
+  height: ${({ width }) => width * 0.4}px;
+  border-width: 1px;
+  border-color: #eeeeee;
+`;
+
+const RuleCardHeader = styled.View<StyledProps & { teamColor: string }>`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: ${({ width }) => width * 0.03}px;
+  border-bottom-width: 1px;
+  border-bottom-color: #eeeeee;
+  background-color: ${(props) => props.teamColor};
+`;
+
+const RuleCardTitle = styled.Text<StyledProps>`
+  font-size: ${({ width }) => width * 0.04}px;
+  font-weight: bold;
+  color: white;
+  font-family: ${({ theme }) => theme.fonts.bold};
+`;
+
+const RuleCardContent = styled.View<StyledProps>`
+  padding: ${({ width }) => width * 0.03}px;
+  flex: 1;
+`;
+
+const PaginationContainer = styled.View`
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+`;
+
+const PaginationDot = styled.View<{ active: boolean; teamColor: string }>`
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  margin: 0 4px;
+  background-color: ${(props) => (props.active ? props.teamColor : "#CCCCCC")};
+`;
+
 const MainPage = () => {
   const navigation = useNavigation<MainPageNavigationProp>();
-  const { teamColor } = useTeam();
+  const { teamColor, teamName } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
   const width =
     Platform.OS === "web"
@@ -264,6 +314,7 @@ const MainPage = () => {
 
   const [currentAmount, setCurrentAmount] = useState(300000);
   const [targetAmount, setTargetAmount] = useState(500000);
+  const [activeSlide, setActiveSlide] = useState(0);
 
   const percentage = Math.min(
     100,
@@ -274,17 +325,106 @@ const MainPage = () => {
     return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
 
+  // 적금 규칙 데이터
+  const ruleData = [
+    {
+      id: 1,
+      title: "기본 규칙",
+      rules: [
+        "팀이 승리하는 경우: 3,000원",
+        "팀이 안타를 친 경우: 1,000원",
+        "팀이 홈런을 친 경우: 5,000원",
+      ],
+    },
+    {
+      id: 2,
+      title: "투수 규칙",
+      rules: [
+        "투수 삼진을 잡는 경우: 1,000원",
+        "투수 볼넷을 던진 경우: -500원",
+        "투수 자책점: -1,000원",
+      ],
+    },
+    {
+      id: 3,
+      title: "타자 규칙",
+      rules: [
+        "타자 안타를 친 경우: 1,000원",
+        "타자 홈런을 친 경우: 5,000원",
+        "타자 도루하는 경우: 2,000원",
+      ],
+    },
+    {
+      id: 4,
+      title: "상대팀 규칙",
+      rules: [
+        "상대팀 삼진: 500원",
+        "상대팀 병살타: 1,000원",
+        "상대팀 실책: 1,000원",
+      ],
+    },
+  ];
+
+  // 캐러셀 아이템 렌더링 함수
+  const renderRuleItem = ({ item }) => {
+    return (
+      <RuleCarouselCard width={width}>
+        <RuleCardHeader width={width} teamColor={teamColor.primary}>
+          <RuleCardTitle width={width}>{item.title}</RuleCardTitle>
+          <Ionicons name="information-circle-outline" size={20} color="white" />
+        </RuleCardHeader>
+        <RuleCardContent width={width}>
+          {item.rules.map((rule, index) => (
+            <RuleText key={index} width={width}>
+              • {rule}
+            </RuleText>
+          ))}
+        </RuleCardContent>
+      </RuleCarouselCard>
+    );
+  };
+
+  // react-native-reanimated-carousel 사용으로 변경된 캐러셀 컴포넌트
+  const RulesCarousel = () => {
+    return (
+      <View>
+        <Carousel
+          loop
+          width={width - width * 0.12}
+          height={width * 0.4}
+          data={ruleData}
+          scrollAnimationDuration={1000}
+          onSnapToItem={(index) => setActiveSlide(index)}
+          renderItem={renderRuleItem}
+          mode="parallax"
+          modeConfig={{
+            parallaxScrollingScale: 0.95,
+            parallaxScrollingOffset: 30,
+          }}
+        />
+        <PaginationContainer>
+          {ruleData.map((_, index) => (
+            <PaginationDot
+              key={index}
+              active={activeSlide === index}
+              teamColor={teamColor.primary}
+            />
+          ))}
+        </PaginationContainer>
+      </View>
+    );
+  };
+
   return (
     <AppWrapper>
       <MobileContainer width={width}>
         <StatusBar style="light" />
         <Header width={width} teamColor={teamColor.primary}>
-          <HeaderTitle width={width}>야금야금 - KIA 타이거즈</HeaderTitle>
+          <HeaderTitle width={width}>
+            야금야금 - {teamName || "팀 정보가 불러와지지 않았습니다."}
+          </HeaderTitle>
           <TouchableOpacity>
-            <BellIcon
-              source={require("../../assets/icon.png")}
-              // tintColor="yellow"
-            />
+            <BellIcon source={require("../../assets/icon.png")} />
           </TouchableOpacity>
         </Header>
 
@@ -329,14 +469,13 @@ const MainPage = () => {
                 </CardContent>
               </Card>
 
+              {/* 적금 규칙 캐러셀 카드 */}
               <Card width={width}>
                 <CardHeader width={width}>
                   <CardTitle width={width}>적금 규칙</CardTitle>
                 </CardHeader>
                 <CardContent width={width}>
-                  <RuleText width={width}>안타 1개당: 1,000원</RuleText>
-                  <RuleText width={width}>홈런 1개당: 5,000원</RuleText>
-                  <RuleText width={width}>팀 승리 시: 3,000원</RuleText>
+                  <RulesCarousel />
                 </CardContent>
               </Card>
 
