@@ -10,6 +10,7 @@ from database import get_db
 import models
 from router.account import account_schema, account_crud
 from router.user.user_router import get_current_user
+from router.player import player_schema
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -82,6 +83,21 @@ async def create_account(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="선택한 팀이 존재하지 않습니다"
             )
+        
+        # 1.1 최애 선수 ID가 제공된 경우 유효성 검사
+        if request.FAVORITE_PLAYER_ID:
+            player = db.query(models.Player).filter(models.Player.PLAYER_ID == request.FAVORITE_PLAYER_ID).first()
+            if not player:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="존재하지 않는 선수입니다"
+                )
+            # 선수가 선택된 팀에 소속되어 있는지 확인
+            if player.TEAM_ID != request.TEAM_ID:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="선택한 선수는 선택한 팀에 소속되어 있지 않습니다"
+                )
         
         # 2. 목표 설정 유효성 검사
         if request.SAVING_GOAL <= 0:
@@ -183,6 +199,7 @@ async def create_account(
         db_account = models.Account(
             USER_ID=current_user.USER_ID,
             TEAM_ID=request.TEAM_ID,
+            FAVORITE_PLAYER_ID=request.FAVORITE_PLAYER_ID,  # 추가된 부분
             ACCOUNT_NUM=account_num,
             INTEREST_RATE=2.5,  # 기본 이자율
             SAVING_GOAL=request.SAVING_GOAL,
@@ -283,6 +300,7 @@ async def create_account(
             "ACCOUNT_ID": db_account.ACCOUNT_ID,
             "ACCOUNT_NUM": db_account.ACCOUNT_NUM,
             "TEAM_ID": db_account.TEAM_ID,
+            "FAVORITE_PLAYER_ID": db_account.FAVORITE_PLAYER_ID,  # 추가된 부분
             "SAVING_GOAL": db_account.SAVING_GOAL,
             "DAILY_LIMIT": db_account.DAILY_LIMIT,
             "MONTH_LIMIT": db_account.MONTH_LIMIT,
@@ -736,4 +754,100 @@ async def get_saving_rules(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"적금 규칙 설정 조회 중 오류 발생: {str(e)}"
+        )
+    
+@router.get("/{account_id}/favorite-player", response_model=player_schema.PlayerResponse)
+async def get_favorite_player(
+    account_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # 계정 존재 여부 및 소유권 확인
+        account = account_crud.get_account_by_id(db, account_id)
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="계정을 찾을 수 없습니다"
+            )
+        
+        if account.USER_ID != current_user.USER_ID:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="권한이 없습니다"
+            )
+        
+        # 최애 선수 확인
+        if not account.FAVORITE_PLAYER_ID:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="등록된 최애 선수가 없습니다"
+            )
+        
+        # 선수 정보 조회
+        player = db.query(models.Player).filter(models.Player.PLAYER_ID == account.FAVORITE_PLAYER_ID).first()
+        if not player:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="선수 정보를 찾을 수 없습니다"
+            )
+        
+        return player
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"최애 선수 조회 중 오류 발생: {str(e)}"
+        )
+    
+@router.put("/{account_id}/favorite-player", response_model=account_schema.AccountResponse)
+async def update_favorite_player(
+    account_id: int,
+    player_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # 계정 존재 여부 및 소유권 확인
+        account = account_crud.get_account_by_id(db, account_id)
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="계정을 찾을 수 없습니다"
+            )
+        
+        if account.USER_ID != current_user.USER_ID:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="권한이 없습니다"
+            )
+        
+        # 선수 존재 여부 확인
+        player = db.query(models.Player).filter(models.Player.PLAYER_ID == player_id).first()
+        if not player:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="존재하지 않는 선수입니다"
+            )
+        
+        # 선수가 계정의 팀에 소속되어 있는지 확인
+        if player.TEAM_ID != account.TEAM_ID:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="선택한 선수는 계정의 팀에 소속되어 있지 않습니다"
+            )
+        
+        # 최애 선수 업데이트
+        account.FAVORITE_PLAYER_ID = player_id
+        db.commit()
+        db.refresh(account)
+        
+        return account
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"최애 선수 업데이트 중 오류 발생: {str(e)}"
         )

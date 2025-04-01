@@ -27,6 +27,7 @@ class Account(Base):
     ACCOUNT_ID = Column(Integer, primary_key=True)
     USER_ID = Column(Integer, ForeignKey("user.USER_ID"), nullable=False)
     TEAM_ID = Column(Integer, ForeignKey("team.TEAM_ID"), nullable=False)
+    FAVORITE_PLAYER_ID = Column(Integer,ForeignKey("player.PLAYER_ID"),nullable=True)
     ACCOUNT_NUM = Column(String(16), nullable=False)
     INTEREST_RATE = Column(Float)
     SAVING_GOAL = Column(Integer)
@@ -39,6 +40,7 @@ class Account(Base):
     # 관계 정의
     user = relationship("User", back_populates="accounts")
     team = relationship("Team", back_populates="accounts")
+    favorite_player = relationship("Player",foreign_keys={FAVORITE_PLAYER_ID})
     used_missions = relationship("UsedMission", back_populates="account")
     user_saving_rules = relationship("UserSavingRule", back_populates="account")
     daily_savings = relationship("DailySaving", back_populates="account")
