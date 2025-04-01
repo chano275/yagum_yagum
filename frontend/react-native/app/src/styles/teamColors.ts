@@ -52,5 +52,33 @@ export const teamColors = {
   },
 };
 
+// DB의 팀 ID를 팀 코드로 매핑
+export const teamIdToCode: { [key: number]: keyof typeof teamColors } = {
+  1: "KIA",
+  2: "SAMSUNG",
+  3: "LG",
+  4: "DOOSAN",
+  5: "KT",
+  6: "SSG",
+  7: "LOTTE",
+  8: "Hanwha",
+  9: "NC",
+  10: "Kiwoom",
+};
+
+// DB의 팀 이름을 팀 코드로 매핑
+export const teamNameToCode: { [key: string]: keyof typeof teamColors } = {
+  "KIA 타이거즈": "KIA",
+  "삼성 라이온즈": "SAMSUNG",
+  "LG 트윈스": "LG",
+  "두산 베어스": "DOOSAN",
+  "KT 위즈": "KT",
+  "SSG 랜더스": "SSG",
+  "롯데 자이언츠": "LOTTE",
+  "한화 이글스": "Hanwha",
+  "NC 다이노스": "NC",
+  "키움 히어로즈": "Kiwoom",
+};
+
 // 기본값 설정
 export const defaultTeam = "NC";
