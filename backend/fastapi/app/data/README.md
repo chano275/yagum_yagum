@@ -13,3 +13,12 @@
 
 `game_preprocessing.py`
 - 경기 기록 전처리 코드
+- 경기 기록 전처리 진행하여 porcessed_data 폴더에 저장
+- 일일 팀 순위 갱신 저장하여 daily_rank 폴더에 저장
+
+`team_rank.py`
+- 일일 팀 순위 표.ver0
+
+
+`change_json.py`
+- csv 파일 json으로 변환

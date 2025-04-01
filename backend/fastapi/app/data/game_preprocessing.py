@@ -85,6 +85,25 @@ for batting_file, log_box_file in zip(batting_files, log_box_files):
         '기록값': home_result
     })
 
+    # current_rank.csv 업데이트
+    ranking_df = pd.read_csv('current_rank.csv')
+
+    # 경기 결과에 따라 승/무/패 업데이트
+    if away_result == 'W':
+        ranking_df.loc[ranking_df['팀'] == away_team, '승'] += 1
+        ranking_df.loc[ranking_df['팀'] == home_team, '패'] += 1
+    elif away_result == 'L':
+        ranking_df.loc[ranking_df['팀'] == away_team, '패'] += 1
+        ranking_df.loc[ranking_df['팀'] == home_team, '승'] += 1
+    elif away_result == 'D':
+        ranking_df.loc[ranking_df['팀'] == away_team, '무'] += 1
+        ranking_df.loc[ranking_df['팀'] == home_team, '무'] += 1
+
+    # current_rank.csv 저장
+    ranking_df.to_csv('current_rank.csv', index=False, encoding='utf-8-sig')
+
+    # print("✅ ranking 업데이트 완료!")
+
     # 2. **log_box 데이터 정제**
     def count_keyword_occurrences(row, keyword):
         count = 0
@@ -128,3 +147,35 @@ output_file_path = os.path.join(output_folder_path, f'{current_date}-play_log.cs
 df_log_combined_sorted.to_csv(output_file_path, index=False, encoding='utf-8-sig')
 
 print(f"✅ {output_file_path} 파일이 성공적으로 생성되었습니다.")
+
+
+ranking_df = pd.read_csv('current_rank.csv')
+
+ranking_df['승률'] = (ranking_df['승'] / (ranking_df['승'] + ranking_df['패']).replace({0: 1})).round(3)
+ranking_df['순위'] = ranking_df['승률'].rank(method='min', ascending=False).astype(int)
+
+# 저장 부분 수정 (파일 경로 사용)
+ranking_df.to_csv('current_rank.csv', index=False, encoding='utf-8-sig')
+
+print("✅ ranking 계산 완료!")
+
+# daily_rank 폴더 생성
+daily_rank_folder = os.path.join('daily_rank')
+if not os.path.exists(daily_rank_folder):
+    os.makedirs(daily_rank_folder)
+
+# 일별 순위 파일 저장 (파일명: YYYYMMDD-rank.csv)
+daily_rank_filename = f'{current_date}-rank.csv'
+daily_rank_path = os.path.join(daily_rank_folder, daily_rank_filename)
+
+# 기존 ranking_df에 날짜 컬럼 추가
+# ranking_df_with_date = ranking_df.copy()
+# ranking_df_with_date.insert(0, '날짜', log_date)  # 첫 번째 컬럼에 날짜 추가
+
+# CSV 저장 (인코딩 및 헤더 처리)
+ranking_df = ranking_df.sort_values(
+    by='순위', 
+    ascending=True
+).reset_index(drop=True)
+ranking_df.to_csv(daily_rank_path, index=False, encoding='utf-8-sig')
+print(f"✅ {daily_rank_path} 파일이 생성되었습니다.")
