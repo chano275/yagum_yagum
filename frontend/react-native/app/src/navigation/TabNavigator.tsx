@@ -75,7 +75,16 @@ const TabNavigator = () => {
         }}
       >
         <Tab.Screen name="홈" component={MainPage} />
-        <Tab.Screen name="적금내역" component={SavingsScreen} />
+        <Tab.Screen
+          name="적금내역"
+          component={SavingsScreen}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              e.preventDefault(); // 기본 동작 방지
+              navigation.navigate("적금내역", { viewMode: "calendar" }); // 항상 캘린더로 초기화
+            },
+          })}
+        />
         <Tab.Screen name="리포트" component={ReportScreen} />
         <Tab.Screen name="혜택" component={BenefitsScreen} />
       </Tab.Navigator>
@@ -83,4 +92,4 @@ const TabNavigator = () => {
   );
 };
 
-export default TabNavigator; 
+export default TabNavigator;
