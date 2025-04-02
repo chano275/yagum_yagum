@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   useWindowDimensions,
   SafeAreaView,
@@ -14,6 +14,9 @@ import styled from "styled-components/native";
 import { Calendar } from "react-native-calendars";
 import { Ionicons } from "@expo/vector-icons";
 import { useTeam } from "@/context/TeamContext";
+import { RouteProp } from "@react-navigation/native";
+import { useRoute } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 
 // 동적 스타일링을 위한 인터페이스
 interface StyledProps {
@@ -430,11 +433,74 @@ const SeriesMatchCard = ({ match }: { match: SeriesMatch }) => {
 // 메인 컴포넌트
 const SavingsScreen = () => {
   const { teamColor } = useTeam();
+  const route = useRoute(); // 네비게이션 라우트 정보 가져오기
   const { width: windowWidth } = useWindowDimensions();
   const width =
     Platform.OS === "web"
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
+
+  // 네비게이션 파라미터 처리
+  useEffect(() => {
+    try {
+      // 디버깅을 위한 로그 추가
+      console.log("전체 라우트 객체:", route);
+
+      if (route && route.params) {
+        console.log("라우트 파라미터:", route.params);
+
+        // params가 객체인지 확인하고 안전하게 접근
+        if (typeof route.params === "object") {
+          // params 객체의 구조를 확인
+          const params = route.params;
+          console.log("params 내용:", params);
+
+          // viewMode 속성이 있는지 확인
+          if ("viewMode" in params) {
+            const mode = params.viewMode;
+            console.log("viewMode 값:", mode);
+
+            if (mode === "list" || mode === "calendar") {
+              setViewMode(mode);
+            }
+          } else {
+            // 중첩된 params 객체 확인 (React Navigation 5 이상)
+            if (
+              params.params &&
+              typeof params.params === "object" &&
+              "viewMode" in params.params
+            ) {
+              const mode = params.params.viewMode;
+              if (mode === "list" || mode === "calendar") {
+                setViewMode(mode);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Navigation params error:", error);
+    }
+  }, [route?.params]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const params = route.params;
+      let mode: ViewMode = "calendar";
+
+      if (params && typeof params === "object") {
+        if ("viewMode" in params) {
+          mode = params.viewMode as ViewMode;
+        } else if (params.params && "viewMode" in params.params) {
+          mode = params.params.viewMode as ViewMode;
+        }
+      }
+
+      if (mode === "calendar" || mode === "list") {
+        setViewMode(mode);
+      }
+    }, [route.params])
+  );
 
   // 팀 로고 임포트 (실제 로고로 교체 필요)
   const teamLogos = {
