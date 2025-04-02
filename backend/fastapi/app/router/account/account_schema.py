@@ -31,6 +31,7 @@ class AccountResponse(AccountBase):
     ACCOUNT_ID: int
     ACCOUNT_NUM:str
     TOTAL_AMOUNT: int
+    INTEREST_RATE: float
     created_at: datetime
     
     class Config:
@@ -69,11 +70,15 @@ class AccountSetup(BaseModel):
     SOURCE_ACCOUNT: str
 
     # 적금 규칙 설정 모델
+# class SavingRuleRequest(BaseModel):
+#     SAVING_RULE_TYPE_ID: int  # 기본 규칙(1), 투수(2), 타자(3), 상대팀(4)
+#     RECORD_TYPE_ID: int  # 승리(1), 안타(2), 홈런(3) 등
+#     PLAYER_ID: Optional[int] = None  # 선수 규칙의 경우만 필요
+#     USER_SAVING_RULED_AMOUNT: int  # 적립 금액
+
 class SavingRuleRequest(BaseModel):
-    SAVING_RULE_TYPE_ID: int  # 기본 규칙(1), 투수(2), 타자(3), 상대팀(4)
-    RECORD_TYPE_ID: int  # 승리(1), 안타(2), 홈런(3) 등
-    PLAYER_ID: Optional[int] = None  # 선수 규칙의 경우만 필요
-    USER_SAVING_RULED_AMOUNT: int  # 적립 금액
+    SAVING_RULE_DETAIL_ID: int  # SAVING_RULE_DETAIL_ID만 받음
+    SAVING_RULED_AMOUNT: int  # 적립 금액
 
 # 적금 가입 요청 모델
 class AccountCreateRequest(BaseModel):
