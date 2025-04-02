@@ -12,11 +12,10 @@ import { DimensionProvider } from "./src/context/DimensionContext";
 import { TeamProvider } from "./src/context/TeamContext";
 import AppNavigator from "./src/navigation/AppNavigator";
 import axios from "axios";
-import { REACT_APP_API_URL, REACT_APP_LOCAL_URL } from "@env";
 
 const BASE_URL = __DEV__
-  ? "http://localhost:8000" // 개발 환경
-  : "http://3.38.183.156:8000"; // 배포 환경
+  ? "http://3.38.183.156:8000" // 배포 환경
+  : "http://localhost:8000"; // 개발 환경
 
 axios.defaults.baseURL = BASE_URL;
 

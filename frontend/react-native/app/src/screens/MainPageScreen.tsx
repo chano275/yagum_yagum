@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   useWindowDimensions,
   SafeAreaView,
@@ -16,6 +16,7 @@ import { RootStackParamList } from "../navigation/AppNavigator";
 import { useNavigation } from "@react-navigation/native";
 import Carousel from "react-native-reanimated-carousel";
 import { Ionicons } from "@expo/vector-icons";
+import { api } from "../api/axios";
 
 type MainPageNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type TabNavigationProp = BottomTabNavigationProp<{
@@ -312,13 +313,51 @@ const MainPage = () => {
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
 
-  const [currentAmount, setCurrentAmount] = useState(300000);
-  const [targetAmount, setTargetAmount] = useState(500000);
+  // 상태값 업데이트
+  const [currentAmount, setCurrentAmount] = useState(0);
+  const [targetAmount, setTargetAmount] = useState(0);
+  const [savingTitle, setSavingTitle] = useState("목표 저축");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeSlide, setActiveSlide] = useState(0);
+
+  // 계좌 정보 조회
+  useEffect(() => {
+    const fetchAccountData = async () => {
+      try {
+        setIsLoading(true);
+        // 예시 계정 ID, 실제로는 로그인 시 저장된 계정 ID를 사용해야 함
+        const accountId = 1; // 실제 구현에서는 저장된 계정 ID 사용
+
+        const response = await api.get(`/api/account/${accountId}`);
+
+        if (response.status === 200) {
+          const accountData = response.data;
+
+          // API 응답에서 목표 금액과 현재 금액 설정
+          setTargetAmount(accountData.SAVING_GOAL || 0);
+          setCurrentAmount(accountData.TOTAL_AMOUNT || 0);
+
+          // 목표 제목 설정 (예시: "유니폼 구매")
+          setSavingTitle("유니폼 구매 (API)"); // 필요시 API에서 제목을 받아와 설정
+        }
+      } catch (err) {
+        console.error("계좌 정보 조회 실패:", err);
+        setError(err);
+        // 에러 발생시 기본값 설정
+        setTargetAmount(500000);
+        setCurrentAmount(300000);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAccountData();
+  }, []); // 컴포넌트 마운트 시 한 번만 실행
 
   const percentage = Math.min(
     100,
-    Math.round((currentAmount / targetAmount) * 100)
+    Math.round((currentAmount / (targetAmount || 1)) * 100) // 0으로 나누기 방지
   );
 
   const formatAmount = (amount: number) => {
@@ -384,7 +423,7 @@ const MainPage = () => {
     );
   };
 
-  // react-native-reanimated-carousel 사용으로 변경된 캐러셀 컴포넌트
+  // 캐러셀 컴포넌트
   const RulesCarousel = () => {
     return (
       <View>
@@ -435,7 +474,7 @@ const MainPage = () => {
             contentContainerStyle={{ paddingBottom: 20 }}
           >
             <ProgressSection width={width} teamColor={teamColor.primary}>
-              <ProgressTitle width={width}>유니폼 구매</ProgressTitle>
+              <ProgressTitle width={width}>{savingTitle}</ProgressTitle>
               <ProgressAmount width={width}>
                 {formatAmount(currentAmount)}원 / {formatAmount(targetAmount)}원
               </ProgressAmount>
@@ -449,7 +488,7 @@ const MainPage = () => {
 
             <StatsRow width={width}>
               <StatText width={width}>
-                현재 금리: 3.5% <StatHighlight>+0.4%</StatHighlight>
+                현재 금리: 3.5%(API) <StatHighlight>+0.4%</StatHighlight>
               </StatText>
               <StatText width={width}>
                 팀 순위: 3위 <StatHighlight>+2</StatHighlight>
@@ -459,7 +498,9 @@ const MainPage = () => {
             <View style={{ padding: width * 0.04 }}>
               <Card width={width}>
                 <CardHeader width={width}>
-                  <CardTitle width={width}>오늘의 적금 비교</CardTitle>
+                  <CardTitle width={width}>
+                    오늘의 적금 비교 (API 연결 필요)
+                  </CardTitle>
                 </CardHeader>
                 <CardContent width={width}>
                   <CardText width={width}>
@@ -472,7 +513,7 @@ const MainPage = () => {
               {/* 적금 규칙 캐러셀 카드 */}
               <Card width={width}>
                 <CardHeader width={width}>
-                  <CardTitle width={width}>적금 규칙</CardTitle>
+                  <CardTitle width={width}>적금 규칙 (API 연결 필요)</CardTitle>
                 </CardHeader>
                 <CardContent width={width}>
                   <RulesCarousel />
@@ -481,11 +522,15 @@ const MainPage = () => {
 
               <Card width={width}>
                 <CardHeader width={width}>
-                  <CardTitle width={width}>최근 적금 내역</CardTitle>
+                  <CardTitle width={width}>
+                    최근 적금 내역 (API 연결 필요)
+                  </CardTitle>
                   <TouchableOpacity
                     onPress={() => {
-                      // @ts-ignore
-                      navigation.navigate("Main", { screen: "적금내역" });
+                      navigation.navigate("Main", {
+                        screen: "적금내역",
+                        params: { viewMode: "list" },
+                      });
                     }}
                   >
                     <ViewAllLink width={width} teamColor={teamColor.primary}>
@@ -531,8 +576,17 @@ const MainPage = () => {
 
               <Card width={width}>
                 <CardHeader width={width}>
-                  <CardTitle width={width}>다음 경기 일정</CardTitle>
-                  <TouchableOpacity>
+                  <CardTitle width={width}>
+                    다음 경기 일정 (API 연결 필요)
+                  </CardTitle>
+                  <TouchableOpacity
+                    onPress={() => {
+                      navigation.navigate("Main", {
+                        screen: "적금내역",
+                        params: { viewMode: "calendar" },
+                      });
+                    }}
+                  >
                     <ViewAllLink width={width} teamColor={teamColor.primary}>
                       전체 일정 &gt;
                     </ViewAllLink>
