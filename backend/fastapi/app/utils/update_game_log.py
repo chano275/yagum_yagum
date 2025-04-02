@@ -119,20 +119,17 @@ def process_json_game_logs(json_dir="data/json_data"):
             with open(file_path, 'r', encoding='utf-8') as f:
                 game_records = json.load(f)
             
+            # 게임 기록 처리 (리스트 형태)
+            # 파일명에서 추출한 날짜 사용
+            record_date = game_date
+            logger.info(f"날짜 {record_date}의 기록 처리 중...")
+                    
             # 각 기록 처리
             for record in game_records:
                 # 필수 필드 확인
                 if '팀' not in record or '기록' not in record or '기록값' not in record:
                     logger.warning(f"필수 필드가 없는 레코드가 발견되었습니다: {record}")
                     continue
-                
-                # 날짜 파싱
-                # try:
-                #     # JSON에 날짜가 있는 경우
-                #     record_date = datetime.strptime(record['날짜'], '%Y-%m-%d').date()
-                # except (ValueError, TypeError):
-                #     # 파일명에서 추출한 날짜 사용
-                record_date = game_date
                 
                 # 팀 정보 처리
                 team_name = record['팀']
@@ -213,7 +210,6 @@ def process_json_game_logs(json_dir="data/json_data"):
                     logger.info(f"새 로그 추가: 날짜={record_date}, 팀={team_name}, 기록={record_type}, 값={count}")
                     
                     total_records += 1
-            
             # 변경사항 커밋
             session.commit()
             
