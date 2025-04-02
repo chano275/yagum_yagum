@@ -26,10 +26,10 @@ def import_game_schedule():
     try:
         # CSV 파일 경로 설정 - 여러 가능한 경로 시도
         possible_paths = [
-            os.path.join(project_root, 'fastapi', 'app', 'data', 'game_schedule', '2025_season_games.csv'),
-            os.path.join(project_root, 'app', 'data', 'game_schedule', '2025_season_games.csv'),
-            os.path.join(project_root, 'data', 'game_schedule', '2025_season_games.csv'),
-            os.path.join(project_root, 'backend', 'fastapi', 'app', 'data', 'game_schedule', '2025_season_games.csv')
+            os.path.join(project_root, 'fastapi', 'app', 'baseball_data', 'game_schedule', '2025_season_games.csv'),
+            os.path.join(project_root, 'app', 'baseball_data', 'game_schedule', '2025_season_games.csv'),
+            os.path.join(project_root, 'baseball_data', 'game_schedule', '2025_season_games.csv'),
+            os.path.join(project_root, 'backend', 'fastapi', 'app', 'baseball_data', 'game_schedule', '2025_season_games.csv')
         ]
 
         csv_file_path = None

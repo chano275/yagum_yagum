@@ -147,7 +147,7 @@ def find_rank_file(data_folder, target_date):
 
 def main():
     # 데이터 폴더 경로 설정
-    data_folder = os.path.join(project_root, 'backend', 'fastapi', 'app', 'data', 'daily_rank')
+    data_folder = os.path.join(project_root, 'backend', 'fastapi', 'app', 'baseball_data', 'daily_rank')
     
     # 인자 파서 설정
     parser = argparse.ArgumentParser(description='일일 팀 순위 데이터베이스 업데이트')
