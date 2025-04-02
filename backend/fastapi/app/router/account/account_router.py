@@ -10,60 +10,13 @@ from database import get_db
 import models
 from router.account import account_schema, account_crud
 from router.user.user_router import get_current_user
+from router.player import player_schema
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-@router.post("/init", response_model=account_schema.InitAccountResponse)
-async def initialize_account(
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    try:
-        logger.info(f"계좌번호 초기 발급 시도: 사용자 ID {current_user.USER_ID}")
-        
-        # 금융 API를 통해 계좌번호만 발급
-        from router.user.user_ssafy_api_utils import create_demand_deposit_account
-        SAVING_CODE = os.getenv("SAVING_CODE")
-        account_num = await create_demand_deposit_account(current_user.USER_KEY, SAVING_CODE)
-        
-        # 임시 기본값 설정 (나중에 업데이트할 값들)
-        default_team_id = 1  # 임시 팀 ID (가장 첫 번째 팀으로 설정)
-        default_saving_goal = 1000000  # 100만원으로 임시 설정
-        default_daily_limit = 100000  # 10만원으로 임시 설정
-        default_month_limit = 1000000  # 100만원으로 임시 설정
-        default_source_account = current_user.SOURCE_ACCOUNT  # 사용자의 입출금 계좌로 설정
-        
-        # 최소한의 정보로 계정 생성 (필수 필드에는 기본값 설정)
-        db_account = models.Account(
-            USER_ID=current_user.USER_ID,
-            TEAM_ID=default_team_id,  # 임시 팀 ID
-            ACCOUNT_NUM=account_num,
-            INTEREST_RATE=2.5,  # 기본 이자율
-            SAVING_GOAL=default_saving_goal,
-            DAILY_LIMIT=default_daily_limit,
-            MONTH_LIMIT=default_month_limit,
-            SOURCE_ACCOUNT=default_source_account,
-            TOTAL_AMOUNT=0,
-            created_at=datetime.now()
-        )
-        db.add(db_account)
-        db.commit()
-        db.refresh(db_account)
-        
-        logger.info(f"계좌번호 초기 발급 완료: 계정 ID {db_account.ACCOUNT_ID}, 계좌번호 {account_num}")
-        
-        return {"ACCOUNT_ID": db_account.ACCOUNT_ID, "ACCOUNT_NUM": account_num}
-        
-    except Exception as e:
-        logger.error(f"계좌번호 발급 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"계좌번호 발급 중 오류 발생: {str(e)}"
-        )
 
 @router.post("/create", response_model=account_schema.AccountCreateResponse)
 async def create_account(
@@ -82,6 +35,21 @@ async def create_account(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="선택한 팀이 존재하지 않습니다"
             )
+        
+        # 1.1 최애 선수 ID가 제공된 경우 유효성 검사
+        if request.FAVORITE_PLAYER_ID:
+            player = db.query(models.Player).filter(models.Player.PLAYER_ID == request.FAVORITE_PLAYER_ID).first()
+            if not player:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="존재하지 않는 선수입니다"
+                )
+            # 선수가 선택된 팀에 소속되어 있는지 확인
+            if player.TEAM_ID != request.TEAM_ID:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="선택한 선수는 선택한 팀에 소속되어 있지 않습니다"
+                )
         
         # 2. 목표 설정 유효성 검사
         if request.SAVING_GOAL <= 0:
@@ -110,58 +78,30 @@ async def create_account(
             )
         
         for rule in request.saving_rules:
-            # 규칙 타입 확인
+            # 규칙 상세 존재 여부 확인
+            rule_detail = db.query(models.SavingRuleDetail).filter(
+                models.SavingRuleDetail.SAVING_RULE_DETAIL_ID == rule.SAVING_RULE_DETAIL_ID
+            ).first()
+            
+            if not rule_detail:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"규칙 상세 ID {rule.SAVING_RULE_DETAIL_ID}가 존재하지 않습니다"
+                )
+            
+            # 규칙 타입 정보 가져오기
             rule_type = db.query(models.SavingRuleType).filter(
-                models.SavingRuleType.SAVING_RULE_TYPE_ID == rule.SAVING_RULE_TYPE_ID
+                models.SavingRuleType.SAVING_RULE_TYPE_ID == rule_detail.SAVING_RULE_TYPE_ID
             ).first()
             
             if not rule_type:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"규칙 타입 ID {rule.SAVING_RULE_TYPE_ID}이 존재하지 않습니다"
+                    detail=f"규칙 타입을 찾을 수 없습니다: {rule_detail.SAVING_RULE_TYPE_ID}"
                 )
-                
-            # 기록 타입 확인
-            record_type = db.query(models.RecordType).filter(
-                models.RecordType.RECORD_TYPE_ID == rule.RECORD_TYPE_ID
-            ).first()
-            
-            if not record_type:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"기록 타입 ID {rule.RECORD_TYPE_ID}이 존재하지 않습니다"
-                )
-                
-            # 선수 규칙인 경우 선수 ID 확인
-            if rule_type.SAVING_RULE_TYPE_NAME in ["투수", "타자"] and not rule.PLAYER_ID:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"{rule_type.SAVING_RULE_TYPE_NAME} 규칙에는 선수 ID가 필요합니다"
-                )
-                
-            if rule.PLAYER_ID:
-                player = db.query(models.Player).filter(models.Player.PLAYER_ID == rule.PLAYER_ID).first()
-                if not player:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail=f"선수 ID {rule.PLAYER_ID}이 존재하지 않습니다"
-                    )
-                    
-                # 선수 타입 확인
-                if rule_type.SAVING_RULE_TYPE_NAME == "투수" and player.PLAYER_TYPE_ID != 1:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="투수 규칙에는 투수 선수만 선택 가능합니다"
-                    )
-                    
-                if rule_type.SAVING_RULE_TYPE_NAME == "타자" and player.PLAYER_TYPE_ID != 2:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="타자 규칙에는 타자 선수만 선택 가능합니다"
-                    )
             
             # 적립 금액 확인
-            if rule.USER_SAVING_RULED_AMOUNT <= 0:
+            if rule.SAVING_RULED_AMOUNT <= 0:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="적립 금액은 0보다 커야 합니다"
@@ -183,6 +123,7 @@ async def create_account(
         db_account = models.Account(
             USER_ID=current_user.USER_ID,
             TEAM_ID=request.TEAM_ID,
+            FAVORITE_PLAYER_ID=request.FAVORITE_PLAYER_ID,
             ACCOUNT_NUM=account_num,
             INTEREST_RATE=2.5,  # 기본 이자율
             SAVING_GOAL=request.SAVING_GOAL,
@@ -198,54 +139,50 @@ async def create_account(
         # 7. 적금 규칙 추가
         saved_rules = []
         for rule in request.saving_rules:
-            # 규칙 타입 확인
-            rule_type = db.query(models.SavingRuleType).filter(
-                models.SavingRuleType.SAVING_RULE_TYPE_ID == rule.SAVING_RULE_TYPE_ID
+            # 규칙 상세 정보 조회
+            rule_detail = db.query(models.SavingRuleDetail).filter(
+                models.SavingRuleDetail.SAVING_RULE_DETAIL_ID == rule.SAVING_RULE_DETAIL_ID
             ).first()
             
-            # 규칙 타입에 따른 player_id와 player_type_id 설정
+            # 규칙 타입 정보 가져오기
+            rule_type = db.query(models.SavingRuleType).filter(
+                models.SavingRuleType.SAVING_RULE_TYPE_ID == rule_detail.SAVING_RULE_TYPE_ID
+            ).first()
+            
+            # PLAYER_ID 설정 (투수/타자 규칙인 경우 favorite_player_id 사용)
             player_id = None
             player_type_id = None
             
-            if rule_type.SAVING_RULE_TYPE_NAME in ["투수", "타자"] and rule.PLAYER_ID:
-                player_id = rule.PLAYER_ID
-                player = db.query(models.Player).filter(models.Player.PLAYER_ID == player_id).first()
-                if player:
-                    player_type_id = player.PLAYER_TYPE_ID
+            if rule_type.SAVING_RULE_TYPE_ID in [2, 3]:  # 투수 또는 타자 규칙
+                if request.FAVORITE_PLAYER_ID:
+                    player = db.query(models.Player).filter(models.Player.PLAYER_ID == request.FAVORITE_PLAYER_ID).first()
+                    if player and player.PLAYER_TYPE_ID == rule_detail.PLAYER_TYPE_ID:
+                        player_id = request.FAVORITE_PLAYER_ID
+                        player_type_id = player.PLAYER_TYPE_ID
+                    else:
+                        logger.warning(f"최애 선수 타입이 규칙 타입과 일치하지 않습니다: 선수 타입 {player.PLAYER_TYPE_ID if player else 'Unknown'}, 규칙 타입 {rule_detail.PLAYER_TYPE_ID}")
+                        continue
+            else:
+                # 기본 규칙 또는 상대팀 규칙인 경우 null 사용
+                player_id = None
+                player_type_id = rule_detail.PLAYER_TYPE_ID
             
-            # 적금 규칙 목록에서 해당 규칙 찾기
+            # 적금 규칙 조회
             saving_rule = db.query(models.SavingRuleList).filter(
-                models.SavingRuleList.SAVING_RULE_TYPE_ID == rule.SAVING_RULE_TYPE_ID,
-                models.SavingRuleList.RECORD_TYPE_ID == rule.RECORD_TYPE_ID
+                models.SavingRuleList.SAVING_RULE_ID == rule_detail.SAVING_RULE_ID
             ).first()
             
             if not saving_rule:
-                logger.warning(f"해당 조합의 적금 규칙을 찾을 수 없음: 타입 {rule.SAVING_RULE_TYPE_ID}, 기록 {rule.RECORD_TYPE_ID}")
-                continue
-            
-            # 규칙 상세 찾기
-            rule_detail_query = db.query(models.SavingRuleDetail).filter(
-                models.SavingRuleDetail.SAVING_RULE_ID == saving_rule.SAVING_RULE_ID
-            )
-            
-            if player_type_id:
-                rule_detail_query = rule_detail_query.filter(models.SavingRuleDetail.PLAYER_TYPE_ID == player_type_id)
-            else:
-                rule_detail_query = rule_detail_query.filter(models.SavingRuleDetail.PLAYER_TYPE_ID.is_(None))
-                
-            rule_detail = rule_detail_query.first()
-            
-            if not rule_detail:
-                logger.warning(f"해당 조합의 적금 규칙 상세를 찾을 수 없음: 규칙 ID {saving_rule.SAVING_RULE_ID}, 선수 타입 ID {player_type_id}")
+                logger.warning(f"적금 규칙 ID {rule_detail.SAVING_RULE_ID}를 찾을 수 없습니다.")
                 continue
             
             # 사용자 적금 규칙 생성
             db_user_rule = models.UserSavingRule(
                 ACCOUNT_ID=db_account.ACCOUNT_ID,
-                SAVING_RULE_TYPE_ID=rule.SAVING_RULE_TYPE_ID,
-                SAVING_RULE_DETAIL_ID=rule_detail.SAVING_RULE_DETAIL_ID,
+                SAVING_RULE_TYPE_ID=rule_detail.SAVING_RULE_TYPE_ID,
+                SAVING_RULE_DETAIL_ID=rule.SAVING_RULE_DETAIL_ID,
                 PLAYER_TYPE_ID=player_type_id,
-                USER_SAVING_RULED_AMOUNT=rule.USER_SAVING_RULED_AMOUNT,
+                USER_SAVING_RULED_AMOUNT=rule.SAVING_RULED_AMOUNT,
                 PLAYER_ID=player_id
             )
             db.add(db_user_rule)
@@ -259,9 +196,9 @@ async def create_account(
             # 저장된 규칙 정보 구성
             rule_info = {
                 "USER_SAVING_RULED_ID": db_user_rule.USER_SAVING_RULED_ID,
-                "rule_type_name": rule_type.SAVING_RULE_TYPE_NAME,
+                "rule_type_name": rule_type.SAVING_RULE_TYPE_NAME if rule_type else None,
                 "record_name": record_type.RECORD_NAME if record_type else None,
-                "amount": rule.USER_SAVING_RULED_AMOUNT
+                "amount": rule.SAVING_RULED_AMOUNT
             }
             
             # 선수 정보 추가
@@ -283,6 +220,7 @@ async def create_account(
             "ACCOUNT_ID": db_account.ACCOUNT_ID,
             "ACCOUNT_NUM": db_account.ACCOUNT_NUM,
             "TEAM_ID": db_account.TEAM_ID,
+            "FAVORITE_PLAYER_ID": db_account.FAVORITE_PLAYER_ID,
             "SAVING_GOAL": db_account.SAVING_GOAL,
             "DAILY_LIMIT": db_account.DAILY_LIMIT,
             "MONTH_LIMIT": db_account.MONTH_LIMIT,
@@ -302,59 +240,6 @@ async def create_account(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"적금 가입 중 오류 발생: {str(e)}"
         )
-
-# # 계정 생성
-# @router.post("/", response_model=account_schema.AccountResponse)
-# async def create_account(
-#     account: account_schema.AccountCreate, 
-#     db: Session = Depends(get_db), 
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"계정 생성 시도: 사용자 ID {current_user.USER_ID}")
-        
-#         # CRUD 함수 호출하여 계정 생성
-#         new_account = await account_crud.create_account(
-#             db=db,
-#             user_id=current_user.USER_ID,
-#             team_id=account.TEAM_ID,
-#             saving_goal=account.SAVING_GOAL,
-#             daily_limit=account.DAILY_LIMIT,
-#             month_limit=account.MONTH_LIMIT,
-#             source_account=account.SOURCE_ACCOUNT,
-#             user_key=current_user.USER_KEY
-#         )
-        
-#         logger.info(f"계정 생성 완료: 계정 ID {new_account.ACCOUNT_ID}")
-#         return new_account
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"계정 생성 중 예상치 못한 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"계정 생성 중 오류 발생: {str(e)}"
-#         )
-
-# # 팀에 속한 계정 조회
-# @router.get("/team/{team_id}", response_model=List[account_schema.AccountSummary])
-# async def read_team_accounts(
-#     team_id: int,
-#     skip: int = 0,
-#     limit: int = 100,
-#     db: Session = Depends(get_db)
-# ):
-#     try:
-#         logger.info(f"팀 계정 목록 조회: 팀 ID {team_id}")
-#         accounts = account_crud.get_accounts_by_team_id(db, team_id, skip, limit)
-#         return accounts
-#     except Exception as e:
-#         logger.error(f"팀 계정 목록 조회 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"팀 계정 목록 조회 중 오류 발생: {str(e)}"
-#         )
 
 # 특정 계정 조회
 @router.get("/{account_id}", response_model=account_schema.AccountResponse)
@@ -390,50 +275,6 @@ async def read_account(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"계정 조회 중 오류 발생: {str(e)}"
         )
-
-# # 계정 정보 업데이트
-# @router.put("/{account_id}", response_model=account_schema.AccountResponse)
-# async def update_account_info(
-#     account_id: int,
-#     account_update: account_schema.AccountUpdate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"계정 업데이트 요청: 계정 ID {account_id}")
-        
-#         # 계정 존재 여부 확인
-#         db_account = account_crud.get_account_by_id(db, account_id)
-#         if not db_account:
-#             logger.warning(f"업데이트할 계정을 찾을 수 없음: {account_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="계정을 찾을 수 없습니다"
-#             )
-        
-#         # 권한 확인: 본인 계정만 업데이트 가능
-#         if db_account.USER_ID != current_user.USER_ID:
-#             logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {db_account.USER_ID}")
-#             raise HTTPException(status_code=403, detail="권한이 없습니다")
-        
-#         # 계정 업데이트
-#         updated_account = account_crud.update_account(db, account_id, account_update)
-#         if not updated_account:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="계정 정보 업데이트 중 오류가 발생했습니다"
-#             )
-        
-#         return updated_account
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"계정 업데이트 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"계정 업데이트 중 오류 발생: {str(e)}"
-#         )
 
 # 적금 계좌 초기 세팅 계좌 번호 제외
 @router.put("/{account_id}/setup", response_model=account_schema.AccountResponse)
@@ -736,4 +577,100 @@ async def get_saving_rules(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"적금 규칙 설정 조회 중 오류 발생: {str(e)}"
+        )
+    
+@router.get("/{account_id}/favorite-player", response_model=player_schema.PlayerResponse)
+async def get_favorite_player(
+    account_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # 계정 존재 여부 및 소유권 확인
+        account = account_crud.get_account_by_id(db, account_id)
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="계정을 찾을 수 없습니다"
+            )
+        
+        if account.USER_ID != current_user.USER_ID:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="권한이 없습니다"
+            )
+        
+        # 최애 선수 확인
+        if not account.FAVORITE_PLAYER_ID:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="등록된 최애 선수가 없습니다"
+            )
+        
+        # 선수 정보 조회
+        player = db.query(models.Player).filter(models.Player.PLAYER_ID == account.FAVORITE_PLAYER_ID).first()
+        if not player:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="선수 정보를 찾을 수 없습니다"
+            )
+        
+        return player
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"최애 선수 조회 중 오류 발생: {str(e)}"
+        )
+    
+@router.put("/{account_id}/favorite-player", response_model=account_schema.AccountResponse)
+async def update_favorite_player(
+    account_id: int,
+    player_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # 계정 존재 여부 및 소유권 확인
+        account = account_crud.get_account_by_id(db, account_id)
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="계정을 찾을 수 없습니다"
+            )
+        
+        if account.USER_ID != current_user.USER_ID:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="권한이 없습니다"
+            )
+        
+        # 선수 존재 여부 확인
+        player = db.query(models.Player).filter(models.Player.PLAYER_ID == player_id).first()
+        if not player:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="존재하지 않는 선수입니다"
+            )
+        
+        # 선수가 계정의 팀에 소속되어 있는지 확인
+        if player.TEAM_ID != account.TEAM_ID:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="선택한 선수는 계정의 팀에 소속되어 있지 않습니다"
+            )
+        
+        # 최애 선수 업데이트
+        account.FAVORITE_PLAYER_ID = player_id
+        db.commit()
+        db.refresh(account)
+        
+        return account
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"최애 선수 업데이트 중 오류 발생: {str(e)}"
         )

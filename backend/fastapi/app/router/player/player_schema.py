@@ -5,7 +5,7 @@ from datetime import datetime, date
 # 선수 기본 모델
 class PlayerBase(BaseModel):
     TEAM_ID: int
-    PLAYER_NUM: int
+    PLAYER_NUM: str
     PLAYER_TYPE_ID: int
     PLAYER_NAME: str
     PLAYER_IMAGE_URL: Optional[str] = None
@@ -17,7 +17,7 @@ class PlayerCreate(PlayerBase):
 # 선수 업데이트 모델 (요청)
 class PlayerUpdate(BaseModel):
     TEAM_ID: Optional[int] = None
-    PLAYER_NUM: Optional[int] = None
+    PLAYER_NUM: Optional[str] = None
     PLAYER_TYPE_ID: Optional[int] = None
     PLAYER_NAME: Optional[str] = None
     PLAYER_IMAGE_URL: Optional[str] = None

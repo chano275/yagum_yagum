@@ -27,6 +27,7 @@ class Account(Base):
     ACCOUNT_ID = Column(Integer, primary_key=True)
     USER_ID = Column(Integer, ForeignKey("user.USER_ID"), nullable=False)
     TEAM_ID = Column(Integer, ForeignKey("team.TEAM_ID"), nullable=False)
+    FAVORITE_PLAYER_ID = Column(Integer,ForeignKey("player.PLAYER_ID"),nullable=True)
     ACCOUNT_NUM = Column(String(16), nullable=False)
     INTEREST_RATE = Column(Float)
     SAVING_GOAL = Column(Integer)
@@ -39,6 +40,7 @@ class Account(Base):
     # 관계 정의
     user = relationship("User", back_populates="accounts")
     team = relationship("Team", back_populates="accounts")
+    favorite_player = relationship("Player",foreign_keys={FAVORITE_PLAYER_ID})
     used_missions = relationship("UsedMission", back_populates="account")
     user_saving_rules = relationship("UserSavingRule", back_populates="account")
     daily_savings = relationship("DailySaving", back_populates="account")
@@ -75,7 +77,7 @@ class Player(Base):
 
     PLAYER_ID = Column(Integer, primary_key=True)
     TEAM_ID = Column(Integer, ForeignKey("team.TEAM_ID"), nullable=False)
-    PLAYER_NUM = Column(Integer)
+    PLAYER_NUM = Column(String(10))
     PLAYER_TYPE_ID = Column(Integer, ForeignKey("player_type.PLAYER_TYPE_ID"), nullable=False)
     PLAYER_NAME = Column(String(20))
     PLAYER_IMAGE_URL = Column(String(255))
@@ -151,7 +153,7 @@ class RecordType(Base):
 
     RECORD_TYPE_ID = Column(Integer, primary_key=True)
     RECORD_NAME = Column(String(20))
-    RECORD_COMMENT = Column(String(50))
+    # RECORD_COMMENT = Column(String(50))
     
     # 관계 정의
     saving_rule_lists = relationship("SavingRuleList", back_populates="record_type")
@@ -179,6 +181,7 @@ class SavingRuleDetail(Base):
     SAVING_RULE_TYPE_ID = Column(Integer, ForeignKey("saving_rule_type.SAVING_RULE_TYPE_ID"), nullable=False)
     PLAYER_TYPE_ID = Column(Integer, ForeignKey("player_type.PLAYER_TYPE_ID"), nullable=True)
     SAVING_RULE_ID = Column(Integer, ForeignKey("saving_rule_list.SAVING_RULE_ID"), nullable=False)
+    RULE_DESCRIPTION = Column(String(100))
     
     # 관계 정의
     saving_rule_type = relationship("SavingRuleType", back_populates="saving_rule_details")

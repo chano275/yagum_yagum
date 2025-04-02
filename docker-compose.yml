@@ -3,12 +3,10 @@ services:
     build:
       context: ./backend/fastapi
       dockerfile: Dockerfile
-      args:                                  
+      args:
         BACKEND_PORT: ${BACKEND_PORT}
     env_file:
       - ./backend/fastapi/app/.env
-    # volumes:
-    #   - ./backend/fastapi/app:/app
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     depends_on:
@@ -17,39 +15,32 @@ services:
   mariadb:
     image: mariadb:latest
     environment:
-     MARIADB_ROOT_PASSWORD: ${MARIA_PASSWORD} 
-     MARIADB_DATABASE: finball
+      MARIADB_ROOT_PASSWORD: ${MARIA_PASSWORD}
+      MARIADB_DATABASE: finball
     volumes:
       - ./backend/mariadb/data:/var/lib/mysql
     ports:
-      - "${MARIA_PORT}:${MARIA_PORT}"
-
+      - "${MARIA_PORT}:3306"
 
   reactnative:
     build:
       context: ./frontend/react-native
       dockerfile: Dockerfile
-      args:                                  
+      args:
         FRONTEND_METRO_PORT: ${FRONTEND_METRO_PORT}
         FRONTEND_EXPO_PORT: ${FRONTEND_EXPO_PORT}
     env_file:
-      - ./frontend/react-native/.env
-    # volumes:
-    #   - ./frontend/react-native:/app
-    #   - /app/node_modules 
-    # node_modules만 빈 볼륨으로 오버라이드
+      - ./frontend/react-native/app/.env
     ports:
       - "${FRONTEND_METRO_PORT}:${FRONTEND_METRO_PORT}"
       - "${FRONTEND_EXPO_PORT}:${FRONTEND_EXPO_PORT}"
     entrypoint: ["/bin/sh", "-c", "npx expo start --web"]
 
   nginx:
-    image: nginx:latest
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
     depends_on:
-    - fastapi
-    command: /bin/sh -c "ln -sf /etc/nginx/conf.d/custom.conf /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
-    volumes:
-      - /home/ubuntu/jenkins-data/workspace/deploy-develop/nginx/default.conf:/etc/nginx/conf.d/custom.conf:ro
-      - /home/ubuntu/jenkins-data/workspace/deploy-develop/nginx/html:/usr/share/nginx/html:ro
+      - fastapi
     ports:
       - "${NGINX_PORT}:${NGINX_PORT}"

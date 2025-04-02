@@ -187,7 +187,8 @@ def create_saving_rule_detail(db: Session, saving_rule_detail: SavingRuleDetailC
     db_saving_rule_detail = models.SavingRuleDetail(
         SAVING_RULE_TYPE_ID=saving_rule_detail.SAVING_RULE_TYPE_ID,
         PLAYER_TYPE_ID=saving_rule_detail.PLAYER_TYPE_ID,
-        SAVING_RULE_ID=saving_rule_detail.SAVING_RULE_ID
+        SAVING_RULE_ID=saving_rule_detail.SAVING_RULE_ID,
+        RULE_DESCRIPTION=saving_rule_detail.RULE_DESCRIPTION
     )
     db.add(db_saving_rule_detail)
     db.commit()

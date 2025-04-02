@@ -26,7 +26,7 @@ class SavingRuleTypeResponse(SavingRuleTypeBase):
 class RecordTypeResponse(BaseModel):
     RECORD_TYPE_ID: int
     RECORD_NAME: str
-    RECORD_COMMENT: Optional[str] = None
+    # RECORD_COMMENT: Optional[str] = None
     
     class Config:
         orm_mode = True
@@ -80,7 +80,7 @@ class SavingRuleDetailBase(BaseModel):
 
 # 적금 규칙 상세 생성 모델 (요청)
 class SavingRuleDetailCreate(SavingRuleDetailBase):
-    pass
+    RULE_DESCRIPTION: Optional[str] = None
 
 # 적금 규칙 상세 업데이트 모델 (요청)
 class SavingRuleDetailUpdate(BaseModel):
@@ -263,8 +263,30 @@ class DailySavingFilterParams(BaseModel):
 
     # 규칙 생성을 위한 새로운 스키마
 class UserSavingRuleCreateSimplified(BaseModel):
-    ACCOUNT_ID: int
+    # ACCOUNT_ID: int
     SAVING_RULE_TYPE_ID: int  # 예: 1=기본 규칙, 2=투수, 3=타자, 4=상대팀
-    RECORD_TYPE_ID: int  # 예: 1=승리, 2=안타, 3=홈런 등
+    RECORD_TYPE_ID: int  # 예: 1=승리, 4=안타, 5=홈런 등
     PLAYER_ID: Optional[int] = None  # 선수 규칙의 경우에만 필요
     USER_SAVING_RULED_AMOUNT: int  # 적립 금액
+
+# 적금 규칙 상세 정보 응답 모델
+class SavingRuleDetailInfo(BaseModel):
+    SAVING_RULE_DETAIL_ID: int
+    SAVING_RULE_TYPE_ID: int
+    PLAYER_TYPE_ID: Optional[int] = None
+    PLAYER_TYPE_NAME: Optional[str] = None
+    SAVING_RULE_ID: int
+    RULE_DESCRIPTION: Optional[str] = None
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+class SavingRuleListDetailResponse(SavingRuleListResponse):
+    saving_rule_type: SavingRuleTypeResponse
+    record_type: RecordTypeResponse
+    saving_rule_details: List[SavingRuleDetailInfo] = []
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True

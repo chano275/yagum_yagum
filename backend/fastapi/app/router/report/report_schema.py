@@ -155,3 +155,26 @@ class NewsFilterParams(BaseModel):
 # 팀 순위 검색 필터 모델
 class RankingFilterParams(BaseModel):
     ranking_date: Optional[date] = None
+
+class NewsItem(BaseModel):
+    team: str
+    news_summation: str
+
+class NewsHeader(BaseModel):
+    date: Optional[str] = None
+
+class NewsSummaryRequest(BaseModel):
+    header: NewsHeader
+    body: List[NewsItem]
+
+class NewsSummaryResultItem(BaseModel):
+    team: str
+    team_id: Optional[int] = None
+    status: str
+    message: str
+
+class NewsSummaryResponse(BaseModel):
+    status: str
+    message: str
+    date: str
+    results: List[NewsSummaryResultItem]
