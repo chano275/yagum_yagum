@@ -115,7 +115,7 @@ try:
                             PLAYER_NUM=number_str,
                             PLAYER_TYPE_ID=player_type,
                             PLAYER_NAME=name,
-                            PLAYER_IMAGE_URL="",  # 기본 이미지 URL
+                            PLAYER_IMAGE_URL=f"https://chano-s3-test.s3.us-east-2.amazonaws.com/{team_id}/{number_str}.jpg",  # 기본 이미지 URL
                             LIKE_COUNT=0
                         )
                         players.append(new_player)
