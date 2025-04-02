@@ -217,30 +217,6 @@ async def read_user_me(current_user: models.User = Depends(get_current_user)):
             detail=f"사용자 정보 조회 중 오류가 발생했습니다: {str(e)}"
         )
 
-# # 특정 사용자 정보 조회
-# @router.get("/{user_id}", response_model=UserResponse)
-# async def get_user(user_id: int, db: Session = Depends(get_db)):
-#     try:
-#         logger.info(f"사용자 조회 요청: {user_id}")
-#         user = user_crud.get_user_by_id(db, user_id=user_id)
-        
-#         if not user:
-#             logger.warning(f"사용자를 찾을 수 없음: {user_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="사용자를 찾을 수 없습니다"
-#             )
-            
-#         return user
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"사용자 조회 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"사용자 조회 중 오류가 발생했습니다: {str(e)}"
-#         )
-
 # 사용자 삭제
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: int, db: Session = Depends(get_db), 

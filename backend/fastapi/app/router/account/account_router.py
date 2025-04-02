@@ -18,54 +18,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.post("/init", response_model=account_schema.InitAccountResponse)
-async def initialize_account(
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    try:
-        logger.info(f"계좌번호 초기 발급 시도: 사용자 ID {current_user.USER_ID}")
-        
-        # 금융 API를 통해 계좌번호만 발급
-        from router.user.user_ssafy_api_utils import create_demand_deposit_account
-        SAVING_CODE = os.getenv("SAVING_CODE")
-        account_num = await create_demand_deposit_account(current_user.USER_KEY, SAVING_CODE)
-        
-        # 임시 기본값 설정 (나중에 업데이트할 값들)
-        default_team_id = 1  # 임시 팀 ID (가장 첫 번째 팀으로 설정)
-        default_saving_goal = 1000000  # 100만원으로 임시 설정
-        default_daily_limit = 100000  # 10만원으로 임시 설정
-        default_month_limit = 1000000  # 100만원으로 임시 설정
-        default_source_account = current_user.SOURCE_ACCOUNT  # 사용자의 입출금 계좌로 설정
-        
-        # 최소한의 정보로 계정 생성 (필수 필드에는 기본값 설정)
-        db_account = models.Account(
-            USER_ID=current_user.USER_ID,
-            TEAM_ID=default_team_id,  # 임시 팀 ID
-            ACCOUNT_NUM=account_num,
-            INTEREST_RATE=2.5,  # 기본 이자율
-            SAVING_GOAL=default_saving_goal,
-            DAILY_LIMIT=default_daily_limit,
-            MONTH_LIMIT=default_month_limit,
-            SOURCE_ACCOUNT=default_source_account,
-            TOTAL_AMOUNT=0,
-            created_at=datetime.now()
-        )
-        db.add(db_account)
-        db.commit()
-        db.refresh(db_account)
-        
-        logger.info(f"계좌번호 초기 발급 완료: 계정 ID {db_account.ACCOUNT_ID}, 계좌번호 {account_num}")
-        
-        return {"ACCOUNT_ID": db_account.ACCOUNT_ID, "ACCOUNT_NUM": account_num}
-        
-    except Exception as e:
-        logger.error(f"계좌번호 발급 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"계좌번호 발급 중 오류 발생: {str(e)}"
-        )
-
 @router.post("/create", response_model=account_schema.AccountCreateResponse)
 async def create_account(
     request: account_schema.AccountCreateRequest,
@@ -321,59 +273,6 @@ async def create_account(
             detail=f"적금 가입 중 오류 발생: {str(e)}"
         )
 
-# # 계정 생성
-# @router.post("/", response_model=account_schema.AccountResponse)
-# async def create_account(
-#     account: account_schema.AccountCreate, 
-#     db: Session = Depends(get_db), 
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"계정 생성 시도: 사용자 ID {current_user.USER_ID}")
-        
-#         # CRUD 함수 호출하여 계정 생성
-#         new_account = await account_crud.create_account(
-#             db=db,
-#             user_id=current_user.USER_ID,
-#             team_id=account.TEAM_ID,
-#             saving_goal=account.SAVING_GOAL,
-#             daily_limit=account.DAILY_LIMIT,
-#             month_limit=account.MONTH_LIMIT,
-#             source_account=account.SOURCE_ACCOUNT,
-#             user_key=current_user.USER_KEY
-#         )
-        
-#         logger.info(f"계정 생성 완료: 계정 ID {new_account.ACCOUNT_ID}")
-#         return new_account
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"계정 생성 중 예상치 못한 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"계정 생성 중 오류 발생: {str(e)}"
-#         )
-
-# # 팀에 속한 계정 조회
-# @router.get("/team/{team_id}", response_model=List[account_schema.AccountSummary])
-# async def read_team_accounts(
-#     team_id: int,
-#     skip: int = 0,
-#     limit: int = 100,
-#     db: Session = Depends(get_db)
-# ):
-#     try:
-#         logger.info(f"팀 계정 목록 조회: 팀 ID {team_id}")
-#         accounts = account_crud.get_accounts_by_team_id(db, team_id, skip, limit)
-#         return accounts
-#     except Exception as e:
-#         logger.error(f"팀 계정 목록 조회 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"팀 계정 목록 조회 중 오류 발생: {str(e)}"
-#         )
-
 # 특정 계정 조회
 @router.get("/{account_id}", response_model=account_schema.AccountResponse)
 async def read_account(
@@ -408,50 +307,6 @@ async def read_account(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"계정 조회 중 오류 발생: {str(e)}"
         )
-
-# # 계정 정보 업데이트
-# @router.put("/{account_id}", response_model=account_schema.AccountResponse)
-# async def update_account_info(
-#     account_id: int,
-#     account_update: account_schema.AccountUpdate,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"계정 업데이트 요청: 계정 ID {account_id}")
-        
-#         # 계정 존재 여부 확인
-#         db_account = account_crud.get_account_by_id(db, account_id)
-#         if not db_account:
-#             logger.warning(f"업데이트할 계정을 찾을 수 없음: {account_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="계정을 찾을 수 없습니다"
-#             )
-        
-#         # 권한 확인: 본인 계정만 업데이트 가능
-#         if db_account.USER_ID != current_user.USER_ID:
-#             logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {db_account.USER_ID}")
-#             raise HTTPException(status_code=403, detail="권한이 없습니다")
-        
-#         # 계정 업데이트
-#         updated_account = account_crud.update_account(db, account_id, account_update)
-#         if not updated_account:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="계정 정보 업데이트 중 오류가 발생했습니다"
-#             )
-        
-#         return updated_account
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"계정 업데이트 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"계정 업데이트 중 오류 발생: {str(e)}"
-#         )
 
 # 적금 계좌 초기 세팅 계좌 번호 제외
 @router.put("/{account_id}/setup", response_model=account_schema.AccountResponse)
