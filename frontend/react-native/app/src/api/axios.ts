@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 
-const BASE_URL = Platform.OS === 'web' 
-  // ? 'http://localhost:8000'
-  ? 'http://3.38.183.156:8000' 
-  : 'http://10.0.2.2:8000';
+const BASE_URL = 'http://localhost:8000';  // 개발 환경
+
+// 배포 환경용
+// const BASE_URL = 'http://3.38.183.156:8000';  // 배포 환경
 
 export const api = axios.create({
   baseURL: BASE_URL,

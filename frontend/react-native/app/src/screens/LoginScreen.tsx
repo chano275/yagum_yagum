@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AppWrapper, MobileContainer, getAdjustedWidth, StyledProps } from '../constants/layout';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import axios from 'axios';
+import { api } from '../api/axios';
 import { useStore } from '../store/useStore';
 import { AuthState } from '../store/useStore';
 
@@ -57,16 +57,11 @@ const LoginScreen = () => {
       formData.append('username', id);
       formData.append('password', password);
 
-      const response = await axios.post(
-        // 'http://localhost:8000/api/user/login',
-        'http://3.38.183.156:8000/api/user/login',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      const response = await api.post('/api/user/login', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       if (response.status === 200) {
         const { access_token, user } = response.data;
@@ -74,12 +69,9 @@ const LoginScreen = () => {
         navigation.replace('Home');
       }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 401) {
-          Alert.alert('로그인 실패', '이메일 또는 비밀번호가 올바르지 않습니다');
-        } else {
-          Alert.alert('오류', '로그인 처리 중 오류가 발생했습니다');
-        }
+      if (error instanceof Error) {
+        console.error('Login failed:', error);
+        Alert.alert('로그인 실패', '아이디 또는 비밀번호를 확인해주세요.');
       }
     } finally {
       setIsLoading(false);
