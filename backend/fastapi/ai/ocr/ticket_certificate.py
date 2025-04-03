@@ -110,18 +110,20 @@ def clova_ocr(image_path):
         print(f"Clova OCR 처리 오류: {e}")
         return None
     
-# 이미지 파일 경로 설정
-image_path = "image/" + input("이미지 파일 이름을 입력하세요: ")
+def main():
+    image_path = "image/" + input("이미지 파일 이름을 입력하세요 (예시: ticket.jpg): ")
 
-# QR 코드 및 바코드 디코딩 시도
-decoded_text = decode_qr_and_barcodes(image_path)
-
-if decoded_text:
-    print(decoded_text)
-else:
-    # Clova OCR 사용
-    ticket_number = clova_ocr(image_path)
-    if ticket_number:
-        print(ticket_number)
+    # QR 코드 및 바코드 디코딩 시도
+    decoded_text = decode_qr_and_barcodes(image_path)
+    if decoded_text:
+        print(decoded_text)
     else:
-        print("티켓 번호를 찾을 수 없습니다.")
+        # Clova OCR을 통한 티켓 번호 추출
+        ticket_number = clova_ocr(image_path)
+        if ticket_number:
+            print(ticket_number)
+        else:
+            print("티켓 번호를 찾을 수 없습니다.")
+
+if __name__ == "__main__":
+    main()
