@@ -118,3 +118,14 @@ class UserTeamGameScheduleResponse(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+
+class GameResultResponse(BaseModel):
+    game_date: date
+    result: str  # "승리", "패배", "무승부"
+    opponent_team_name: str
+    score: Optional[str] = None  # 예: "3-2"
+    is_home: bool  # 홈 경기 여부
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True

@@ -88,3 +88,23 @@ class InterestRateResponse(BaseModel):
     BASE_INTEREST_RATE: float
     MISSION_INTEREST_RATE: float
     TOTAL_INTEREST_RATE: float
+
+# 팀 순위 예측 관련 스키마
+class TeamRankPredictionCreate(BaseModel):
+    TEAM_ID: int
+    PREDICTED_RANK: int
+    SEASON_YEAR: int = datetime.now().year  # 기본값은 현재 연도
+
+class TeamRankPredictionResponse(BaseModel):
+    PREDICTION_ID: int
+    ACCOUNT_ID: int
+    TEAM_ID: int
+    PREDICTED_RANK: int
+    SEASON_YEAR: int
+    IS_CORRECT: int
+    # created_at: datetime
+    team_name: str
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True

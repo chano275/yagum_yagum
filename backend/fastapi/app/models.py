@@ -47,6 +47,7 @@ class Account(Base):
     ticket_numbers = relationship("TicketNumber", back_populates="account")
     daily_balances = relationship("DailyBalances", back_populates="account")
     weekly_reports = relationship("WeeklyReportPersonal", back_populates="account")
+    rank_predictions = relationship("TeamRankPrediction",back_populates="account")
 
 # 팀 테이블
 class Team(Base):
@@ -70,6 +71,9 @@ class Team(Base):
     home_games = relationship("GameSchedule", foreign_keys="GameSchedule.HOME_TEAM_ID", back_populates="home_team")
     away_games = relationship("GameSchedule", foreign_keys="GameSchedule.AWAY_TEAM_ID", back_populates="away_team")
     game_logs = relationship("GameLog", back_populates="team")
+    rank_predictions = relationship("TeamRankPrediction", back_populates="team")
+    home_ticket_infos = relationship("TicketInfo", foreign_keys="TicketInfo.HOME_TEAM_ID", back_populates="home_team")
+    away_ticket_infos = relationship("TicketInfo", foreign_keys="TicketInfo.AWAY_TEAM_ID", back_populates="away_team")
 
 # 플레이어 테이블
 class Player(Base):
@@ -233,12 +237,14 @@ class TicketNumber(Base):
 
     TICKET_NUMBER_ID = Column(Integer, primary_key=True)
     ACCOUNT_ID = Column(Integer, ForeignKey("account.ACCOUNT_ID"), nullable=True)
+    TICKETINFO_ID = Column(Integer, ForeignKey("ticket_info.TICKETINFO_ID"), nullable=True)
     TICKET_NUMBER = Column(String(20))
     TICKET_TYPE = Column(String(10))
     VERIFIED_STATUS = Column(Boolean)
     
     # 관계 정의
     account = relationship("Account", back_populates="ticket_numbers")
+    ticket_info = relationship("TicketInfo", back_populates="ticket_numbers")
 
 # 일일 잔액 테이블
 class DailyBalances(Base):
@@ -397,3 +403,32 @@ class GameLog(Base):
     # 관계 정의
     team = relationship("Team", back_populates="game_logs")
     record_type = relationship("RecordType", back_populates="game_logs")
+
+# 팀 순위 예측 테이블
+class TeamRankPrediction(Base):
+    __tablename__ = "team_rank_prediction"
+
+    PREDICTION_ID = Column(Integer, primary_key=True)
+    ACCOUNT_ID = Column(Integer, ForeignKey("account.ACCOUNT_ID"), nullable=False)
+    TEAM_ID = Column(Integer, ForeignKey("team.TEAM_ID"), nullable=False)
+    PREDICTED_RANK = Column(Integer, nullable=False)  # 예측한 순위
+    SEASON_YEAR = Column(Integer, nullable=False)  # 시즌 연도 (ex: 2025)
+    IS_CORRECT = Column(Integer, default=0)  # 예측 결과 (0: 미확정, 1: 맞음, 2: 틀림)
+    created_at = Column(DateTime, server_default=func.now())
+    
+    # 관계 정의
+    account = relationship("Account", back_populates="rank_predictions")
+    team = relationship("Team", back_populates="rank_predictions")
+
+class TicketInfo(Base):
+    __tablename__ = "ticket_info"
+
+    TICKETINFO_ID = Column(Integer, primary_key=True)
+    DATE = Column(Date)
+    HOME_TEAM_ID = Column(Integer,ForeignKey("team.TEAM_ID"))
+    AWAY_TEAM_ID = Column(Integer,ForeignKey("team.TEAM_ID"))
+
+    # 관계 정의
+    home_team = relationship("Team", foreign_keys=[HOME_TEAM_ID], back_populates="home_ticket_infos")
+    away_team = relationship("Team", foreign_keys=[AWAY_TEAM_ID], back_populates="away_ticket_infos")
+    ticket_numbers = relationship("TicketNumber", back_populates="ticket_info")
