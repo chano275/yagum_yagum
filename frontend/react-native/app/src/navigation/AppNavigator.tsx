@@ -6,6 +6,8 @@ import LoginScreen from '../screens/LoginScreen';
 import SavingsJoinScreen from '../screens/SavingsJoinScreen';
 import ServiceScreen from '../screens/ServiceScreen';
 import TabNavigator from './TabNavigator';
+import { useStore } from '../store/useStore';
+import PlayerSelectScreen from '../screens/PlayerSelectScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -13,14 +15,18 @@ export type RootStackParamList = {
   SavingsJoin: undefined;
   Service: undefined;
   Main: undefined;
+  PlayerSelect: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
+  const { isLoggedIn } = useStore();
+
   return (
     <NavigationContainer>
       <Stack.Navigator
+        initialRouteName="Home"
         screenOptions={{
           headerShown: false,
         }}
@@ -30,9 +36,10 @@ const AppNavigator = () => {
         <Stack.Screen name="SavingsJoin" component={SavingsJoinScreen} />
         <Stack.Screen name="Service" component={ServiceScreen} />
         <Stack.Screen name="Main" component={TabNavigator} />
+        <Stack.Screen name="PlayerSelect" component={PlayerSelectScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 };
 
-export default AppNavigator; 
+export default AppNavigator;

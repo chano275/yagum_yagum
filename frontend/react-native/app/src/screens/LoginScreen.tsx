@@ -78,9 +78,9 @@ const LoginScreen = () => {
       formData.append("username", id);
       formData.append("password", password);
 
-      const response = await api.post("/api/user/login", formData, {
+      const response = await api.post('/api/user/login', formData, {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       });
 
@@ -97,10 +97,9 @@ const LoginScreen = () => {
         navigation.replace("Home");
       }
     } catch (error) {
-      // 에러 처리는 기존 코드 유지
       if (error instanceof Error) {
-        console.error("Login failed:", error);
-        Alert.alert("로그인 실패", "아이디 또는 비밀번호를 확인해주세요.");
+        console.error('Login failed:', error);
+        Alert.alert('로그인 실패', '아이디 또는 비밀번호를 확인해주세요.');
       }
     } finally {
       setIsLoading(false);
