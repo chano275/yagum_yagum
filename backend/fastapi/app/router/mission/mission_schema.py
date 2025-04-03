@@ -65,30 +65,6 @@ class UsedMissionDetailResponse(UsedMissionResponse):
         orm_mode = True
         from_attributes = True
 
-# 미션 요약 정보 응답 모델
-class MissionSummaryResponse(BaseModel):
-    total_missions: int
-    completed_missions: int
-    completion_rate: float
-    total_rate: float
-
-# 미션 상태 업데이트 요청 모델
-class MissionStatusUpdate(BaseModel):
-    MISSION_ID: int
-    increment: bool = True  # True: 증가, False: 감소
-
-# 일회성 미션 완료 요청 모델
-class CompleteMissionRequest(BaseModel):
-    MISSION_ID: int
-    ACCOUNT_ID: int
-
-# 이자율 응답 모델
-class InterestRateResponse(BaseModel):
-    ACCOUNT_ID: int
-    BASE_INTEREST_RATE: float
-    MISSION_INTEREST_RATE: float
-    TOTAL_INTEREST_RATE: float
-
 # 팀 순위 예측 관련 스키마
 class TeamRankPredictionCreate(BaseModel):
     TEAM_ID: int
@@ -108,3 +84,9 @@ class TeamRankPredictionResponse(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+    
+class OCRResponse(BaseModel):
+    success:bool
+    text:str
+    confidence: Optional[float] = None
+    error: Optional[str] = None

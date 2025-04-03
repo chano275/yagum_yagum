@@ -171,39 +171,6 @@ async def read_team_full_details(
             detail=f"팀 상세 정보 조회 중 오류 발생: {str(e)}"
         )
 
-# 팀 뉴스 조회
-@router.get("/{team_id}/news", response_model=List[team_schema.NewsResponse])
-async def read_team_news(
-    team_id: int,
-    skip: int = 0,
-    limit: int = 30,
-    db: Session = Depends(get_db)
-):
-    try:
-        logger.info(f"팀 뉴스 조회: 팀 ID {team_id}")
-        
-        # 팀 존재 여부 확인
-        team = team_crud.get_team_by_id(db, team_id)
-        if not team:
-            logger.warning(f"존재하지 않는 팀: {team_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="존재하지 않는 팀입니다"
-            )
-            
-        # 뉴스 조회
-        news = team_crud.get_news_by_team(db, team_id, skip, limit)
-        
-        return news
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"팀 뉴스 조회 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"팀 뉴스 조회 중 오류 발생: {str(e)}"
-        )
-
 # 팀 일일 보고서 조회
 @router.get("/{team_id}/daily-reports", response_model=List[team_schema.DailyReportResponse])
 async def read_team_daily_reports(
@@ -346,49 +313,6 @@ async def read_team_weekly_report_by_date(
             detail=f"특정 날짜 팀 주간 보고서 조회 중 오류 발생: {str(e)}"
         )
 
-# 팀 주간 보고서 생성/업데이트
-@router.post("/{team_id}/weekly-reports", response_model=team_schema.WeeklyReportResponse)
-async def create_team_weekly_report(
-    team_id: int,
-    report: team_schema.WeeklyReportCreate,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    try:
-        logger.info(f"팀 주간 보고서 생성/업데이트 요청: 팀 ID {team_id}")
-        
-        # TODO: 관리자 권한 확인 필요
-        
-        # 팀 존재 여부 확인
-        team = team_crud.get_team_by_id(db, team_id)
-        if not team:
-            logger.warning(f"존재하지 않는 팀: {team_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="존재하지 않는 팀입니다"
-            )
-            
-        # 요청 경로의 팀 ID와 보고서 데이터의 팀 ID 일치 확인
-        if report.TEAM_ID != team_id:
-            logger.warning(f"경로의 팀 ID와 데이터의 팀 ID 불일치: 경로 {team_id}, 데이터 {report.TEAM_ID}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="경로의 팀 ID와 보고서 데이터의 팀 ID가 일치하지 않습니다"
-            )
-            
-        # 보고서 생성/업데이트
-        created_report = team_crud.create_weekly_report(db, report.dict())
-        
-        logger.info(f"팀 주간 보고서 생성/업데이트 완료: 팀 ID {team_id}")
-        return created_report
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"팀 주간 보고서 생성/업데이트 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"팀 주간 보고서 생성/업데이트 중 오류 발생: {str(e)}"
-        )
 
 # 팀 계정 목록 조회
 @router.get("/{team_id}/accounts", response_model=List[team_schema.TeamAccountBasicInfo])
