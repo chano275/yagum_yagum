@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { UserAccountsResponse } from '../types/account';
-import { getUserAccounts } from '../api/account';
+import { create } from "zustand";
+import { UserAccountsResponse } from "../types/account";
+import { getUserAccounts } from "../api/account";
 
 export interface AuthState {
   isLoggedIn: boolean;
@@ -11,19 +11,19 @@ export interface AuthState {
 }
 
 export const useStore = create<AuthState>((set) => ({
-  isLoggedIn: __DEV__ ? true : false,
-  token: __DEV__ ? 'mock-token' : null,
-  user: __DEV__ ? { id: '1', name: '테스트 유저' } : null,
+  isLoggedIn: false,
+  token: null,
+  user: null,
   setAuth: (token: string, user: { id: string; name: string }) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
     set({ isLoggedIn: true, token, user });
   },
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     set({ isLoggedIn: false, token: null, user: null });
-  }
+  },
 }));
 
 interface AccountStore {
@@ -43,7 +43,12 @@ export const useAccountStore = create<AccountStore>((set) => ({
       const data = await getUserAccounts();
       set({ accountInfo: data });
     } catch (error) {
-      set({ error: error instanceof Error ? error.message : '계좌 정보를 가져오는데 실패했습니다.' });
+      set({
+        error:
+          error instanceof Error
+            ? error.message
+            : "계좌 정보를 가져오는데 실패했습니다.",
+      });
     } finally {
       set({ isLoading: false });
     }
