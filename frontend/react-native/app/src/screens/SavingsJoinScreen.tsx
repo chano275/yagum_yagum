@@ -1,10 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, Platform, useWindowDimensions, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, Platform, useWindowDimensions, ScrollView, Pressable, Animated, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppWrapper, MobileContainer, getAdjustedWidth } from '../constants/layout';
 import styled from 'styled-components/native';
+import TeamSelectModal from '../components/TeamSelectModal';
+import { BlurView } from 'expo-blur';
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
@@ -54,12 +56,16 @@ const TagContainer = styled.View`
   justify-content: center;
   gap: 12px;
   padding-vertical: 16px;
+  margin-top: 16px;
 `;
 
 const Tag = styled.Text`
-  color: #666;
+  color: #176B87;
   font-size: 15px;
   font-weight: 500;
+  background-color: rgba(192, 238, 242, 0.3);
+  padding: 6px 12px;
+  border-radius: 16px;
 `;
 
 const TopSection = styled.View`
@@ -72,7 +78,7 @@ const TopSection = styled.View`
 const InfoBox = styled.View`
   flex-direction: row;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 40px;
   gap: 12px;
 `;
 
@@ -81,120 +87,202 @@ const InfoColumn = styled.View`
   align-items: center;
 `;
 
-const CardIconPlaceholder = styled.View`
-  width: 48px;
-  height: 48px;
-  margin-bottom: 12px;
+const IconContainer = styled.View`
+  width: 64px;
+  height: 64px;
   background-color: #fff;
-  border-radius: 24px;
+  border-radius: 32px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  elevation: 3;
+  shadow-color: #000;
+  shadow-offset: 0px 2px;
+  shadow-opacity: 0.1;
+  shadow-radius: 4px;
+`;
+
+const IconImage = styled.Image`
+  width: 42px;
+  height: 42px;
 `;
 
 const InfoTitle = styled.Text`
-  font-size: 15px;
-  color: #666;
-  margin-bottom: 8px;
-`;
-
-const InfoValue = styled.Text`
-  font-size: 17px;
-  font-weight: bold;
-  color: #000;
-`;
-
-const InfoHighlight = styled.Text`
-  font-size: 15px;
-  color: #2D64F4;
-  margin-top: 4px;
-`;
-
-const JoinButtonLight = styled.TouchableOpacity`
-  background-color: #C0EEF2;
-  padding: 16px;
-  border-radius: 8px;
-  align-items: center;
-  margin-bottom: 24px;
-`;
-
-const JoinButtonLightText = styled.Text`
-  color: #176B87;
-  font-size: 16px;
-  font-weight: bold;
-`;
-
-const BottomSection = styled.View`
-  background-color: #fff;
-  padding: 20px;
-`;
-
-const PromotionText = styled.Text`
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 4px;
+`;
+
+const TopInfoValue = styled.Text`
+  font-size: 14px;
+  color: #222222;
+  font-weight: 500;
+  line-height: 20px;
   text-align: center;
-  line-height: 26px;
-  margin-bottom: 24px;
 `;
 
-const MainImage = styled.Image`
-  width: 100%;
-  height: 200px;
-  resize-mode: contain;
-  margin-bottom: 32px;
-`;
-
-const InfoContainer = styled.View`
-  margin-top: 24px;
+const TopInfoHighlight = styled.Text`
+  font-size: 14px;
+  color: #2D64F4;
+  margin-top: 2px;
 `;
 
 const InfoItem = styled.View`
   flex-direction: row;
   justify-content: space-between;
   padding-vertical: 12px;
-  border-bottom-width: 1px;
-  border-bottom-color: #eee;
+  border-bottom-width: 0.5px;
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+  align-items: center;
 `;
 
 const InfoLabel = styled.Text`
+  font-size: 14px;
+  color: #999999;
+  font-weight: 600;
+  line-height: 20px;
+`;
+
+const InfoValue = styled.Text`
+  flex: 1;
+  font-size: 15px;
+  color: #1B1D1F;
+  font-weight: 600;
+  line-height: 22px;
+  text-align: right;
+`;
+
+const InfoHighlight = styled.Text`
+  font-size: 14px;
+  color: #2D64F4;
+  margin-top: 3px;
+`;
+
+const JoinButtonLight = styled.TouchableOpacity`
+  background-color: #C0EEF2;
+  padding: 16px;
+  borderRadius: 8px;
+  align-items: center;
+  margin-bottom: 32px;
+`;
+
+const JoinButtonLightText = styled.Text`
+  color: #176B87;
+  font-size: 18px;
+  font-weight: 900;
+`;
+
+const BottomSection = styled.View`
+  background-color: #fff;
+  padding: 20px;
+  padding-bottom: 16px;
+`;
+
+const PromotionContainer = styled.View`
+  margin-bottom: 8px;
+  margin-top: 24px;
+`;
+
+const PromotionText = styled.Text`
+  font-size: 24px;
+  font-weight: bold;
+  text-align: left;
+  line-height: 32px;
+  margin-bottom: 8px;
+`;
+
+const HighlightText = styled(PromotionText)`
+  color: #176B87;
+  font-size: 26px;
+  font-weight: 900;
+`;
+
+const SubPromotionText = styled.Text`
+  font-size: 14px;
   color: #666;
+  line-height: 20px;
+  margin-bottom: 16px;
+`;
+
+const MainImage = styled.Image`
+  width: 240px;
+  height: 240px;
+  resize-mode: contain;
+  align-self: flex-end;
+  margin-right: -20px;
+  margin-top: -30px;
+  margin-bottom: 12px;
+`;
+
+const SectionDivider = styled.View`
+  width: 100vw;
+  height: 8px;
+  background-color: #F8F9FA;
+  margin-horizontal: -20px;
+`;
+
+const InfoContainer = styled.View`
+  margin-top: 4px;
+  background-color: #FFFFFF;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding-top: 32px;
 `;
 
 const StepContainer = styled.View`
   margin-top: 32px;
-  margin-bottom: 24px;
+  padding-bottom: 32px;
 `;
 
 const StepTitle = styled.Text`
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 16px;
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 28px;
+  color: #1B1D1F;
+  letter-spacing: -0.4px;
 `;
 
-const StepItem = styled.View`
+const StepItem = styled(Animated.View)`
   flex-direction: row;
-  align-items: center;
-  margin-bottom: 16px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding-right: 20px;
 `;
 
-const StepNumber = styled.Text`
-  width: 24px;
-  height: 24px;
-  border-radius: 12px;
-  background-color: #007AFF;
-  color: #fff;
-  text-align: center;
-  line-height: 24px;
-  margin-right: 12px;
+const StepNumber = styled.View`
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  background-color: rgba(23, 107, 135, 0.1);
+  justify-content: center;
+  align-items: center;
+  margin-right: 16px;
+`;
+
+const StepNumberText = styled.Text`
+  color: #176B87;
+  font-size: 15px;
+  font-weight: 700;
+`;
+
+const StepContent = styled.View`
+  flex: 1;
 `;
 
 const StepText = styled.Text`
-  font-size: 16px;
-  font-weight: bold;
-  margin-right: 8px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1B1D1F;
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
 `;
 
 const StepDesc = styled.Text`
-  font-size: 14px;
-  color: #666;
-  flex: 1;
+  font-size: 15px;
+  color: #64666B;
+  line-height: 22px;
+  letter-spacing: -0.2px;
 `;
 
 const JoinButton = styled.TouchableOpacity`
@@ -202,23 +290,96 @@ const JoinButton = styled.TouchableOpacity`
   padding: 16px;
   border-radius: 8px;
   align-items: center;
+  margin-top: 8px;
+  margin-bottom: 16px;
 `;
 
 const JoinButtonText = styled.Text`
   color: #fff;
-  font-weight: bold;
+  font-size: 18px;
+  font-weight: 900;
+`;
+
+const stepTexts = [
+  {
+    title: '동의서 선택',
+    desc: 'KBO 자유 적금 등 동의하는 단계'
+  },
+  {
+    title: '최애 선수 선택',
+    desc: '계좌 정보와 적금 선수를 선택'
+  },
+  {
+    title: '적금 목표 설정',
+    desc: '납입금, 시즌 목표를 설정하는 단계'
+  },
+  {
+    title: '적금 규칙 설정',
+    desc: '경기 결과에 따른 적금 규칙을 설정'
+  },
+  {
+    title: '계좌 개설 확인',
+    desc: '설정한 내용을 확인하고 계좌 개설'
+  }
+];
+
+const BlurContainer = styled(BlurView)`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
 `;
 
 const SavingsJoinScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const { width: windowWidth } = useWindowDimensions();
   const width = getAdjustedWidth(windowWidth);
+  const [isStepVisible, setIsStepVisible] = React.useState(false);
+  const stepAnimations = React.useRef(stepTexts.map(() => new Animated.Value(0))).current;
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const scrollY = event.nativeEvent.contentOffset.y;
+    const layoutHeight = event.nativeEvent.layoutMeasurement.height;
+    const contentHeight = event.nativeEvent.contentSize.height;
+    
+    // 스크롤이 전체 컨텐츠의 40% 정도 진행되었을 때 애니메이션 시작
+    if (scrollY > contentHeight * 0.4 && !isStepVisible) {
+      setIsStepVisible(true);
+      Animated.stagger(100, stepAnimations.map(animation =>
+        Animated.spring(animation, {
+          toValue: 1,
+          tension: 50,
+          friction: 7,
+          useNativeDriver: true,
+        })
+      )).start();
+    }
+  };
+
+  const handleJoinPress = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleTeamSelect = (teamId: string) => {
+    console.log('Selected team:', teamId);
+    setIsModalVisible(false);
+    // TODO: 팀 선택 후 처리 로직
+  };
 
   return (
     <AppWrapper>
       <MobileContainer width={width}>
         <SafeAreaView style={{ flex: 1 }}>
           <Content>
+            {isModalVisible && (
+              <BlurContainer
+                intensity={10}
+                tint="light"
+              />
+            )}
             <TitleContainer>
               <BackButton onPress={() => navigation.goBack()}>
                 <Ionicons name="chevron-back" size={24} color="black" />
@@ -226,7 +387,11 @@ const SavingsJoinScreen = () => {
               <Title>야금야금</Title>
             </TitleContainer>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+            >
               <TopSection>
                 <TagContainer>
                   <Tag>#KBO 야구</Tag>
@@ -236,38 +401,49 @@ const SavingsJoinScreen = () => {
 
                 <InfoBox>
                   <InfoColumn>
-                    <CardIconPlaceholder />
+                    <IconContainer>
+                      <IconImage source={require('../../assets/rate.png')} />
+                    </IconContainer>
                     <InfoTitle>이자율</InfoTitle>
-                    <InfoValue>기본 2.00%</InfoValue>
-                    <InfoHighlight>최대 4.00%</InfoHighlight>
+                    <TopInfoValue>기본 2.00%</TopInfoValue>
+                    <TopInfoHighlight>최대 4.00%</TopInfoHighlight>
                   </InfoColumn>
                   <InfoColumn>
-                    <CardIconPlaceholder />
+                    <IconContainer>
+                      <IconImage source={require('../../assets/saving.png')} />
+                    </IconContainer>
                     <InfoTitle>납입 금액</InfoTitle>
-                    <InfoValue>월 70만원 이내</InfoValue>
+                    <TopInfoValue>월 70만원 이내</TopInfoValue>
                   </InfoColumn>
                 </InfoBox>
 
-                <JoinButtonLight>
+                <JoinButtonLight onPress={handleJoinPress}>
                   <JoinButtonLightText>가입하기</JoinButtonLightText>
                 </JoinButtonLight>
               </TopSection>
 
               <BottomSection>
-                <PromotionText>
-                  아구 경기 보는 재미와{'\n'}
-                  적금의 혜택을 함께해요!
-                </PromotionText>
-
+                <PromotionContainer>
+                  <PromotionText>
+                    <HighlightText>야구 경기</HighlightText>
+                    <PromotionText> 보는 재미와{'\n'}</PromotionText>
+                    <HighlightText>적금의 혜택</HighlightText>
+                    <PromotionText>을 한번에 !</PromotionText>
+                  </PromotionText>
+                </PromotionContainer>
+                <SubPromotionText>
+                  팀과 선수 경기 기록으로 자동 적금{'\n'}
+                  KBO 시즌 동안 모으고 우대금리 혜택까지
+                </SubPromotionText>
                 <MainImage 
-                  source={require('../../assets/squirrel.png')} 
+                  source={require('../../assets/squirrel.png')}
                 />
-
+                <SectionDivider />
                 <InfoContainer>
-                  <StepTitle>상품 안내</StepTitle>
+                  <InfoTitle>상품 안내</InfoTitle>
                   <InfoItem>
                     <InfoLabel>상품명</InfoLabel>
-                    <InfoValue>KBO 자유 적금 아금아금</InfoValue>
+                    <InfoValue>KBO 자유 적금 '야금야금'</InfoValue>
                   </InfoItem>
                   <InfoItem>
                     <InfoLabel>계약기간</InfoLabel>
@@ -281,37 +457,42 @@ const SavingsJoinScreen = () => {
 
                 <StepContainer>
                   <StepTitle>계좌 개설 절차</StepTitle>
-                  <StepItem>
-                    <StepNumber>1</StepNumber>
-                    <StepText>본인인 인증</StepText>
-                    <StepDesc>KBO 자유 적금 등 동의하는 단계</StepDesc>
-                  </StepItem>
-                  <StepItem>
-                    <StepNumber>2</StepNumber>
-                    <StepText>정보 입력 단계</StepText>
-                    <StepDesc>계좌 정보 입력 단계</StepDesc>
-                  </StepItem>
-                  <StepItem>
-                    <StepNumber>3</StepNumber>
-                    <StepText>약관 동의 절차</StepText>
-                    <StepDesc>서비스, 상품과 관련된 동의 하는 단계</StepDesc>
-                  </StepItem>
-                  <StepItem>
-                    <StepNumber>4</StepNumber>
-                    <StepText>약관 동의 절차</StepText>
-                    <StepDesc>금리 정보와 약관 적용 조항을 설명</StepDesc>
-                  </StepItem>
-                  <StepItem>
-                    <StepNumber>5</StepNumber>
-                    <StepText>계좌 개설 확인</StepText>
-                  </StepItem>
+                  {stepTexts.map((step, index) => (
+                    <StepItem
+                      key={index}
+                      style={{
+                        opacity: stepAnimations[index],
+                        transform: [{
+                          translateX: stepAnimations[index].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [20, 0],
+                          })
+                        }]
+                      }}
+                    >
+                      <StepNumber>
+                        <StepNumberText>{index + 1}</StepNumberText>
+                      </StepNumber>
+                      <StepContent>
+                        <StepText>{step.title}</StepText>
+                        <StepDesc>{step.desc}</StepDesc>
+                      </StepContent>
+                    </StepItem>
+                  ))}
                 </StepContainer>
 
-                <JoinButton>
+                <JoinButton onPress={handleJoinPress}>
                   <JoinButtonText>가입하기</JoinButtonText>
                 </JoinButton>
               </BottomSection>
             </ScrollView>
+
+            <TeamSelectModal
+              visible={isModalVisible}
+              onClose={() => setIsModalVisible(false)}
+              onSelectTeam={handleTeamSelect}
+              width={width}
+            />
           </Content>
         </SafeAreaView>
       </MobileContainer>
@@ -462,12 +643,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 24,
-    marginHorizontal: 0,
+    marginBottom: 32,
   },
   joinButtonLightText: {
     color: '#176B87',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   joinButton: {
@@ -478,6 +658,7 @@ const styles = StyleSheet.create({
   },
   joinButtonText: {
     color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
   },
   cardIconPlaceholder: {

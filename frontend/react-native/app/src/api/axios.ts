@@ -1,9 +1,10 @@
 import axios from "axios";
 import { REACT_APP_API_URL, REACT_APP_LOCAL_URL } from "@env";
 
-const BASE_URL = __DEV__
-  ? "http://3.38.183.156:8000" // 배포 환경
-  : "http://localhost:8000"; // 개발 환경
+const BASE_URL = 'http://localhost:8000';  // 개발 환경
+
+// 배포 환경용
+// const BASE_URL = 'http://3.38.183.156:8000';  // 배포 환경
 
 export const api = axios.create({
   baseURL: BASE_URL,
