@@ -242,14 +242,16 @@ async def create_account(
         )
 
 # 특정 계정 조회
-@router.get("/{account_id}", response_model=account_schema.AccountResponse)
+from router.mission import mission_crud
+
+@router.get("/{account_id}", response_model=account_schema.AccountDetailResponse)
 async def read_account(
     account_id: int, 
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"계정 조회 요청: 계정 ID {account_id}")
+        logger.info(f"계정 상세 정보 조회 요청: 계정 ID {account_id}")
         
         # 계정 조회
         account = account_crud.get_account_by_id(db, account_id)
@@ -265,15 +267,85 @@ async def read_account(
             logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
             raise HTTPException(status_code=403, detail="권한이 없습니다")
         
-        return account
+        # 이자율 정보 계산
+        from router.mission import mission_crud  # 순환 참조 방지를 위해 여기서 import
+        interest_details = mission_crud.calculate_account_interest_details(db, account_id)
+        
+        # 사용자의 미션 조회 (진행 중 또는 완료된 미션)
+        used_missions = db.query(models.UsedMission).filter(
+            models.UsedMission.ACCOUNT_ID == account_id
+        ).all()
+        
+        # 활성 미션 정보 구성
+        active_missions = []
+        for used_mission in used_missions:
+            mission = used_mission.mission
+            active_missions.append({
+                "MISSION_ID": mission.MISSION_ID,
+                "MISSION_NAME": mission.MISSION_NAME,
+                "MISSION_MAX_COUNT": mission.MISSION_MAX_COUNT,
+                "MISSION_RATE": mission.MISSION_RATE,
+                "COUNT": used_mission.COUNT,
+                "CURRENT_COUNT": used_mission.COUNT,
+                "MAX_COUNT": used_mission.MAX_COUNT
+            })
+        
+        # 계정 상세 정보 구성
+        account_detail = {
+            **account.__dict__,  # 기존 계정 정보 포함
+            "base_interest_rate": interest_details['base_interest_rate'],  # 기본 이자율
+            "mission_interest_rate": interest_details['mission_interest_rate'],  # 미션 이자율
+            "total_interest_rate": interest_details['total_interest_rate'],  # 총 이자율
+            "active_missions": active_missions,  # 활성 미션 목록
+        }
+        
+        return account_detail
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"계정 상세 정보 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"계정 상세 정보 조회 중 오류 발생: {str(e)}"
+        )
+
+@router.get("/{account_id}/interest-details", response_model=account_schema.AccountInterestDetailResponse)
+async def get_account_interest_details(
+    account_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"계정 이자율 상세 정보 조회 요청: 계정 ID {account_id}")
+        
+        # 계정 조회
+        account = account_crud.get_account_by_id(db, account_id)
+        if not account:
+            logger.warning(f"계정을 찾을 수 없음: {account_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="계정을 찾을 수 없습니다"
+            )
+        
+        # 권한 확인: 본인 계정만 조회 가능
+        if account.USER_ID != current_user.USER_ID:
+            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
+            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        
+        # 이자율 정보 계산
+        from router.mission import mission_crud  # 순환 참조 방지를 위해 여기서 import
+        interest_details = mission_crud.calculate_account_interest_details(db, account_id)
+        
+        return interest_details
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"계정 조회 중 오류: {str(e)}")
+        logger.error(f"계정 이자율 상세 정보 조회 중 오류: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"계정 조회 중 오류 발생: {str(e)}"
+            detail=f"계정 이자율 상세 정보 조회 중 오류 발생: {str(e)}"
         )
 
 # 적금 계좌 초기 세팅 계좌 번호 제외
