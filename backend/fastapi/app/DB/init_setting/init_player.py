@@ -32,11 +32,11 @@ TEAM_MAPPING = {
 
 # players 폴더 경로 설정 - 여러 가능한 경로 시도
 possible_base_paths = [
-    os.path.join(os.path.dirname(__file__), '..', '..', 'fastapi', 'app', 'data', 'players'),
-    os.path.join(os.path.dirname(__file__), '..', '..', 'app', 'data', 'players'),
-    os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'players'),
-    os.path.join(os.path.dirname(__file__), '..', 'fastapi', 'app', 'data', 'players'),
-    os.path.join(os.path.dirname(__file__), 'data', 'players'),
+    os.path.join(os.path.dirname(__file__), '..', '..', 'fastapi', 'app', 'baseball_data', 'players'),
+    os.path.join(os.path.dirname(__file__), '..', '..', 'app', 'baseball_data', 'players'),
+    os.path.join(os.path.dirname(__file__), '..', '..', 'baseball_data', 'players'),
+    os.path.join(os.path.dirname(__file__), '..', 'fastapi', 'app', 'datbaseball_dataa', 'players'),
+    os.path.join(os.path.dirname(__file__), 'baseball_data', 'players'),
     'fastapi/app/data/players'
 ]
 
@@ -106,7 +106,12 @@ try:
                     name = row[1].strip() if len(row) > 1 else ""
                     if not number_str:continue
                     # 타입 결정 (2번째 인덱스가 있으면 그 값 사용, 없으면 기본값 2(타자))
-                    player_type = int(row[2].strip()) if len(row) > 2 and row[2].strip().isdigit() else 2
+                    # player_type = int(row[2].strip()) if len(row) > 2 and row[2].strip().isdigit() else 2
+                    player_type_csv = row[2].strip()
+                    if player_type_csv == "투수":
+                        player_type = 1
+                    else:
+                        player_type = 2
                     
                     # 이름이 비어있지 않은 경우만 추가
                     if name and name not in existing_names:
@@ -115,7 +120,7 @@ try:
                             PLAYER_NUM=number_str,
                             PLAYER_TYPE_ID=player_type,
                             PLAYER_NAME=name,
-                            PLAYER_IMAGE_URL="",  # 기본 이미지 URL
+                            PLAYER_IMAGE_URL=f"https://chano-s3-test.s3.us-east-2.amazonaws.com/{team_id}/{number_str}.jpg",  # 기본 이미지 URL
                             LIKE_COUNT=0
                         )
                         players.append(new_player)

@@ -43,9 +43,9 @@ async def process_actual_transfers(db, date_param=None):
     Returns:
         dict: 처리 결과 요약 정보
     """
-    # 날짜 설정 (기본값: 오늘)
+    # 날짜 설정 (기본값: 어제)
     if date_param is None:
-        date_param = datetime.now().date()
+        date_param = datetime.now().date() - timedelta(days=1)
     
     # 월의 시작일과 끝일 계산 (월간 한도 확인용)
     month_start = date_param.replace(day=1)

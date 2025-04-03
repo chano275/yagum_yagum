@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { Platform } from 'react-native';
+import axios from "axios";
+import { REACT_APP_API_URL, REACT_APP_LOCAL_URL } from "@env";
 
 const BASE_URL = 'http://localhost:8000';  // 개발 환경
 
@@ -9,15 +9,15 @@ const BASE_URL = 'http://localhost:8000';  // 개발 환경
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    "Content-Type": "application/json",
+    Accept: "application/json",
   },
 });
 
 // 요청 인터셉터
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -33,10 +33,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/';
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/";
     }
     return Promise.reject(error);
   }
-); 
+);

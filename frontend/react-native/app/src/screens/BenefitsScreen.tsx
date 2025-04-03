@@ -46,8 +46,9 @@ const MobileContainer = styled.View<StyledProps>`
   `}
 `;
 
-const Header = styled.View`
-  background-color: #004f9e;
+// 팀 컬러를 적용하도록 Header 컴포넌트 수정
+const Header = styled.View<{ teamColor: string }>`
+  background-color: ${(props) => props.teamColor};
   padding: 20px;
   padding-top: 60px;
   padding-bottom: 15px;
@@ -107,6 +108,8 @@ const NavigationArrow = styled.View`
 `;
 
 const BenefitsScreen = () => {
+  // useTeam 훅을 사용해 팀 컬러 정보 가져오기
+  const { teamColor } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
   const width =
     Platform.OS === "web"
@@ -121,7 +124,7 @@ const BenefitsScreen = () => {
       description:
         "적금 목표 달성 시 기본금리에 추가로 최대 1.0%p의 우대금리가 제공됩니다.",
       icon: "cash-outline",
-      bgColor: "#FFD700",
+      bgColor: teamColor.primary, // 팀 컬러 적용
     },
     {
       id: "2",
@@ -145,7 +148,7 @@ const BenefitsScreen = () => {
       description:
         "시즌 종료 후 예측한 순위와 실제 순위가 일치하면 우대금리가 제공됩니다.",
       icon: "trophy-outline",
-      bgColor: "#FFA000",
+      bgColor: teamColor.secondary, // 팀 컬러의 secondary 색상 적용
     },
   ];
 
@@ -153,7 +156,8 @@ const BenefitsScreen = () => {
     <AppWrapper>
       <MobileContainer width={width}>
         <StatusBar style="light" />
-        <Header>
+        {/* 헤더에 팀 컬러 적용 */}
+        <Header teamColor={teamColor.primary}>
           <HeaderTitle>혜택</HeaderTitle>
         </Header>
 
