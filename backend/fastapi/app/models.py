@@ -232,7 +232,7 @@ class TicketNumber(Base):
     __tablename__ = "ticket_number"
 
     TICKET_NUMBER_ID = Column(Integer, primary_key=True)
-    ACCOUNT_ID = Column(Integer, ForeignKey("account.ACCOUNT_ID"), nullable=False)
+    ACCOUNT_ID = Column(Integer, ForeignKey("account.ACCOUNT_ID"), nullable=True)
     TICKET_NUMBER = Column(String(20))
     TICKET_TYPE = Column(String(10))
     VERIFIED_STATUS = Column(Boolean)
