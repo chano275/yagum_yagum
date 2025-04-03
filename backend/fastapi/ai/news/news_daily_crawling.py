@@ -134,12 +134,6 @@ def crawl_news(date, team):
     
     return all_articles
 
-# CSV 저장 함수
-def save_to_csv(date, data, filename="news_results.csv"):
-    df = pd.DataFrame(data)
-    df.to_csv(f"news_csv/{date}/{filename}", index=False, encoding="utf-8-sig")  # 한글 깨짐 방지 위해 utf-8-sig 사용
-    print(f"CSV 파일 저장 완료: {filename}")
-
 # 디렉토리 생성 함수
 def makedirs(path):
     if not os.path.exists(path):
@@ -158,8 +152,6 @@ def main():
         
         with open(f"news_json/{date}/news_{date}_{team}.json", "w", encoding="utf-8") as f:
             json.dump(results, f, ensure_ascii=False, indent=2)
-
-        save_to_csv(date, results, f"news_{date}_{team}.csv")
         
         print(f"{date} {team} 크롤링 완료. 총 {len(results)}개의 기사를 저장했습니다.")
     

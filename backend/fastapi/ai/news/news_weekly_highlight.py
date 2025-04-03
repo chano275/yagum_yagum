@@ -9,8 +9,10 @@ import google.generativeai as genai
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+# Gemini API 키 설정
 genai.configure(api_key=GEMINI_API_KEY)
 
+# 주간 뉴스 요약을 위한 instruction 문자열
 instruction = """
 [역할]
 당신은 주간 뉴스를 요약해서 정리해주는 전문가입니다.
@@ -39,6 +41,7 @@ instruction = """
 - 개막 후 김도영의 부상에도 타선이 폭발하며 키움에 대승, 외국인 투수 올러가 데뷔 첫 승을 거둠
 """
 
+# Gemini 모델 인스턴스 생성
 model = genai.GenerativeModel(
     "models/gemini-2.0-flash", 
     system_instruction=instruction
@@ -111,17 +114,23 @@ def generate_weekly_summary_json(date, n_day=6):
 
     return result_json
 
-# 날짜 설정
-date = input("요약할 기준 날짜를 입력하세요 (YYYYMMDD 형식): ")
+def main():
+    # 주간 하이라이트 요약할 기준 날짜 입력(기준 날짜로부터 이전 6일간의 뉴스 요약)
+    date = input("요약할 기준 날짜를 입력하세요 (YYYYMMDD 형식): ")
+    result_json = generate_weekly_summary_json(date)
 
-# JSON 파일 생성 및 저장
-result_json = generate_weekly_summary_json(date)
+    date_obj = datetime.datetime.strptime(date, "%Y%m%d")
+    # 예시에서는 기준 주차 번호를 계산 (필요에 따라 조정)
+    week_number = date_obj.isocalendar()[1] - 12
 
-date_obj = datetime.datetime.strptime(date, "%Y%m%d")
-week_number = date_obj.isocalendar()[1] - 12
-file_name = f"news_weekly_highlight/news_weekly_highlight_{week_number}주차.json"
+    output_folder = "news_weekly_highlight"
+    os.makedirs(output_folder, exist_ok=True)
+    file_name = os.path.join(output_folder, f"news_weekly_highlight_{week_number}주차.json")
 
-with open(file_name, "w", encoding="utf-8") as json_file:
-    json.dump(result_json, json_file, ensure_ascii=False, indent=4)
+    with open(file_name, "w", encoding="utf-8") as json_file:
+        json.dump(result_json, json_file, ensure_ascii=False, indent=4)
 
-print(f"{file_name} 파일이 생성되었습니다.")
+    print(f"{file_name} 파일이 생성되었습니다.")
+
+if __name__ == "__main__":
+    main()

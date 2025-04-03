@@ -9,8 +9,10 @@ import google.generativeai as genai
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+# Gemini API 설정
 genai.configure(api_key=GEMINI_API_KEY)
 
+# 뉴스 요약에 사용할 instruction 문자열
 instruction = """
 [역할]
 당신은 일일 뉴스를 요약해서 정리해주는 전문가입니다.
@@ -19,7 +21,7 @@ instruction = """
 - 생성되는 텍스트는 순수한 일반 텍스트 형식이어야 하며, 어떠한 마크다운 문법(예: **, ## 등)도 사용하지 말아주세요.
 - news_title, news_summary, published_date 정보를 포함한 JSON 형식의 데이터를 입력받아, 요약된 내용을 생성해주세요.
 - 뉴스 중에서 중복되는 내용이 있는 경우에는 1개만 요약해야 합니다.
-- 일일 뉴스 중에서 가장 중요한 내용 5가지를 각각 한 줄로 요약해야 하고, 뉴스 제목과 같은 형태로 요약된 내용을 반환해야 합니다.
+- 일일 뉴스 중에서 가장 중요한 내용 3가지를 각각 한 줄로 요약해야 하고, 뉴스 제목과 같은 형태로 요약된 내용을 반환해야 합니다.
 - 출력 예시 형태와 동일한 형태로 출력하세요.
 
 [입력 데이터 형식]
@@ -37,13 +39,12 @@ instruction = """
   "news_highlight": [
     "김도영, 개막전서 햄스트링 부상으로 팬들에게 안타까운 사과와 빠른 복귀 다짐",
     "윤도현, 김도영 부상으로 찾아온 기회 놓치지 않고 성장 발판 마련할 수 있을지 주목",
-    "개막전에서 NC에 9-2 역전승, 최형우 결승타와 한준수 쐐기 홈런으로 승리",
-    "네일, 개막전서 5이닝 무실점 쾌투에도 승리투수 되지 못했지만 팀 승리 발판 마련",
-    "개막 후 김도영의 부상에도 타선이 폭발하며 키움에 대승, 외국인 투수 올러가 데뷔 첫 승을 거둠"
+    "개막전에서 NC에 9-2 역전승, 최형우 결승타와 한준수 쐐기 홈런으로 승리"
   ]
 }
 """
 
+# Gemini 모델 인스턴스 생성
 model = genai.GenerativeModel(
     "models/gemini-2.0-flash", 
     system_instruction=instruction
@@ -95,10 +96,10 @@ def generate_daily_summary_json(date):
     all_team_highlights = {}
 
     for team_code, team_name in team_mapping.items():
-        # 1) 팀별 뉴스 요약
+        # 팀별 뉴스 요약
         raw_result = summarize_daily_news(date, team_code)
         
-        # 2) 모델 응답에서 JSON 부분 파싱
+        # 모델 응답에서 JSON 부분 파싱
         json_regex = re.compile(r"(\{.*\})", re.DOTALL)
         match = json_regex.search(raw_result)
         
@@ -115,31 +116,35 @@ def generate_daily_summary_json(date):
             # JSON 객체를 찾지 못했을 때도 빈 리스트로
             highlights = []
         
-        # 3) 현재 팀 이름을 키로, 하이라이트 리스트를 값으로 저장
+        # 현재 팀 이름을 키로, 하이라이트 리스트를 값으로 저장
         all_team_highlights[team_name] = highlights
 
-    # 4) 최종 결과 구조
+    # 최종 결과 구조
     result_json = {
         "news_highlights": all_team_highlights
     }
 
     return result_json
 
-# 날짜 설정
-date = input("요약할 기준 날짜를 입력하세요 (YYYYMMDD 형식): ")
+def main():
+    # 일일 뉴스 하이라이트를 추출할 날짜 입력
+    date = input("요약할 기준 날짜를 입력하세요 (YYYYMMDD 형식): ")
 
-# 모든 팀 뉴스 요약을 JSON 구조로 생성
-final_json = generate_daily_summary_json(date)
+    # 모든 팀의 뉴스 요약 결과를 JSON 구조로 생성
+    final_json = generate_daily_summary_json(date)
 
-# news_daily_highlight 폴더가 없다면 생성
-output_folder = "news_daily_highlight"
-os.makedirs(output_folder, exist_ok=True)
+    # 결과를 저장할 폴더 생성 (없으면 자동 생성)
+    output_folder = "news_daily_highlight"
+    os.makedirs(output_folder, exist_ok=True)
 
-# 파일 경로 생성: news_daily_highlight_날짜.json
-output_file = os.path.join(output_folder, f"news_daily_highlight_{date}.json")
+    # 출력 파일 경로 생성: news_daily_highlight_날짜.json
+    output_file = os.path.join(output_folder, f"news_daily_highlight_{date}.json")
 
-# 최종 JSON 파일 저장
-with open(output_file, "w", encoding="utf-8") as f:
-    json.dump(final_json, f, ensure_ascii=False, indent=2)
+    # 최종 JSON 파일 저장
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(final_json, f, ensure_ascii=False, indent=2)
 
-print(f"최종 JSON 파일이 저장되었습니다: {output_file}")
+    print(f"최종 JSON 파일이 저장되었습니다: {output_file}")
+
+if __name__ == "__main__":
+    main()
