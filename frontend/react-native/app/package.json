@@ -42,7 +42,8 @@
     "stylis": "^4.3.6",
     "use-sync-external-store": "^1.4.0",
     "victory-native": "^41.16.1",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "expo-image-picker": "~16.0.6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -1,11 +1,15 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from '../screens/HomeScreen';
-import LoginScreen from '../screens/LoginScreen';
-import SavingsJoinScreen from '../screens/SavingsJoinScreen';
-import ServiceScreen from '../screens/ServiceScreen';
-import TabNavigator from './TabNavigator';
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import HomeScreen from "../screens/HomeScreen";
+import LoginScreen from "../screens/LoginScreen";
+import SavingsJoinScreen from "../screens/SavingsJoinScreen";
+import ServiceScreen from "../screens/ServiceScreen";
+import TabNavigator from "./TabNavigator";
+import Matchrank from "../screens/Benefits/MatchrankScreen";
+import Merchdiscount from "../screens/Benefits/MerchdiscountScreen";
+import Primerate from "../screens/Benefits/PrimerateScreen";
+import Verifyticket from "../screens/Benefits/VerifyticketScreen";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -30,9 +34,13 @@ const AppNavigator = () => {
         <Stack.Screen name="SavingsJoin" component={SavingsJoinScreen} />
         <Stack.Screen name="Service" component={ServiceScreen} />
         <Stack.Screen name="Main" component={TabNavigator} />
+        <Stack.Screen name="Matchrank" component={Matchrank} />
+        <Stack.Screen name="Merchdiscount" component={Merchdiscount} />
+        <Stack.Screen name="Primerate" component={Primerate} />
+        <Stack.Screen name="Verifyticket" component={Verifyticket} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 };
 
-export default AppNavigator; 
+export default AppNavigator;
