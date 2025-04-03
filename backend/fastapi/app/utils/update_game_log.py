@@ -60,7 +60,100 @@ record_type_mapping = {
     '경기결과': None  # 이 값은 처리 시 변경됩니다
 }
 
-def process_json_game_logs(json_dir="data/json_data"):
+def update_team_victory_missions(db_session):
+    """
+    팀의 승리 횟수를 체크하고, 10승마다 해당 팀을 응원하는 유저들의 미션 카운트를 업데이트합니다.
+    
+    Args:
+        db_session (Session): 데이터베이스 세션
+    """
+    logger.info("팀 승리 미션 업데이트 시작...")
+    
+    # 1. 미션 정보 가져오기 ("응원팀 10승당 우대금리" 미션)
+    team_victory_mission = db_session.query(models.Mission).filter(
+        models.Mission.MISSION_NAME.like("%10승당%")
+    ).first()
+    
+    if not team_victory_mission:
+        logger.warning("10승당 우대금리 미션을 찾을 수 없습니다.")
+        return
+    
+    mission_id = team_victory_mission.MISSION_ID
+    mission_max_count = team_victory_mission.MISSION_MAX_COUNT
+    mission_rate = team_victory_mission.MISSION_RATE
+    
+    logger.info(f"미션 ID {mission_id}: {team_victory_mission.MISSION_NAME} 처리 중...")
+    
+    # 2. 모든 팀의 현재 승리 횟수 가져오기
+    teams = db_session.query(models.Team).all()
+    
+    for team in teams:
+        team_id = team.TEAM_ID
+        team_name = team.TEAM_NAME
+        total_wins = team.TOTAL_WIN
+        
+        logger.info(f"팀 {team_name}(ID: {team_id}) 처리 중...")
+        logger.info(f"현재 총 승리 횟수: {total_wins}")
+        
+        # 3. 해당 팀을 응원하는 계정들 조회
+        team_accounts = db_session.query(models.Account).filter(
+            models.Account.TEAM_ID == team_id
+        ).all()
+        
+        if not team_accounts:
+            logger.info(f"팀 {team_name}을 응원하는 계정이 없습니다.")
+            continue
+            
+        logger.info(f"팀 {team_name}을 응원하는 계정 수: {len(team_accounts)}")
+        
+        # 4. 각 계정별로 미션 업데이트
+        for account in team_accounts:
+            account_id = account.ACCOUNT_ID
+            
+            # 4.1. 해당 미션이 이미 등록되어 있는지 확인
+            used_mission = db_session.query(models.UsedMission).filter(
+                models.UsedMission.ACCOUNT_ID == account_id,
+                models.UsedMission.MISSION_ID == mission_id
+            ).first()
+            
+            if not used_mission:
+                # 4.2. 미션이 등록되어 있지 않으면 새로 생성
+                used_mission = models.UsedMission(
+                    ACCOUNT_ID=account_id,
+                    MISSION_ID=mission_id,
+                    COUNT=0,  # 초기 카운트 0
+                    MAX_COUNT=mission_max_count,
+                    MISSION_RATE=mission_rate,
+                    created_at=datetime.now()
+                )
+                db_session.add(used_mission)
+                db_session.flush()
+                logger.info(f"계정 ID {account_id}에 미션 신규 등록")
+            
+            # 4.3. 현재 미션 카운트 확인
+            current_count = used_mission.COUNT
+            
+            # 4.4. 총 승리 횟수를 10으로 나눈 몫이 현재 카운트보다 크면 업데이트
+            new_count = total_wins // 10  # 10승당 1 카운트
+            
+            if new_count > current_count:
+                # 최대 카운트를 초과하지 않도록 체크
+                if new_count > used_mission.MAX_COUNT:
+                    new_count = used_mission.MAX_COUNT
+                
+                # 카운트가 실제로 증가했을 때만 기록 남기기
+                if new_count > current_count:
+                    old_count = current_count
+                    used_mission.COUNT = new_count
+                    logger.info(f"계정 ID {account_id}의 미션 카운트 업데이트: {old_count} -> {new_count}")
+                    
+                    # 최대 카운트에 도달했는지 체크
+                    if new_count >= used_mission.MAX_COUNT:
+                        logger.info(f"계정 ID {account_id}의 미션 카운트가 최대치({used_mission.MAX_COUNT})에 도달했습니다.")
+    
+    logger.info("팀 승리 미션 업데이트 완료")
+
+def process_json_game_logs(json_dir="baseball_data/json_data"):
     """
     JSON 파일을 처리하여 게임 로그 정보를 DB에 저장
     
@@ -119,17 +212,20 @@ def process_json_game_logs(json_dir="data/json_data"):
             with open(file_path, 'r', encoding='utf-8') as f:
                 game_records = json.load(f)
             
-            # 게임 기록 처리 (리스트 형태)
-            # 파일명에서 추출한 날짜 사용
-            record_date = game_date
-            logger.info(f"날짜 {record_date}의 기록 처리 중...")
-                    
             # 각 기록 처리
             for record in game_records:
                 # 필수 필드 확인
                 if '팀' not in record or '기록' not in record or '기록값' not in record:
                     logger.warning(f"필수 필드가 없는 레코드가 발견되었습니다: {record}")
                     continue
+                
+                # 날짜 파싱
+                # try:
+                #     # JSON에 날짜가 있는 경우
+                #     record_date = datetime.strptime(record['날짜'], '%Y-%m-%d').date()
+                # except (ValueError, TypeError):
+                #     # 파일명에서 추출한 날짜 사용
+                record_date = game_date
                 
                 # 팀 정보 처리
                 team_name = record['팀']
@@ -210,6 +306,7 @@ def process_json_game_logs(json_dir="data/json_data"):
                     logger.info(f"새 로그 추가: 날짜={record_date}, 팀={team_name}, 기록={record_type}, 값={count}")
                     
                     total_records += 1
+            
             # 변경사항 커밋
             session.commit()
             
@@ -218,17 +315,31 @@ def process_json_game_logs(json_dir="data/json_data"):
             logger.error(f"파일 {json_file} 처리 중 오류 발생: {str(e)}")
     
     logger.info(f"총 {total_records}개의 기록이 처리되었습니다.")
+    
+    # 팀 승리 미션 업데이트 실행
+    try:
+        logger.info("팀 승리 관련 미션 업데이트 시작...")
+        update_team_victory_missions(session)
+        session.commit()
+        logger.info("팀 승리 관련 미션 업데이트 완료")
+    except Exception as e:
+        logger.error(f"미션 업데이트 중 오류 발생: {str(e)}")
 
 if __name__ == "__main__":
     try:
         # 명령줄 인자 처리
         import argparse
         parser = argparse.ArgumentParser(description='JSON 게임 로그 처리')
-        parser.add_argument('--dir', type=str, help='JSON 파일 디렉토리 경로', default='data/json_data')
+        parser.add_argument('--dir', type=str, help='JSON 파일 디렉토리 경로', default='baseball_data/json_data')
         args = parser.parse_args()
         
         process_json_game_logs(args.dir)
         logger.info("JSON 파일 처리가 완료되었습니다.")
+        
+        # 직접 미션 업데이트 함수 호출 추가
+        logger.info("팀 승리 미션 직접 업데이트 시작...")
+        update_team_victory_missions(session)
+        logger.info("팀 승리 미션 직접 업데이트 완료")
     except Exception as e:
         logger.error(f"처리 중 오류 발생: {str(e)}")
     finally:
