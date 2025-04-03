@@ -7,7 +7,7 @@ from database import get_db
 import models
 from router.mission import mission_schema, mission_crud
 from router.user.user_router import get_current_user
-
+from datetime import datetime
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -486,3 +486,157 @@ async def remove_mission_from_account(
             detail=f"계정의 미션 삭제 중 오류 발생: {str(e)}"
         )
 
+# 순위 예측 생성
+@router.post("/rank-predictions", response_model=mission_schema.TeamRankPredictionResponse)
+async def create_team_rank_prediction(
+    prediction: mission_schema.TeamRankPredictionCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"순위 예측 생성 요청: 사용자 ID {current_user.USER_ID}")
+        
+        # 1. 사용자의 계정 확인 (첫 번째 계정 사용)
+        account = db.query(models.Account).filter(
+            models.Account.USER_ID == current_user.USER_ID
+        ).first()
+        
+        if not account:
+            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 계정이 없습니다"
+            )
+        
+        # 2. 팀 존재 여부 확인
+        team = db.query(models.Team).filter(models.Team.TEAM_ID == prediction.TEAM_ID).first()
+        if not team:
+            logger.warning(f"존재하지 않는 팀: {prediction.TEAM_ID}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="존재하지 않는 팀입니다"
+            )
+        
+        # 3. 순위 유효성 검사
+        if prediction.PREDICTED_RANK < 1 or prediction.PREDICTED_RANK > 10:  # KBO는 10개 팀
+            logger.warning(f"유효하지 않은 순위: {prediction.PREDICTED_RANK}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="순위는 1부터 10 사이의 값이어야 합니다"
+            )
+        
+        # 4. 해당 계정에 이미 예측이 있는지 확인 (해당 시즌에)
+        existing_prediction = db.query(models.TeamRankPrediction).filter(
+            models.TeamRankPrediction.ACCOUNT_ID == account.ACCOUNT_ID,
+            models.TeamRankPrediction.SEASON_YEAR == prediction.SEASON_YEAR
+        ).first()
+        
+        if existing_prediction:
+            logger.warning(f"이미 해당 시즌에 예측이 있음: 계정 ID {account.ACCOUNT_ID}, 시즌 {prediction.SEASON_YEAR}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="해당 시즌에 이미 예측을 등록했습니다"
+            )
+        
+        # 5. 예측 저장
+        new_prediction = models.TeamRankPrediction(
+            ACCOUNT_ID=account.ACCOUNT_ID,
+            TEAM_ID=prediction.TEAM_ID,
+            PREDICTED_RANK=prediction.PREDICTED_RANK,
+            SEASON_YEAR=prediction.SEASON_YEAR,
+            IS_CORRECT=0,  # 초기값: 미확정
+            created_at=datetime.now()
+        )
+        
+        db.add(new_prediction)
+        db.commit()
+        db.refresh(new_prediction)
+        
+        # 6. 응답 준비
+        response = {
+            "PREDICTION_ID": new_prediction.PREDICTION_ID,
+            "ACCOUNT_ID": new_prediction.ACCOUNT_ID,
+            "TEAM_ID": new_prediction.TEAM_ID,
+            "PREDICTED_RANK": new_prediction.PREDICTED_RANK,
+            "SEASON_YEAR": new_prediction.SEASON_YEAR,
+            "IS_CORRECT": new_prediction.IS_CORRECT,
+            "created_at": new_prediction.created_at,
+            "team_name": team.TEAM_NAME
+        }
+        
+        logger.info(f"순위 예측 생성 완료: ID {new_prediction.PREDICTION_ID}")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"순위 예측 생성 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"순위 예측 생성 중 오류 발생: {str(e)}"
+        )
+
+# 사용자의 순위 예측 조회
+@router.get("/rank-predictions/check", response_model=List[mission_schema.TeamRankPredictionResponse])
+async def get_user_predictions(
+    season_year: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"사용자 순위 예측 조회: 사용자 ID {current_user.USER_ID}")
+        
+        # 1. 사용자의 계정 확인
+        accounts = db.query(models.Account).filter(
+            models.Account.USER_ID == current_user.USER_ID
+        ).all()
+        
+        if not accounts:
+            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 계정이 없습니다"
+            )
+        
+        # 계정 ID 목록
+        account_ids = [account.ACCOUNT_ID for account in accounts]
+        
+        # 2. 순위 예측 조회
+        query = db.query(models.TeamRankPrediction).filter(
+            models.TeamRankPrediction.ACCOUNT_ID.in_(account_ids)
+        )
+        
+        # 시즌 필터 적용
+        if season_year:
+            query = query.filter(models.TeamRankPrediction.SEASON_YEAR == season_year)
+        
+        predictions = query.order_by(models.TeamRankPrediction.created_at.desc()).all()
+        
+        # 3. 응답 준비
+        result = []
+        for prediction in predictions:
+            team = db.query(models.Team).filter(models.Team.TEAM_ID == prediction.TEAM_ID).first()
+            
+            prediction_dict = {
+                "PREDICTION_ID": prediction.PREDICTION_ID,
+                "ACCOUNT_ID": prediction.ACCOUNT_ID,
+                "TEAM_ID": prediction.TEAM_ID,
+                "PREDICTED_RANK": prediction.PREDICTED_RANK,
+                "SEASON_YEAR": prediction.SEASON_YEAR,
+                "IS_CORRECT": prediction.IS_CORRECT,
+                # "created_at": prediction.created_at,
+                "team_name": team.TEAM_NAME if team else "알 수 없음"
+            }
+            
+            result.append(prediction_dict)
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"사용자 순위 예측 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"사용자 순위 예측 조회 중 오류 발생: {str(e)}"
+        )
