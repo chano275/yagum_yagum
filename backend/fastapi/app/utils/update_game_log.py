@@ -60,7 +60,7 @@ record_type_mapping = {
     '경기결과': None  # 이 값은 처리 시 변경됩니다
 }
 
-def process_json_game_logs(json_dir="data/json_data"):
+def process_json_game_logs(json_dir="baseball_data/json_data"):
     """
     JSON 파일을 처리하여 게임 로그 정보를 DB에 저장
     
@@ -224,7 +224,7 @@ if __name__ == "__main__":
         # 명령줄 인자 처리
         import argparse
         parser = argparse.ArgumentParser(description='JSON 게임 로그 처리')
-        parser.add_argument('--dir', type=str, help='JSON 파일 디렉토리 경로', default='data/json_data')
+        parser.add_argument('--dir', type=str, help='JSON 파일 디렉토리 경로', default='baseball_data/json_data')
         args = parser.parse_args()
         
         process_json_game_logs(args.dir)

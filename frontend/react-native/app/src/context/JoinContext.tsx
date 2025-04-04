@@ -171,7 +171,7 @@ export const JoinProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// Context 사용을 위한 Hook
+// useJoin 훅 추가
 export const useJoin = () => {
   const context = useContext(JoinContext);
   if (!context) {

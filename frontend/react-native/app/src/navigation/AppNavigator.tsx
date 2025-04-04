@@ -8,6 +8,8 @@ import ServiceScreen from '../screens/ServiceScreen';
 import TabNavigator from './TabNavigator';
 import { useStore } from '../store/useStore';
 import PlayerSelectScreen from '../screens/PlayerSelectScreen';
+import AccountSelectScreen from '../screens/AccountSelectScreen';
+import CompletionScreen from '../screens/CompletionScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -16,6 +18,8 @@ export type RootStackParamList = {
   Service: undefined;
   Main: undefined;
   PlayerSelect: undefined;
+  AccountSelect: undefined;
+  Completion: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -37,6 +41,8 @@ const AppNavigator = () => {
         <Stack.Screen name="Service" component={ServiceScreen} />
         <Stack.Screen name="Main" component={TabNavigator} />
         <Stack.Screen name="PlayerSelect" component={PlayerSelectScreen} />
+        <Stack.Screen name="AccountSelect" component={AccountSelectScreen} />
+        <Stack.Screen name="Completion" component={CompletionScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
