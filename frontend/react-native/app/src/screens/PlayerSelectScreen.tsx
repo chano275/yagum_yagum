@@ -566,7 +566,7 @@ const PlayerSelectScreen = () => {
                     position: player.player_type_name,
                     teamId: teamId
                   });
-                  navigation.navigate('AccountSelect' as never);
+                  navigation.navigate('AccountSelect');
                 }
               }
             }}
