@@ -1,13 +1,17 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from '../screens/HomeScreen';
-import LoginScreen from '../screens/LoginScreen';
-import SavingsJoinScreen from '../screens/SavingsJoinScreen';
-import ServiceScreen from '../screens/ServiceScreen';
-import TabNavigator from './TabNavigator';
-import { useStore } from '../store/useStore';
-import PlayerSelectScreen from '../screens/PlayerSelectScreen';
+import React from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import HomeScreen from "../screens/HomeScreen";
+import LoginScreen from "../screens/LoginScreen";
+import SavingsJoinScreen from "../screens/SavingsJoinScreen";
+import ServiceScreen from "../screens/ServiceScreen";
+import TabNavigator from "./TabNavigator";
+import { useStore } from "../store/useStore";
+import PlayerSelectScreen from "../screens/PlayerSelectScreen";
+import Matchrank from "../screens/Benefits/MatchrankScreen";
+import Merchdiscount from "../screens/Benefits/MerchdiscountScreen";
+import Primerate from "../screens/Benefits/PrimerateScreen";
+import Verifyticket from "../screens/Benefits/VerifyticketScreen";
 import AccountSelectScreen from '../screens/AccountSelectScreen';
 import CompletionScreen from '../screens/CompletionScreen';
 
@@ -41,8 +45,6 @@ const AppNavigator = () => {
         <Stack.Screen name="Service" component={ServiceScreen} />
         <Stack.Screen name="Main" component={TabNavigator} />
         <Stack.Screen name="PlayerSelect" component={PlayerSelectScreen} />
-        <Stack.Screen name="AccountSelect" component={AccountSelectScreen} />
-        <Stack.Screen name="Completion" component={CompletionScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

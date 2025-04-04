@@ -317,6 +317,8 @@ const MainPage = () => {
   const [currentAmount, setCurrentAmount] = useState(0);
   const [targetAmount, setTargetAmount] = useState(0);
   const [savingTitle, setSavingTitle] = useState("목표 저축");
+  const [interestRate, setInterestRate] = useState(0);
+  const [additionalRate, setAdditionalRate] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeSlide, setActiveSlide] = useState(0);
@@ -326,7 +328,6 @@ const MainPage = () => {
     const fetchAccountData = async () => {
       try {
         setIsLoading(true);
-        // 예시 계정 ID, 실제로는 로그인 시 저장된 계정 ID를 사용해야 함
         const accountId = 1; // 실제 구현에서는 저장된 계정 ID 사용
 
         const response = await api.get(`/api/account/${accountId}`);
@@ -338,8 +339,17 @@ const MainPage = () => {
           setTargetAmount(accountData.SAVING_GOAL || 0);
           setCurrentAmount(accountData.TOTAL_AMOUNT || 0);
 
-          // 목표 제목 설정 (예시: "유니폼 구매")
-          setSavingTitle("유니폼 구매 (API)"); // 필요시 API에서 제목을 받아와 설정
+          // 금리 정보 설정
+          const baseRate = 2.5; // 기본 금리
+          const rate = accountData.INTEREST_RATE || baseRate;
+          setInterestRate(rate);
+
+          // 추가 금리 계산 (기본 금리 기준)
+          const additional = rate - baseRate;
+          setAdditionalRate(additional);
+
+          // 목표 제목 설정
+          setSavingTitle("유니폼 구매(목표 금액에 따라 하드코딩)");
         }
       } catch (err) {
         console.error("계좌 정보 조회 실패:", err);
@@ -347,13 +357,15 @@ const MainPage = () => {
         // 에러 발생시 기본값 설정
         setTargetAmount(500000);
         setCurrentAmount(300000);
+        setInterestRate(2.5);
+        setAdditionalRate(0);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchAccountData();
-  }, []); // 컴포넌트 마운트 시 한 번만 실행
+  }, []);
 
   const percentage = Math.min(
     100,
@@ -488,10 +500,13 @@ const MainPage = () => {
 
             <StatsRow width={width}>
               <StatText width={width}>
-                현재 금리: 3.5%(API) <StatHighlight>+0.4%</StatHighlight>
+                현재 금리: {interestRate.toFixed(1)}%
+                {additionalRate > 0 && (
+                  <StatHighlight> +{additionalRate.toFixed(1)}%</StatHighlight>
+                )}
               </StatText>
               <StatText width={width}>
-                팀 순위: 3위 <StatHighlight>+2</StatHighlight>
+                팀 순위: 3위(API) <StatHighlight>+2</StatHighlight>
               </StatText>
             </StatsRow>
 

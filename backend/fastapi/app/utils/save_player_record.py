@@ -50,7 +50,7 @@ record_type_mapping = {
 
 def process_game_data_folder():
     """
-    data/game_data 폴더 내의 모든 날짜 폴더를 처리하여 선수 기록을 DB에 저장
+    baseball_data/game_data 폴더 내의 모든 날짜 폴더를 처리하여 선수 기록을 DB에 저장
     """
     # 게임 데이터 폴더 경로
     game_data_path = os.path.join(project_root, 'baseball_data', 'game_data')

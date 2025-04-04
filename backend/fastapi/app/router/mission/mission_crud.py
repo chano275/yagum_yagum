@@ -152,8 +152,24 @@ def get_account_mission_summary(db: Session, account_id: int):
     used_missions = get_used_missions_by_account(db, account_id)
     
     total_missions = len(used_missions)
-    completed_missions = sum(1 for m in used_missions if m.COUNT >= m.MAX_COUNT)
-    total_rate = sum(m.MISSION_RATE for m in used_missions if m.COUNT >= m.MAX_COUNT)
+    completed_missions = 0
+    total_rate = 0
+    
+    for mission in used_missions:
+        # COUNT는 해당 미션을 달성한 횟수
+        # MAX_COUNT는 최대 가능한 횟수
+        # MISSION_RATE는 한 번 달성당 받는 금리
+        
+        # COUNT가 MAX_COUNT를 초과하는 경우, MAX_COUNT까지만 적용
+        effective_count = min(mission.COUNT, mission.MAX_COUNT)
+        
+        # 적어도 한 번 이상 달성했으면 completed_missions 증가
+        if effective_count > 0:
+            completed_missions += 1
+        
+        # 우대금리 계산: 달성 횟수 * 미션당 금리
+        mission_rate = effective_count * mission.MISSION_RATE
+        total_rate += mission_rate
     
     return {
         "total_missions": total_missions,
@@ -209,3 +225,51 @@ def update_account_interest_rate(db: Session, account_id: int):
     db.refresh(account)
     
     return account
+
+def calculate_account_interest_details(db: Session, account_id: int):
+    """
+    계정의 기본 이자율과 미션으로 인한 추가 이자율 계산
+    
+    Args:
+        db (Session): 데이터베이스 세션
+        account_id (int): 계정 ID
+    
+    Returns:
+        dict: 기본 이자율, 미션의 이자율 정보
+    """
+    # 계정 정보 조회
+    account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
+    if not account:
+        return None
+    
+    # 모든 사용자 미션 조회 (진행 중 또는 완료된 미션)
+    used_missions = db.query(models.UsedMission).filter(
+        models.UsedMission.ACCOUNT_ID == account_id
+    ).all()
+    
+    # 미션 이자율 계산 (count와 mission_rate를 곱한 값의 합)
+    mission_details = []
+    total_mission_rate = 0
+    
+    for used_mission in used_missions:
+        mission = used_mission.mission
+        
+        # 실제 추가될 이자율 계산 (count * mission_rate)
+        additional_rate = min(used_mission.COUNT, used_mission.MAX_COUNT) * mission.MISSION_RATE
+        
+        mission_details.append({
+            "MISSION_ID": mission.MISSION_ID,
+            "MISSION_NAME": mission.MISSION_NAME,
+            "MISSION_MAX_COUNT": mission.MISSION_MAX_COUNT,
+            "MISSION_RATE": mission.MISSION_RATE,
+            "CURRENT_COUNT": used_mission.COUNT,
+            "ADDITIONAL_RATE": additional_rate
+        })
+        
+        total_mission_rate += additional_rate
+    
+    return {
+        'base_interest_rate': account.INTEREST_RATE,
+        'mission_interest_rate': total_mission_rate,
+        'total_interest_rate': account.INTEREST_RATE+total_mission_rate,
+    }

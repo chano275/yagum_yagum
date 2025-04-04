@@ -6,11 +6,19 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  Alert,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTeam } from "@/context/TeamContext";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "@/navigation/AppNavigator";
+
+// 네비게이션 타입 정의
+type BenefitsScreenNavigationProp =
+  NativeStackNavigationProp<RootStackParamList>;
 
 // 동적 스타일링을 위한 인터페이스
 interface StyledProps {
@@ -75,11 +83,15 @@ const BenefitCard = styled.View<StyledProps>`
   `}
 `;
 
+// 수정된 IconContainer 컴포넌트
 const IconContainer = styled.View<{ bgColor: string }>`
   width: 40px;
   height: 40px;
   border-radius: 20px;
-  background-color: ${(props) => props.bgColor};
+  background-color: ${(props) =>
+    props.bgColor === "#ffffff" ? "#f0f0f0" : props.bgColor};
+  border: ${(props) =>
+    props.bgColor === "#ffffff" ? "1px solid #dddddd" : "none"};
   justify-content: center;
   align-items: center;
   margin-right: 15px;
@@ -116,6 +128,9 @@ const BenefitsScreen = () => {
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
 
+  // 네비게이션 추가
+  const navigation = useNavigation<BenefitsScreenNavigationProp>();
+
   // 혜택 데이터
   const benefits = [
     {
@@ -124,7 +139,14 @@ const BenefitsScreen = () => {
       description:
         "적금 목표 달성 시 기본금리에 추가로 최대 1.0%p의 우대금리가 제공됩니다.",
       icon: "cash-outline",
-      bgColor: teamColor.primary, // 팀 컬러 적용
+      bgColor: teamColor.primary,
+      onPress: () => {
+        // 금리 혜택 상세 페이지로 이동
+        navigation.navigate("Primerate", {
+          benefitType: "interest",
+          title: "우대금리 혜택",
+        });
+      },
     },
     {
       id: "2",
@@ -133,6 +155,13 @@ const BenefitsScreen = () => {
         "홈경기 직관 티켓 인증을 3번 완료하면 우대금리 0.1%p가 추가 제공됩니다.",
       icon: "ticket-outline",
       bgColor: "#FF5252",
+      onPress: () => {
+        // 티켓 인증 페이지로 이동
+        navigation.navigate("Verifyticket", {
+          benefitType: "ticket",
+          title: "경기 직관 인증",
+        });
+      },
     },
     {
       id: "3",
@@ -141,6 +170,13 @@ const BenefitsScreen = () => {
         "응원팀 공식 굿즈 구매 시 최대 20% 할인 혜택을 받을 수 있습니다.",
       icon: "shirt-outline",
       bgColor: "#4CAF50",
+      onPress: () => {
+        // 굿즈 쇼핑 페이지로 이동
+        navigation.navigate("Merchdiscount", {
+          benefitType: "goods",
+          title: "팀 굿즈 할인",
+        });
+      },
     },
     {
       id: "4",
@@ -148,7 +184,14 @@ const BenefitsScreen = () => {
       description:
         "시즌 종료 후 예측한 순위와 실제 순위가 일치하면 우대금리가 제공됩니다.",
       icon: "trophy-outline",
-      bgColor: teamColor.secondary, // 팀 컬러의 secondary 색상 적용
+      bgColor: teamColor.secondary,
+      onPress: () => {
+        // 순위 예측 페이지로 이동
+        navigation.navigate("Matchrank", {
+          benefitType: "ranking",
+          title: "팀 순위 맞추기",
+        });
+      },
     },
   ];
 
@@ -168,7 +211,11 @@ const BenefitsScreen = () => {
             contentContainerStyle={{ padding: 16 }}
           >
             {benefits.map((benefit) => (
-              <TouchableOpacity key={benefit.id}>
+              <TouchableOpacity
+                key={benefit.id}
+                onPress={benefit.onPress}
+                activeOpacity={0.7}
+              >
                 <BenefitCard width={width}>
                   <IconContainer bgColor={benefit.bgColor}>
                     <Ionicons name={benefit.icon} size={24} color="white" />

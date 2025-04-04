@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 # 계정 기본 모델
@@ -124,3 +124,42 @@ class UserAccountsResponse(BaseModel):
     user_name: str
     source_account: SourceAccountInfo
     savings_accounts: List[SavingsAccountInfo]
+
+
+# 기존 코드에 추가
+class MissionDetailResponse(BaseModel):
+    """미션 상세 정보 응답 모델"""
+    MISSION_ID: int
+    MISSION_NAME: str
+    MISSION_MAX_COUNT: int
+    MISSION_RATE: float
+    COUNT: int
+    MAX_COUNT: int
+
+class AccountDetailResponse(AccountResponse):
+    base_interest_rate: float
+    mission_interest_rate: float
+    total_interest_rate: float
+    active_missions: List[Dict[str, Any]]
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+class CompletedMissionDetail(BaseModel):
+    MISSION_ID: int
+    MISSION_NAME: str
+    MISSION_RATE: float
+
+class MissionInterestDetail(BaseModel):
+    MISSION_ID: int
+    MISSION_NAME: str
+    MISSION_MAX_COUNT: int
+    MISSION_RATE: float
+    CURRENT_COUNT: int
+    ADDITIONAL_RATE: float
+
+class AccountInterestDetailResponse(BaseModel):
+    base_interest_rate: float  # 기본 이자율
+    total_mission_rate: float  # 모든 미션의 비례적 이자율
+    mission_details: List[MissionInterestDetail]

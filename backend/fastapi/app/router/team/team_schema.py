@@ -48,22 +48,6 @@ class TeamRatingBase(BaseModel):
 class TeamRatingCreate(TeamRatingBase):
     pass
 
-# 팀 순위 응답 모델
-class TeamRatingResponse(TeamRatingBase):
-    TEAM_RATING_ID: int
-    
-    class Config:
-        orm_mode = True
-        from_attributes = True
-
-# 팀 순위 상세 응답 모델
-class TeamRatingDetailResponse(TeamRatingResponse):
-    team_name: str
-    
-    class Config:
-        orm_mode = True
-        from_attributes = True
-
 # 뉴스 기본 모델
 class NewsBase(BaseModel):
     TEAM_ID: int
@@ -75,23 +59,9 @@ class NewsBase(BaseModel):
 class NewsCreate(NewsBase):
     pass
 
-# 뉴스 업데이트 모델 (요청)
-class NewsUpdate(BaseModel):
-    NEWS_TITLE: Optional[str] = None
-    NEWS_CONTENT: Optional[str] = None
-    PUBLISHED_DATE: Optional[date] = None
-
 # 뉴스 응답 모델
 class NewsResponse(NewsBase):
     NEWS_ID: int
-    
-    class Config:
-        orm_mode = True
-        from_attributes = True
-
-# 뉴스 상세 응답 모델
-class NewsDetailResponse(NewsResponse):
-    team_name: str
     
     class Config:
         orm_mode = True
@@ -108,22 +78,9 @@ class DailyReportBase(BaseModel):
 class DailyReportCreate(DailyReportBase):
     pass
 
-# 일일 보고서 업데이트 모델 (요청)
-class DailyReportUpdate(BaseModel):
-    LLM_CONTEXT: Optional[str] = None
-    TEAM_AVG_AMOUNT: Optional[int] = None
-
 # 일일 보고서 응답 모델
 class DailyReportResponse(DailyReportBase):
     DAILY_REPORT_ID: int
-    
-    class Config:
-        orm_mode = True
-        from_attributes = True
-
-# 일일 보고서 상세 응답 모델
-class DailyReportDetailResponse(DailyReportResponse):
-    team_name: str
     
     class Config:
         orm_mode = True
@@ -143,14 +100,6 @@ class WeeklyReportBase(BaseModel):
 class WeeklyReportCreate(WeeklyReportBase):
     pass
 
-# 주간 팀 보고서 업데이트 모델 (요청)
-class WeeklyReportUpdate(BaseModel):
-    NEWS_SUMMATION: Optional[str] = None
-    TEAM_AMOUNT: Optional[int] = None
-    TEAM_WIN: Optional[int] = None
-    TEAM_DRAW: Optional[int] = None
-    TEAM_LOSE: Optional[int] = None
-
 # 주간 팀 보고서 응답 모델
 class WeeklyReportResponse(WeeklyReportBase):
     WEEKLY_TEAM_ID: int
@@ -158,43 +107,6 @@ class WeeklyReportResponse(WeeklyReportBase):
     class Config:
         orm_mode = True
         from_attributes = True
-
-# 주간 팀 보고서 상세 응답 모델
-class WeeklyReportDetailResponse(WeeklyReportResponse):
-    team_name: str
-    win_rate: float
-    
-    class Config:
-        orm_mode = True
-        from_attributes = True
-
-# 팀 요약 정보 응답 모델
-class TeamSummaryResponse(BaseModel):
-    team_id: int
-    team_name: str
-    account_count: int
-    total_amount: int
-    player_count: int
-    total_games: int
-    win_count: int
-    lose_count: int
-    draw_count: int
-    win_rate: float
-    current_ranking: Optional[int] = None
-
-# 팀 월간 통계 응답 모델
-class TeamMonthlyStatsResponse(BaseModel):
-    team_id: int
-    year: int
-    month: int
-    win_count: int
-    lose_count: int
-    draw_count: int
-    total_games: int
-    record_stats: Dict[str, int]
-    account_count: int
-    total_saving: int
-    avg_daily_saving: float
 
 # 팀 선수 정보 응답 모델
 class TeamPlayerBasicInfo(BaseModel):
@@ -232,12 +144,6 @@ class TeamFullDetailResponse(TeamDetailResponse):
     class Config:
         orm_mode = True
         from_attributes = True
-
-# 팀 검색 필터 모델
-class TeamFilterParams(BaseModel):
-    name: Optional[str] = None
-    skip: int = 0
-    limit: int = 100
 
 # 뉴스 검색 필터 모델
 class NewsFilterParams(BaseModel):

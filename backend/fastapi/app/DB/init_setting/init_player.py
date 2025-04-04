@@ -35,9 +35,9 @@ possible_base_paths = [
     os.path.join(os.path.dirname(__file__), '..', '..', 'fastapi', 'app', 'baseball_data', 'players'),
     os.path.join(os.path.dirname(__file__), '..', '..', 'app', 'baseball_data', 'players'),
     os.path.join(os.path.dirname(__file__), '..', '..', 'baseball_data', 'players'),
-    os.path.join(os.path.dirname(__file__), '..', 'fastapi', 'app', 'datbaseball_dataa', 'players'),
+    os.path.join(os.path.dirname(__file__), '..', 'fastapi', 'app', 'baseball_data', 'players'),
     os.path.join(os.path.dirname(__file__), 'baseball_data', 'players'),
-    'fastapi/app/data/players'
+    'fastapi/app/baseball_data/players'
 ]
 
 # 유효한 경로 찾기
