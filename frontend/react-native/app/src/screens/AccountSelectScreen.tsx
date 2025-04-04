@@ -1,15 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ScrollView, View, Platform, Animated, Modal, TouchableWithoutFeedback, ActivityIndicator, LayoutAnimation, UIManager, Easing } from 'react-native';
-import styled from 'styled-components/native';
-import { useNavigation } from '@react-navigation/native';
-import { useTeam } from '../context/TeamContext';
-import { useAccountStore } from '../store/useStore';
-import { useStore } from '../store/useStore';
-import { UserAccountsResponse, SourceAccount } from '../types/account';
-import Header from '../components/Header';
-import { MaterialIcons } from '@expo/vector-icons';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../navigation/AppNavigator';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  ScrollView,
+  View,
+  Platform,
+  Animated,
+  Modal,
+  TouchableWithoutFeedback,
+  ActivityIndicator,
+  LayoutAnimation,
+  UIManager,
+  Easing,
+} from "react-native";
+import styled from "styled-components/native";
+import { useNavigation } from "@react-navigation/native";
+import { useTeam } from "../context/TeamContext";
+import { useAccountStore } from "../store/useStore";
+import { useStore } from "../store/useStore";
+import { UserAccountsResponse, SourceAccount } from "../types/account";
+import Header from "../components/Header";
+import { MaterialIcons } from "@expo/vector-icons";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../navigation/AppNavigator";
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
@@ -23,13 +34,16 @@ const AppWrapper = styled.View`
 `;
 
 const MobileContainer = styled.View`
-  width: ${Platform.OS === 'web' ? `${BASE_MOBILE_WIDTH}px` : `${MAX_MOBILE_WIDTH}px`};
+  width: ${Platform.OS === "web"
+    ? `${BASE_MOBILE_WIDTH}px`
+    : `${MAX_MOBILE_WIDTH}px`};
   max-width: 100%;
   flex: 1;
   align-self: center;
   overflow: hidden;
   position: relative;
-  ${Platform.OS === 'web' && `
+  ${Platform.OS === "web" &&
+  `
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
     margin: 0 auto;
   `}
@@ -69,7 +83,7 @@ const Section = styled.View`
 `;
 
 const AgreementCard = styled.View`
-  background-color: #F8F8FA;
+  background-color: #f8f8fa;
   border-radius: 16px;
   padding: 20px;
   width: 100%;
@@ -80,7 +94,7 @@ const AgreementItem = styled.View`
   align-items: center;
   padding: 16px 0;
   border-bottom-width: 1px;
-  border-bottom-color: #EEEEEE;
+  border-bottom-color: #eeeeee;
 `;
 
 const AgreementItemLast = styled(AgreementItem)`
@@ -97,8 +111,8 @@ const CheckBox = styled.TouchableOpacity<CheckBoxProps>`
   height: 20px;
   border-radius: 4px;
   border-width: 1.5px;
-  border-color: ${props => props.isChecked ? props.color : '#CCCCCC'};
-  background-color: ${props => props.isChecked ? props.color : 'white'};
+  border-color: ${(props) => (props.isChecked ? props.color : "#CCCCCC")};
+  background-color: ${(props) => (props.isChecked ? props.color : "white")};
   justify-content: center;
   align-items: center;
   margin-right: 12px;
@@ -118,7 +132,7 @@ const AgreementTextAll = styled.Text`
   flex: 1;
   font-size: 16px;
   font-weight: 700;
-  color: #1B1D1F;
+  color: #1b1d1f;
 `;
 
 const AgreementText = styled.Text`
@@ -147,7 +161,7 @@ const AccountSelect = styled.TouchableOpacity`
   justify-content: space-between;
   padding: 16px;
   border-radius: 12px;
-  border: 1px solid #EEEEEE;
+  border: 1px solid #eeeeee;
   margin-top: 16px;
 `;
 
@@ -158,12 +172,13 @@ const AccountPlaceholder = styled.Text`
 
 const AccountDropdown = styled(Animated.View)`
   background-color: white;
-  border: 1px solid #EEEEEE;
+  border: 1px solid #eeeeee;
   border-radius: 12px;
   margin-top: 4px;
   z-index: 9999;
   overflow: hidden;
-  ${Platform.OS === 'web' && `
+  ${Platform.OS === "web" &&
+  `
     box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
   `}
 `;
@@ -192,7 +207,7 @@ const AccountIcon = styled.View<{ color: string }>`
   width: 32px;
   height: 32px;
   border-radius: 16px;
-  background-color: ${props => props.color}10;
+  background-color: ${(props) => props.color}10;
   justify-content: center;
   align-items: center;
   margin-right: 12px;
@@ -221,13 +236,13 @@ const BottomSection = styled.View`
 `;
 
 const SelectButton = styled.TouchableOpacity<SelectButtonProps>`
-  background-color: ${props => props.disabled ? '#CCCCCC' : props.color};
+  background-color: ${(props) => (props.disabled ? "#CCCCCC" : props.color)};
   padding: 16px;
   border-radius: 8px;
   align-items: center;
   margin-top: 8px;
   margin-bottom: 16px;
-  opacity: ${props => props.disabled ? 0.7 : 1};
+  opacity: ${(props) => (props.disabled ? 0.7 : 1)};
 `;
 
 const SelectButtonText = styled.Text<{ disabled: boolean }>`
@@ -260,7 +275,7 @@ const ModalHeader = styled.View`
 const ModalTitle = styled.Text`
   font-size: 18px;
   font-weight: 600;
-  color: #1B1D1F;
+  color: #1b1d1f;
 `;
 
 const CloseButton = styled.TouchableOpacity`
@@ -271,13 +286,17 @@ const AccountList = styled.ScrollView`
   max-height: 400px;
 `;
 
-const AccountOption = styled.TouchableOpacity<{ isSelected: boolean; color: string }>`
+const AccountOption = styled.TouchableOpacity<{
+  isSelected: boolean;
+  color: string;
+}>`
   flex-direction: row;
   align-items: center;
   padding: 16px;
-  background-color: ${props => props.isSelected ? props.color + '10' : 'white'};
+  background-color: ${(props) =>
+    props.isSelected ? props.color + "10" : "white"};
   border-bottom-width: 1px;
-  border-bottom-color: #EEEEEE;
+  border-bottom-color: #eeeeee;
   &:last-child {
     border-bottom-width: 0;
   }
@@ -301,7 +320,7 @@ const ErrorContainer = styled.View`
 
 const ErrorText = styled.Text`
   font-size: 14px;
-  color: #FF4444;
+  color: #ff4444;
   text-align: center;
   margin-top: 8px;
 `;
@@ -311,7 +330,8 @@ const AnimatedSection = styled(Animated.View)`
 `;
 
 const AccountSelectScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { teamColor } = useTeam();
   const { accountInfo, isLoading, error, fetchAccountInfo } = useAccountStore();
   const { isLoggedIn, token } = useStore();
@@ -331,24 +351,24 @@ const AccountSelectScreen = () => {
   const dropdownAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    console.log('로그인 상태:', isLoggedIn);
-    console.log('토큰:', token);
-    console.log('API 베이스 URL:', process.env.REACT_APP_API_URL);
+    console.log("로그인 상태:", isLoggedIn);
+    console.log("토큰:", token);
+    console.log("API 베이스 URL:", process.env.REACT_APP_API_URL);
     fetchAccountInfo();
   }, []);
 
   useEffect(() => {
     if (accountInfo) {
-      console.log('계좌 정보:', accountInfo);
-      console.log('출금 계좌:', accountInfo.source_account);
+      console.log("계좌 정보:", accountInfo);
+      console.log("출금 계좌:", accountInfo.source_account);
     }
     if (error) {
-      console.log('계좌 정보 조회 에러:', error);
+      console.log("계좌 정보 조회 에러:", error);
     }
   }, [accountInfo, error]);
 
   const handleAgreementCheck = (key: keyof typeof agreements) => {
-    if (key === 'all') {
+    if (key === "all") {
       const newValue = !agreements.all;
       setAgreements({
         all: newValue,
@@ -364,7 +384,8 @@ const AccountSelectScreen = () => {
         ...agreements,
         [key]: !agreements[key],
       };
-      const newAll = newAgreements.terms && newAgreements.privacy && newAgreements.marketing;
+      const newAll =
+        newAgreements.terms && newAgreements.privacy && newAgreements.marketing;
       setAgreements({
         ...newAgreements,
         all: newAll,
@@ -387,7 +408,7 @@ const AccountSelectScreen = () => {
     setTimeout(() => {
       scrollViewRef.current?.scrollTo({
         y: 500,
-        animated: true
+        animated: true,
       });
     }, 350); // 애니메이션 완료 후 스크롤
   };
@@ -396,7 +417,7 @@ const AccountSelectScreen = () => {
   useEffect(() => {
     if (isRequiredAgreed !== isRequiredAgreedPrev) {
       setIsRequiredAgreedPrev(isRequiredAgreed);
-      
+
       if (isRequiredAgreed) {
         // 새로운 섹션이 나타날 때
         Animated.parallel([
@@ -411,7 +432,7 @@ const AccountSelectScreen = () => {
             duration: 350,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
-          })
+          }),
         ]).start(() => {
           scrollToAccountSection(); // 애니메이션 완료 후 스크롤
         });
@@ -429,7 +450,7 @@ const AccountSelectScreen = () => {
             duration: 200,
             easing: Easing.in(Easing.ease),
             useNativeDriver: true,
-          })
+          }),
         ]).start();
       }
     }
@@ -451,7 +472,7 @@ const AccountSelectScreen = () => {
       setTimeout(() => {
         scrollViewRef.current?.scrollTo({
           y: 500,
-          animated: true
+          animated: true,
         });
       }, 50);
     }
@@ -477,19 +498,36 @@ const AccountSelectScreen = () => {
               <AccountList>
                 {accountInfo?.source_account && (
                   <AccountOption
-                    isSelected={selectedAccount === accountInfo.source_account.account_num}
+                    isSelected={
+                      selectedAccount === accountInfo.source_account.account_num
+                    }
                     color={teamColor.primary}
-                    onPress={() => handleAccountSelect(accountInfo.source_account.account_num)}
+                    onPress={() =>
+                      handleAccountSelect(
+                        accountInfo.source_account.account_num
+                      )
+                    }
                   >
                     <AccountIcon color={teamColor.primary}>
-                      <MaterialIcons name="account-balance" size={18} color={teamColor.primary} />
+                      <MaterialIcons
+                        name="account-balance"
+                        size={18}
+                        color={teamColor.primary}
+                      />
                     </AccountIcon>
                     <AccountInfo>
                       <AccountName>입출금 통장(자유예금)</AccountName>
-                      <AccountNumber>{accountInfo.source_account.account_num}</AccountNumber>
+                      <AccountNumber>
+                        {accountInfo.source_account.account_num}
+                      </AccountNumber>
                     </AccountInfo>
-                    {selectedAccount === accountInfo.source_account.account_num && (
-                      <MaterialIcons name="check-circle" size={20} color={teamColor.primary} />
+                    {selectedAccount ===
+                      accountInfo.source_account.account_num && (
+                      <MaterialIcons
+                        name="check-circle"
+                        size={20}
+                        color={teamColor.primary}
+                      />
                     )}
                   </AccountOption>
                 )}
@@ -534,7 +572,11 @@ const AccountSelectScreen = () => {
         <AccountSelect onPress={handleDropdownToggle}>
           <AccountRow>
             <AccountIcon color={teamColor.primary}>
-              <MaterialIcons name="account-balance" size={18} color={teamColor.primary} />
+              <MaterialIcons
+                name="account-balance"
+                size={18}
+                color={teamColor.primary}
+              />
             </AccountIcon>
             {selectedAccount ? (
               <AccountInfo>
@@ -545,40 +587,56 @@ const AccountSelectScreen = () => {
               <AccountPlaceholder>계좌를 선택해주세요</AccountPlaceholder>
             )}
           </AccountRow>
-          <MaterialIcons 
-            name={isDropdownOpen ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
-            size={24} 
-            color="#666666" 
+          <MaterialIcons
+            name={isDropdownOpen ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+            size={24}
+            color="#666666"
           />
         </AccountSelect>
 
         <AccountDropdown
           style={{
             opacity: dropdownAnimation,
-            transform: [{
-              scaleY: dropdownAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.9, 1],
-              })
-            }],
-            transformOrigin: 'top',
+            transform: [
+              {
+                scaleY: dropdownAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.9, 1],
+                }),
+              },
+            ],
+            transformOrigin: "top",
           }}
         >
           {isDropdownOpen && (
             <AccountOption
-              isSelected={selectedAccount === accountInfo.source_account.account_num}
+              isSelected={
+                selectedAccount === accountInfo.source_account.account_num
+              }
               color={teamColor.primary}
-              onPress={() => handleAccountSelect(accountInfo.source_account.account_num)}
+              onPress={() =>
+                handleAccountSelect(accountInfo.source_account.account_num)
+              }
             >
               <AccountIcon color={teamColor.primary}>
-                <MaterialIcons name="account-balance" size={18} color={teamColor.primary} />
+                <MaterialIcons
+                  name="account-balance"
+                  size={18}
+                  color={teamColor.primary}
+                />
               </AccountIcon>
               <AccountInfo>
                 <AccountName>입출금 통장(자유예금)</AccountName>
-                <AccountNumber>{accountInfo.source_account.account_num}</AccountNumber>
+                <AccountNumber>
+                  {accountInfo.source_account.account_num}
+                </AccountNumber>
               </AccountInfo>
               {selectedAccount === accountInfo.source_account.account_num && (
-                <MaterialIcons name="check-circle" size={20} color={teamColor.primary} />
+                <MaterialIcons
+                  name="check-circle"
+                  size={20}
+                  color={teamColor.primary}
+                />
               )}
             </AccountOption>
           )}
@@ -590,17 +648,17 @@ const AccountSelectScreen = () => {
   return (
     <AppWrapper>
       <MobileContainer>
-        <Header 
-          title="적금 가입" 
-          step={4} 
-          totalSteps={4} 
-          onBack={() => navigation.goBack()} 
+        <Header
+          title="적금 가입"
+          step={4}
+          totalSteps={4}
+          onBack={() => navigation.goBack()}
         />
-        <ScrollView 
+        <ScrollView
           ref={scrollViewRef}
-          style={{ width: '100%', flex: 1 }}
-          contentContainerStyle={{ 
-            paddingBottom: 40
+          style={{ width: "100%", flex: 1 }}
+          contentContainerStyle={{
+            paddingBottom: 40,
           }}
           scrollEventThrottle={16}
           nestedScrollEnabled={true}
@@ -609,10 +667,10 @@ const AccountSelectScreen = () => {
             <Section>
               <AgreementCard>
                 <AgreementItem>
-                  <CheckBox 
+                  <CheckBox
                     isChecked={agreements.all}
                     color={teamColor.primary}
-                    onPress={() => handleAgreementCheck('all')}
+                    onPress={() => handleAgreementCheck("all")}
                   >
                     {agreements.all && <CheckIcon />}
                   </CheckBox>
@@ -620,38 +678,40 @@ const AccountSelectScreen = () => {
                 </AgreementItem>
 
                 <AgreementItem>
-                  <CheckBox 
+                  <CheckBox
                     isChecked={agreements.terms}
                     color={teamColor.primary}
-                    onPress={() => handleAgreementCheck('terms')}
+                    onPress={() => handleAgreementCheck("terms")}
                   >
                     {agreements.terms && <CheckIcon />}
                   </CheckBox>
-                  <AgreementText>(필수) 아금바라 이용약관</AgreementText>
+                  <AgreementText>(필수) 야금야금 이용약관</AgreementText>
                   <ViewButton>
                     <ViewButtonText>보기</ViewButtonText>
                   </ViewButton>
                 </AgreementItem>
 
                 <AgreementItem>
-                  <CheckBox 
+                  <CheckBox
                     isChecked={agreements.privacy}
                     color={teamColor.primary}
-                    onPress={() => handleAgreementCheck('privacy')}
+                    onPress={() => handleAgreementCheck("privacy")}
                   >
                     {agreements.privacy && <CheckIcon />}
                   </CheckBox>
-                  <AgreementText>(필수) 개인정보 수집 및 이용 동의</AgreementText>
+                  <AgreementText>
+                    (필수) 개인정보 수집 및 이용 동의
+                  </AgreementText>
                   <ViewButton>
                     <ViewButtonText>보기</ViewButtonText>
                   </ViewButton>
                 </AgreementItem>
 
                 <AgreementItemLast>
-                  <CheckBox 
+                  <CheckBox
                     isChecked={agreements.marketing}
                     color={teamColor.primary}
-                    onPress={() => handleAgreementCheck('marketing')}
+                    onPress={() => handleAgreementCheck("marketing")}
                   >
                     {agreements.marketing && <CheckIcon />}
                   </CheckBox>
@@ -666,12 +726,14 @@ const AccountSelectScreen = () => {
             <AnimatedSection
               style={{
                 opacity: opacityAnimation,
-                transform: [{
-                  translateY: expandAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-20, 0]
-                  })
-                }]
+                transform: [
+                  {
+                    translateY: expandAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-20, 0],
+                    }),
+                  },
+                ],
               }}
             >
               <Section>
@@ -684,12 +746,12 @@ const AccountSelectScreen = () => {
         </ScrollView>
 
         <BottomSection>
-          <SelectButton 
+          <SelectButton
             color={teamColor.primary}
             disabled={!canProceed}
             onPress={() => {
               if (canProceed) {
-                navigation.navigate('Completion');
+                navigation.navigate("Completion");
               }
             }}
           >
@@ -702,4 +764,4 @@ const AccountSelectScreen = () => {
   );
 };
 
-export default AccountSelectScreen; 
+export default AccountSelectScreen;

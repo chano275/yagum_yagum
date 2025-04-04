@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   useWindowDimensions,
   SafeAreaView,
@@ -12,6 +12,7 @@ import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
 import { useTeam } from "@/context/TeamContext";
 import { Ionicons } from "@expo/vector-icons";
+import { api } from "@/api/axios"; // API 클라이언트 임포트
 
 // 동적 스타일링을 위한 인터페이스
 interface StyledProps {
@@ -343,12 +344,91 @@ const CustomDonutChart = ({ data, width }) => {
 };
 
 const WeeklyReportScreen = ({ navigation }) => {
-  const { teamColor } = useTeam();
+  const { teamColor, teamName, currentTeam } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
   const width =
     Platform.OS === "web"
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
+
+  // 뉴스 데이터 상태 추가
+  const [newsData, setNewsData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // 팀 이름으로 팀 ID 가져오기
+  const getTeamIdByName = (name) => {
+    const teamMapping = {
+      "KIA 타이거즈": 1,
+      "삼성 라이온즈": 2,
+      "LG 트윈스": 3,
+      "두산 베어스": 4,
+      "KT 위즈": 5,
+      "SSG 랜더스": 6,
+      "롯데 자이언츠": 7,
+      "한화 이글스": 8,
+      "NC 다이노스": 9,
+      "키움 히어로즈": 10,
+    };
+    return teamMapping[name] || 1; // 기본값 1
+  };
+
+  // API에서 뉴스 데이터 가져오기
+  useEffect(() => {
+    const fetchWeeklyReport = async () => {
+      try {
+        setIsLoading(true);
+        // teamName을 기준으로 teamId 결정
+        const teamId = getTeamIdByName(teamName);
+
+        const response = await api.get(`/api/report/weekly/team/${teamId}`);
+
+        if (response.status === 200) {
+          setNewsData(response.data);
+        }
+      } catch (err) {
+        console.error("Weekly report fetch failed:", err);
+        setError(err);
+        // 에러 발생 시 빈 데이터 설정
+        setNewsData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWeeklyReport();
+  }, [teamName]); // teamName이 변경될 때마다 다시 가져오기
+
+  // API 응답에서 뉴스 데이터 처리
+  const processNewsData = () => {
+    if (newsData.length === 0 || !newsData[0]?.NEWS_SUMMATION) {
+      // API 호출 실패 시 기본 뉴스 데이터 반환
+      return [
+        {
+          id: 1,
+          title: "뉴스 데이터가 불러와 지지 않았습니다.",
+          date: "2025.01.01",
+        },
+      ];
+    }
+
+    const newsItem = newsData[0];
+
+    // 문자열을 줄바꿈으로 분리하고 뉴스 아이템 생성
+    return newsItem.NEWS_SUMMATION.split("\n").map((news, index) => {
+      // 앞에 "- "가 있으면 제거
+      const title = news.startsWith("- ") ? news.substring(2) : news;
+
+      return {
+        id: index + 1,
+        title,
+        date: newsItem.DATE || "2025.04.03",
+      };
+    });
+  };
+
+  // 가공된 뉴스 데이터 가져오기
+  const newsHighlights = processNewsData();
 
   // 주간 요약 데이터
   const weekSummary = {
@@ -406,30 +486,6 @@ const WeeklyReportScreen = ({ navigation }) => {
     teamHomeRuns: "8개",
     rankChange: "+2",
   };
-
-  // 주간 뉴스 하이라이트
-  const newsHighlights = [
-    {
-      id: 1,
-      title: "김도영 선수, 주간 4경기 연속 안타 기록 달성",
-      date: "2025.03.07",
-    },
-    {
-      id: 2,
-      title: "최형우 선수, 주간 타율 0.423으로 팀 내 최고 성적",
-      date: "2025.03.06",
-    },
-    {
-      id: 3,
-      title: "홍상삼 선수, 7이닝 무실점 호투로 팀 승리 견인",
-      date: "2025.03.05",
-    },
-    {
-      id: 4,
-      title: "한승택 선수, 주간 도루 5개로 리그 선두 유지",
-      date: "2025.03.04",
-    },
-  ];
 
   return (
     <AppWrapper>
@@ -534,18 +590,28 @@ const WeeklyReportScreen = ({ navigation }) => {
               </CardContent>
             </Card>
 
-            {/* 주간 뉴스 하이라이트 */}
+            {/* 주간 뉴스 하이라이트 - 변경된 부분 */}
             <Card width={width}>
               <CardHeader width={width}>
                 <CardTitle width={width}>주간 뉴스 하이라이트</CardTitle>
               </CardHeader>
               <CardContent width={width}>
-                {newsHighlights.map((news) => (
-                  <NewsItem key={news.id}>
-                    <NewsTitle>• {news.title}</NewsTitle>
-                    <NewsDate>{news.date}</NewsDate>
-                  </NewsItem>
-                ))}
+                {isLoading ? (
+                  <View style={{ padding: 20, alignItems: "center" }}>
+                    <Text>뉴스 데이터 로딩 중...</Text>
+                  </View>
+                ) : error ? (
+                  <View style={{ padding: 20, alignItems: "center" }}>
+                    <Text>뉴스 데이터 로딩 실패</Text>
+                  </View>
+                ) : (
+                  newsHighlights.map((news) => (
+                    <NewsItem key={news.id}>
+                      <NewsTitle>• {news.title}</NewsTitle>
+                      <NewsDate>{news.date}</NewsDate>
+                    </NewsItem>
+                  ))
+                )}
               </CardContent>
             </Card>
           </ScrollView>
