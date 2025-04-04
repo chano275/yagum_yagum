@@ -12,8 +12,8 @@ import Matchrank from "../screens/Benefits/MatchrankScreen";
 import Merchdiscount from "../screens/Benefits/MerchdiscountScreen";
 import Primerate from "../screens/Benefits/PrimerateScreen";
 import Verifyticket from "../screens/Benefits/VerifyticketScreen";
-import AccountSelectScreen from '../screens/AccountSelectScreen';
-import CompletionScreen from '../screens/CompletionScreen';
+import AccountSelectScreen from "../screens/AccountSelectScreen";
+import CompletionScreen from "../screens/CompletionScreen";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -47,6 +47,10 @@ const AppNavigator = () => {
         <Stack.Screen name="PlayerSelect" component={PlayerSelectScreen} />
         <Stack.Screen name="AccountSelect" component={AccountSelectScreen} />
         <Stack.Screen name="Completion" component={CompletionScreen} />
+        <Stack.Screen name="Matchrank" component={Matchrank} />
+        <Stack.Screen name="Merchdiscount" component={Merchdiscount} />
+        <Stack.Screen name="Primerate" component={Primerate} />
+        <Stack.Screen name="Verifyticket" component={Verifyticket} />
       </Stack.Navigator>
     </NavigationContainer>
   );
