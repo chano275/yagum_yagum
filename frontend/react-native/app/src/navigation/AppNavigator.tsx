@@ -45,6 +45,8 @@ const AppNavigator = () => {
         <Stack.Screen name="Service" component={ServiceScreen} />
         <Stack.Screen name="Main" component={TabNavigator} />
         <Stack.Screen name="PlayerSelect" component={PlayerSelectScreen} />
+        <Stack.Screen name="AccountSelect" component={AccountSelectScreen} />
+        <Stack.Screen name="Completion" component={CompletionScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
