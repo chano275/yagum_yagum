@@ -364,7 +364,156 @@ async def read_user_team_monthly_schedule(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"팀 월별 경기 일정 조회 중 오류 발생: {str(e)}"
         )
+
+@router.get("/user-team-results", response_model=List[game_schema.GameResultResponse])
+async def get_user_team_game_results(
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    로그인한 사용자의 응원팀 경기 결과 조회
     
+    Args:
+        end_date: 종료 날짜 (기본값: 어제제)
+        
+    Returns:
+        List[GameResultResponse]: 사용자 응원팀의 경기 결과 목록
+    """
+    try:
+        logger.info(f"사용자 응원팀 경기 결과 조회: 사용자 ID {current_user.USER_ID}")
+        
+        # 1. 사용자의 계정에서 팀 ID 조회
+        accounts = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).all()
+        
+        if not accounts:
+            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 계정이 없습니다"
+            )
+        
+        # 첫 번째 계정의 팀 ID 사용 (여러 계정이 있을 경우)
+        team_id = accounts[0].TEAM_ID
+        
+        if not team_id:
+            logger.warning(f"사용자 계정에 연결된 팀 ID가 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 팀 정보가 없습니다"
+            )
+        
+        # 2. 팀 정보 조회
+        team = db.query(models.Team).filter(models.Team.TEAM_ID == team_id).first()
+        if not team:
+            logger.warning(f"팀 ID {team_id}를 찾을 수 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="팀 정보를 찾을 수 없습니다"
+            )
+        
+        # 3. 날짜 설정 (기본값: 어제)
+        if end_date is None:
+            end_date = datetime.now().date() - timedelta(days=1)
+        
+         # 4. 모든 과거 경기 일정 조회 (start_date 제한 없음)
+        game_schedules = db.query(models.GameSchedule).filter(
+            ((models.GameSchedule.HOME_TEAM_ID == team_id) | 
+             (models.GameSchedule.AWAY_TEAM_ID == team_id)),
+            models.GameSchedule.DATE <= end_date
+        ).order_by(models.GameSchedule.DATE.desc()).all()
+
+        
+        # 5. 경기 결과 조회
+        results = []
+        
+        for schedule in game_schedules:
+            # 경기 날짜
+            game_date = schedule.DATE
+            
+            # 홈/원정 여부 (수정된 부분: 반대로 설정되어 있던 것을 수정)
+            # team_id가 HOME_TEAM_ID와 같으면 홈팀이 맞음
+            is_home = schedule.HOME_TEAM_ID == team_id
+            
+            # 상대팀 정보
+            opponent_team_id = schedule.AWAY_TEAM_ID if is_home else schedule.HOME_TEAM_ID
+            opponent_team = db.query(models.Team).filter(models.Team.TEAM_ID == opponent_team_id).first()
+            opponent_team_name = opponent_team.TEAM_NAME if opponent_team else f"Unknown Team ({opponent_team_id})"
+            
+            # 득점 기록 조회 (RECORD_TYPE_ID = 6은 득점을 의미)
+            team_score_log = db.query(models.GameLog).filter(
+                models.GameLog.DATE == game_date,
+                models.GameLog.TEAM_ID == team_id,
+                models.GameLog.RECORD_TYPE_ID == 6  # 득점
+            ).first()
+            
+            opponent_score_log = db.query(models.GameLog).filter(
+                models.GameLog.DATE == game_date,
+                models.GameLog.TEAM_ID == opponent_team_id,
+                models.GameLog.RECORD_TYPE_ID == 6  # 득점
+            ).first()
+            
+            # 승리 기록 조회 (RECORD_TYPE_ID = 1은 승리를 의미)
+            team_win_log = db.query(models.GameLog).filter(
+                models.GameLog.DATE == game_date,
+                models.GameLog.TEAM_ID == team_id,
+                models.GameLog.RECORD_TYPE_ID == 1  # 승리
+            ).first()
+            
+            # 경기 취소 여부 확인 (양 팀 모두 게임 로그가 없는 경우)
+            team_any_log = db.query(models.GameLog).filter(
+                models.GameLog.DATE == game_date,
+                models.GameLog.TEAM_ID == team_id
+            ).first()
+            
+            opponent_any_log = db.query(models.GameLog).filter(
+                models.GameLog.DATE == game_date,
+                models.GameLog.TEAM_ID == opponent_team_id
+            ).first()
+            
+            # 게임 로그가 전혀 없으면 취소된 경기로 처리
+            if not team_any_log and not opponent_any_log:
+                game_result = "취소"
+                score = "취소된 경기"
+            else:
+                # 팀과 상대팀의 실제 점수
+                team_score = team_score_log.COUNT if team_score_log else 0
+                opponent_score = opponent_score_log.COUNT if opponent_score_log else 0
+                
+                # 승/패/무 결과 조회
+                if team_win_log:
+                    game_result = "승리"
+                elif team_score > opponent_score:
+                    game_result = "승리"
+                elif team_score < opponent_score:
+                    game_result = "패배"
+                else:
+                    game_result = "무승부"
+                
+                # 실제 점수 구성
+                score = f"{team_score}-{opponent_score}"
+            
+            # 경기 결과 추가
+            results.append(game_schema.GameResultResponse(
+                game_date=game_date,
+                result=game_result,
+                opponent_team_name=opponent_team_name,
+                score=score,
+                is_home=is_home
+            ))
+        
+        logger.info(f"사용자 응원팀 경기 결과 조회 완료: {len(results)}건")
+        return results
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"사용자 응원팀 경기 결과 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"사용자 응원팀 경기 결과 조회 중 오류 발생: {str(e)}"
+        )
+
 # 모든 게임 로그 조회
 @router.get("/log", response_model=List[game_schema.GameLogDetailResponse])
 async def read_game_logs(

@@ -17,8 +17,13 @@ COPY app/ ./
 RUN cat ./wait-for-it.sh | tr -d '\r' > ./wait-for-it-fixed.sh && \
     mv ./wait-for-it-fixed.sh ./wait-for-it.sh && \
     chmod +x ./wait-for-it.sh
-EXPOSE ${BACKEND_PORT}
-
 RUN chmod +x ./wait-for-it.sh
+
+RUN apt-get update && apt-get install -y wget gnupg2
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
+RUN echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+RUN apt-get update && apt-get install -y google-chrome-stable
+
+EXPOSE ${BACKEND_PORT}
 # CMD ["sh", "-c", "pwd && ./wait-for-it.sh mariadb:3306 -t 10 -- uvicorn main:app --host 0.0.0.0 --port ${BACKEND_PORT} --reload"]
 CMD ["bash", "-c", "pwd && ./wait-for-it.sh mariadb:3306 -t 10 -- uvicorn main:app --host 0.0.0.0 --port ${BACKEND_PORT} --reload"]

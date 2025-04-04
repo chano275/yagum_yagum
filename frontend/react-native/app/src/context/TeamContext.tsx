@@ -7,7 +7,13 @@ import {
   teamNameToCode,
 } from "../styles/teamColors";
 
-type TeamType = keyof typeof teamColors;
+type TeamType = {
+  team_id: number;
+  team_name: string;
+  team_color: string;
+  team_color_secondary?: string;
+  team_color_background?: string;
+};
 
 interface TeamData {
   team_id: number;
@@ -15,66 +21,49 @@ interface TeamData {
   account_id: number;
 }
 
-interface TeamContextType {
-  currentTeam: TeamType;
+export type TeamContextType = {
+  currentTeam: TeamType | undefined;
   teamName: string | undefined;
-  setCurrentTeam: (team: TeamType) => void;
-  setTeamById: (id: number) => void;
-  setTeamByName: (name: string) => void;
-  setTeamData: (data: TeamData) => void;
+  teamId: number;
   teamColor: {
     primary: string;
     secondary: string;
     background: string;
   };
-}
+  setTeamData: (team: TeamType) => void;
+};
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
 
-export const TeamProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [currentTeam, setCurrentTeam] = useState<TeamType>(defaultTeam);
-  const [teamName, setTeamName] = useState<string | undefined>(undefined);
+export const TeamProvider = ({ children }: { children: React.ReactNode }) => {
+  const [currentTeam, setCurrentTeam] = useState<TeamType>();
+  const [teamName, setTeamName] = useState<string>();
+  const [teamId, setTeamId] = useState<number>(0);
+  const [teamColor, setTeamColor] = useState({
+    primary: '#000000',
+    secondary: '#FFFFFF',
+    background: '#FFFFFF',
+  });
 
-  // 팀 ID로 팀 설정
-  const setTeamById = (id: number) => {
-    const teamCode = teamIdToCode[id];
-    if (teamCode) {
-      setCurrentTeam(teamCode);
-    }
+  const setTeamData = (team: TeamType) => {
+    setCurrentTeam(team);
+    setTeamName(team.team_name);
+    setTeamId(team.team_id);
+    setTeamColor({
+      primary: team.team_color,
+      secondary: team.team_color_secondary || '#FFFFFF',
+      background: team.team_color_background || '#FFFFFF',
+    });
   };
-
-  // 팀 이름으로 팀 설정
-  const setTeamByName = (name: string) => {
-    setTeamName(name);
-    const teamCode = teamNameToCode[name];
-    if (teamCode) {
-      setCurrentTeam(teamCode);
-    }
-  };
-
-  // API 응답에서 팀 데이터 설정
-  const setTeamData = (data: TeamData) => {
-    if (data && data.team_id) {
-      setTeamById(data.team_id);
-      setTeamName(data.team_name);
-    }
-  };
-
-  // 현재 팀 색상 가져오기
-  const teamColor = teamColors[currentTeam] || teamColors[defaultTeam];
 
   return (
     <TeamContext.Provider
       value={{
         currentTeam,
         teamName,
-        setCurrentTeam,
-        setTeamById,
-        setTeamByName,
-        setTeamData,
+        teamId,
         teamColor,
+        setTeamData,
       }}
     >
       {children}

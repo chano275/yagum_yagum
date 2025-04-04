@@ -87,7 +87,7 @@ const LoginScreen = () => {
       if (response.status === 200) {
         const { access_token, token_type, team } = response.data;
         // 인증 정보 저장
-        setAuth(access_token, null);
+        setAuth(access_token, { id: id, name: id });
 
         // 팀 정보가 있으면 TeamContext에 설정
         if (team) {

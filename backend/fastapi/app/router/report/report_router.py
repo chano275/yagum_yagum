@@ -862,6 +862,7 @@ async def get_all_system_accounts_summary(
                 "our_team": our_team.TEAM_NAME,
                 "opposing_team": opposing_team.TEAM_NAME if opposing_team else None,
                 "favorite_player": favorite_player.PLAYER_NAME if favorite_player else None,
+                "saving_goal":account.SAVING_GOAL,
                 "savings_rules": savings_rules,
                 "game_results": game_results,
                 "original_outcome": original_total,  # 원래 계산된 적립 금액
