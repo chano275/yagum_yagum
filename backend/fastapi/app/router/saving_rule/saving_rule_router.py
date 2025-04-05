@@ -60,15 +60,35 @@ async def read_saving_rules(
     try:
         logger.info("적금 규칙 타입별 목록 조회")
         
-        # 선수 정보 조회 (player_id가 제공된 경우)
-        player = None
+        # 플레이어 타입 확인 (player_id가 제공된 경우)
+        player_type_id = None
         if player_id:
             player = db.query(models.Player).filter(models.Player.PLAYER_ID == player_id).first()
             if not player:
                 logger.warning(f"존재하지 않는 선수 ID: {player_id}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="존재하지 않는 선수입니다"
+                )
+            player_type_id = player.PLAYER_TYPE_ID
         
         # 모든 적금 규칙 타입 조회
-        rule_types = saving_rule_crud.get_all_saving_rule_types(db)
+        rule_types_query = db.query(models.SavingRuleType)
+        
+        # 플레이어 타입에 따라 필터링
+        if player_type_id is not None:
+            # 투수(1)인 경우: 기본 규칙(1), 투수(2), 상대팀(4)
+            if player_type_id == 1:
+                rule_types_query = rule_types_query.filter(
+                    models.SavingRuleType.SAVING_RULE_TYPE_ID.in_([1, 2, 4])
+                )
+            # 타자(2)인 경우: 기본 규칙(1), 타자(3), 상대팀(4)
+            elif player_type_id == 2:
+                rule_types_query = rule_types_query.filter(
+                    models.SavingRuleType.SAVING_RULE_TYPE_ID.in_([1, 3, 4])
+                )
+        
+        rule_types = rule_types_query.all()
         
         result = []
         for rule_type in rule_types:
@@ -80,9 +100,17 @@ async def read_saving_rules(
             }
             
             # 이 규칙 타입과 관련된 모든 상세 규칙 조회
-            rule_details = db.query(models.SavingRuleDetail).filter(
+            rule_details_query = db.query(models.SavingRuleDetail).filter(
                 models.SavingRuleDetail.SAVING_RULE_TYPE_ID == rule_type.SAVING_RULE_TYPE_ID
-            ).all()
+            )
+            
+            # 선수 타입이 제공된 경우, 해당 선수 타입에 맞는 규칙만 조회
+            if player_type_id is not None and rule_type.SAVING_RULE_TYPE_ID in [2, 3]:  # 투수 또는 타자 규칙
+                rule_details_query = rule_details_query.filter(
+                    models.SavingRuleDetail.PLAYER_TYPE_ID == player_type_id
+                )
+            
+            rule_details = rule_details_query.all()
             
             for detail in rule_details:
                 # 선수 타입 정보 조회 (있는 경우)
@@ -112,7 +140,7 @@ async def read_saving_rules(
                 rule_description = detail.RULE_DESCRIPTION
                 
                 # player_type_id가 None이 아니고 player_id가 제공되었다면, 선수 이름을 룰 설명 앞에 붙이기
-                if detail.PLAYER_TYPE_ID is not None and player:
+                if detail.PLAYER_TYPE_ID is not None and player_id:
                     # player_type_id가 선수의 타입과 일치하는지 확인
                     if player.PLAYER_TYPE_ID == detail.PLAYER_TYPE_ID:
                         # 선수 이름을 룰 설명 앞에 붙이기
