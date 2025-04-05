@@ -49,6 +49,7 @@ class Account(Base):
     weekly_reports = relationship("WeeklyReportPersonal", back_populates="account")
     rank_predictions = relationship("TeamRankPrediction",back_populates="account")
     transaction_messages = relationship("TransactionMessage", back_populates="account")
+    daily_transfers = relationship("DailyTransfer", back_populates="account")
 
 # 팀 테이블
 class Team(Base):
@@ -434,6 +435,7 @@ class TicketInfo(Base):
     away_team = relationship("Team", foreign_keys=[AWAY_TEAM_ID], back_populates="away_ticket_infos")
     ticket_numbers = relationship("TicketNumber", back_populates="ticket_info")
 
+#일일 송금 메시지 테이블
 class TransactionMessage(Base):
     __tablename__ = "transaction_message"
 
@@ -441,8 +443,21 @@ class TransactionMessage(Base):
     ACCOUNT_ID = Column(Integer, ForeignKey("account.ACCOUNT_ID"), nullable=False)
     TRANSACTION_DATE = Column(Date, nullable=False)
     MESSAGE = Column(Text)
-    # AMOUNT = Column(Integer, nullable=False)
     CREATED_AT = Column(DateTime, server_default=func.now())
     
     # 관계 정의
     account = relationship("Account", back_populates="transaction_messages")
+
+# 일일 송금 내역 테이블
+class DailyTransfer(Base):
+    __tablename__ = "daily_transfer"
+
+    DAILY_TRANSFER_ID = Column(Integer, primary_key=True)
+    ACCOUNT_ID = Column(Integer, ForeignKey("account.ACCOUNT_ID"), nullable=False)
+    DATE = Column(Date)
+    TEXT = Column(String(255))
+    AMOUNT = Column(Integer)
+    created_at = Column(DateTime, server_default=func.now())
+    
+    # 관계 정의
+    account = relationship("Account", back_populates="daily_transfers")
