@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional,Dict, Any
 from datetime import date, datetime, timedelta
@@ -834,4 +835,164 @@ async def get_all_system_accounts_summary(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"모든 계정 일일 요약 정보 조회 중 오류 발생: {str(e)}"
+        )
+
+@router.get("/weekly-report-data", response_model=report_schema.WeeklyReportDataResponse)
+async def get_weekly_report_data(
+    report_date: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    모든 사용자의 주간 레포트 생성에 필요한 데이터를 가져옵니다.
+    로그인하지 않은 사용자도 모든 사용자의 정보를 볼 수 있습니다.
+    
+    Args:
+        report_date: 레포트 날짜 (기본값: 오늘)
+        
+    Returns:
+        WeeklyReportDataResponse: 모든 사용자의 주간 레포트에 필요한 데이터
+    """
+    try:
+        logger.info("모든 사용자의 주간 레포트 데이터 조회")
+        
+        # 모든 계정 조회
+        accounts = db.query(models.Account).all()
+        if not accounts:
+            logger.warning("조회할 계정이 없음")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="조회할 계정이 없습니다"
+            )
+        
+        # 기준 날짜 설정 (기본값: 오늘)
+        if report_date is None:
+            report_date = datetime.now().date()
+        
+        # 이번 주의 시작일과 끝일 계산
+        # 월요일을 한 주의 시작으로 설정
+        days_since_monday = report_date.weekday()  # 월요일이 0, 일요일이 6
+        
+        current_week_start = report_date - timedelta(days=days_since_monday)  # 이번 주 월요일
+        current_week_end = current_week_start + timedelta(days=6)  # 이번 주 일요일
+        
+        # 지난 주의 시작일과 끝일 계산
+        previous_week_start = current_week_start - timedelta(days=7)  # 지난 주 월요일
+        previous_week_end = current_week_start - timedelta(days=1)  # 지난 주 일요일
+        
+        # 모든 계정에 대한 데이터 수집
+        all_accounts_data = []
+        
+        for account in accounts:
+            # 사용자 정보 가져오기
+            user = db.query(models.User).filter(models.User.USER_ID == account.USER_ID).first()
+            user_name = user.NAME if user else "Unknown User"
+            
+            # 팀 정보 가져오기
+            team = db.query(models.Team).filter(models.Team.TEAM_ID == account.TEAM_ID).first()
+            team_name = team.TEAM_NAME if team else "Unknown Team"
+            
+            # 이번 주 송금 금액 계산 (DailyTransfer 테이블 사용)
+            current_week_transfers = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                models.DailyTransfer.ACCOUNT_ID == account.ACCOUNT_ID,
+                models.DailyTransfer.DATE >= current_week_start,
+                models.DailyTransfer.DATE <= current_week_end
+            ).scalar() or 0
+            
+            # 지난 주 송금 금액 계산 (DailyTransfer 테이블 사용)
+            previous_week_transfers = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                models.DailyTransfer.ACCOUNT_ID == account.ACCOUNT_ID,
+                models.DailyTransfer.DATE >= previous_week_start,
+                models.DailyTransfer.DATE <= previous_week_end
+            ).scalar() or 0
+            
+            # 이번 주 팀 전적 계산
+            current_week_wins = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 1,  # 승리
+                models.GameLog.DATE >= current_week_start,
+                models.GameLog.DATE <= current_week_end
+            ).scalar() or 0
+            
+            current_week_losses = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 2,  # 패배
+                models.GameLog.DATE >= current_week_start,
+                models.GameLog.DATE <= current_week_end
+            ).scalar() or 0
+            
+            current_week_draws = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 3,  # 무승부
+                models.GameLog.DATE >= current_week_start,
+                models.GameLog.DATE <= current_week_end
+            ).scalar() or 0
+            
+            # 지난 주 팀 전적 계산
+            previous_week_wins = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 1,  # 승리
+                models.GameLog.DATE >= previous_week_start,
+                models.GameLog.DATE <= previous_week_end
+            ).scalar() or 0
+            
+            previous_week_losses = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 2,  # 패배
+                models.GameLog.DATE >= previous_week_start,
+                models.GameLog.DATE <= previous_week_end
+            ).scalar() or 0
+            
+            previous_week_draws = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 3,  # 무승부
+                models.GameLog.DATE >= previous_week_start,
+                models.GameLog.DATE <= previous_week_end
+            ).scalar() or 0
+            
+            # 현재 총 적립액
+            current_total_savings = account.TOTAL_AMOUNT
+            
+            # 적금 목표액
+            target_amount = account.SAVING_GOAL
+            
+            # 계정별 데이터 구성
+            account_data = {
+                "account_id": account.ACCOUNT_ID,
+                "user_name": user_name,
+                "team_name": team_name,
+                "weekly_saving": int(current_week_transfers),  # DailyTransfer 금액으로 변경
+                "before_weekly_saving": int(previous_week_transfers),  # DailyTransfer 금액으로 변경
+                "weekly_record": {
+                    "win": int(current_week_wins),
+                    "lose": int(current_week_losses),
+                    "draw": int(current_week_draws)
+                },
+                "before_weekly_record": {
+                    "win": int(previous_week_wins),
+                    "lose": int(previous_week_losses),
+                    "draw": int(previous_week_draws)
+                },
+                "current_savings": int(current_total_savings),
+                "target_amount": int(target_amount)
+            }
+            
+            all_accounts_data.append(account_data)
+            
+        # 결과 데이터 구성
+        result = {
+            "accounts_data": all_accounts_data,
+            "total_accounts": len(all_accounts_data),
+            "report_date": report_date.isoformat()
+        }
+        
+        logger.info(f"모든 사용자의 주간 레포트 데이터 조회 완료: 총 {len(all_accounts_data)}개 계정")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"주간 레포트 데이터 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"주간 레포트 데이터 조회 중 오류 발생: {str(e)}"
         )

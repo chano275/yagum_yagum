@@ -178,3 +178,24 @@ class NewsSummaryResponse(BaseModel):
     message: str
     date: str
     results: List[NewsSummaryResultItem]
+
+class WeeklyRecord(BaseModel):
+    win: int
+    lose: int
+    draw: int
+
+class AccountWeeklyReport(BaseModel):
+    account_id: int
+    user_name: str
+    team_name: str
+    weekly_saving: int
+    before_weekly_saving: int
+    weekly_record: WeeklyRecord
+    before_weekly_record: WeeklyRecord
+    current_savings: int
+    target_amount: int
+
+class WeeklyReportDataResponse(BaseModel):
+    accounts_data: List[AccountWeeklyReport]
+    total_accounts: int
+    report_date: str
