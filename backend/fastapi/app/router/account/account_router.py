@@ -1,7 +1,7 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional,Dict,Any
 from datetime import date
 import logging
 import os
@@ -746,3 +746,136 @@ async def update_favorite_player(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"최애 선수 업데이트 중 오류 발생: {str(e)}"
         )
+    
+# 계정의 모든 트랜잭션 메시지 조회
+@router.get("/{account_id}/transactions", response_model=List[account_schema.TransactionMessageResponse])
+async def get_account_transactions(
+    account_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"계정 트랜잭션 메시지 조회: 계정 ID {account_id}")
+        
+        # 계정 존재 여부 확인
+        account = account_crud.get_account_by_id(db, account_id)
+        if not account:
+            logger.warning(f"계정을 찾을 수 없음: {account_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="계정을 찾을 수 없습니다"
+            )
+        
+        # 권한 확인: 본인 계정만 조회 가능
+        if account.USER_ID != current_user.USER_ID:
+            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
+            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        
+        # 트랜잭션 메시지 조회
+        transactions = account_crud.get_transaction_messages_by_account(db, account_id, skip, limit)
+        return transactions
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"트랜잭션 메시지 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"트랜잭션 메시지 조회 중 오류 발생: {str(e)}"
+        )
+
+# 특정 기간의 트랜잭션 메시지 조회
+@router.get("/{account_id}/transactions/range", response_model=List[account_schema.TransactionMessageResponse])
+async def get_account_transactions_by_date_range(
+    account_id: int,
+    start_date: date,
+    end_date: date,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"기간별 트랜잭션 메시지 조회: 계정 ID {account_id}, 기간 {start_date} ~ {end_date}")
+        
+        # 날짜 유효성 검사
+        if end_date < start_date:
+            logger.warning(f"유효하지 않은 날짜 범위: {start_date} ~ {end_date}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="종료 날짜는 시작 날짜보다 이후여야 합니다"
+            )
+            
+        # 계정 존재 여부 확인
+        account = account_crud.get_account_by_id(db, account_id)
+        if not account:
+            logger.warning(f"계정을 찾을 수 없음: {account_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="계정을 찾을 수 없습니다"
+            )
+        
+        # 권한 확인: 본인 계정만 조회 가능
+        if account.USER_ID != current_user.USER_ID:
+            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
+            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        
+        # 기간별 트랜잭션 메시지 조회
+        transactions = account_crud.get_transaction_messages_by_date_range(db, account_id, start_date, end_date)
+        return transactions
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"기간별 트랜잭션 메시지 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"기간별 트랜잭션 메시지 조회 중 오류 발생: {str(e)}"
+        )
+
+# 트랜잭션 메시지 생성
+@router.post("/{account_id}/transactions", response_model=account_schema.TransactionMessageResponse)
+async def create_transaction_message_endpoint(
+    account_id: int,
+    transaction: account_schema.TransactionMessageCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"트랜잭션 메시지 생성 요청: 계정 ID {account_id}")
+        
+        # 계정 존재 여부 확인
+        account = account_crud.get_account_by_id(db, account_id)
+        if not account:
+            logger.warning(f"계정을 찾을 수 없음: {account_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="계정을 찾을 수 없습니다"
+            )
+        
+        # 권한 확인: 본인 계정만 수정 가능
+        if account.USER_ID != current_user.USER_ID:
+            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
+            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        
+        # 계정 ID 확인
+        if transaction.ACCOUNT_ID != account_id:
+            logger.warning(f"경로의 계정 ID({account_id})와 요청 본문의 계정 ID({transaction.ACCOUNT_ID})가 일치하지 않습니다")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="경로의 계정 ID와 요청 본문의 계정 ID가 일치해야 합니다"
+            )
+        
+        # 트랜잭션 메시지 생성
+        created_transaction = account_crud.create_transaction_message(db, transaction)
+        return created_transaction
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"트랜잭션 메시지 생성 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"트랜잭션 메시지 생성 중 오류 발생: {str(e)}"
+        )
+

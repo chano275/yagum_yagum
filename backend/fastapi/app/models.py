@@ -48,6 +48,7 @@ class Account(Base):
     daily_balances = relationship("DailyBalances", back_populates="account")
     weekly_reports = relationship("WeeklyReportPersonal", back_populates="account")
     rank_predictions = relationship("TeamRankPrediction",back_populates="account")
+    transaction_messages = relationship("TransactionMessage", back_populates="account")
 
 # 팀 테이블
 class Team(Base):
@@ -432,3 +433,16 @@ class TicketInfo(Base):
     home_team = relationship("Team", foreign_keys=[HOME_TEAM_ID], back_populates="home_ticket_infos")
     away_team = relationship("Team", foreign_keys=[AWAY_TEAM_ID], back_populates="away_ticket_infos")
     ticket_numbers = relationship("TicketNumber", back_populates="ticket_info")
+
+class TransactionMessage(Base):
+    __tablename__ = "transaction_message"
+
+    TRANSACTION_ID = Column(Integer, primary_key=True)
+    ACCOUNT_ID = Column(Integer, ForeignKey("account.ACCOUNT_ID"), nullable=False)
+    TRANSACTION_DATE = Column(Date, nullable=False)
+    MESSAGE = Column(Text)
+    # AMOUNT = Column(Integer, nullable=False)
+    CREATED_AT = Column(DateTime, server_default=func.now())
+    
+    # 관계 정의
+    account = relationship("Account", back_populates="transaction_messages")

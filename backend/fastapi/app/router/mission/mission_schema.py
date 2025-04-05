@@ -88,5 +88,4 @@ class TeamRankPredictionResponse(BaseModel):
 class OCRResponse(BaseModel):
     success:bool
     text:str
-    confidence: Optional[float] = None
     error: Optional[str] = None

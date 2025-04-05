@@ -1,10 +1,10 @@
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime,date
 from typing import Optional, List, Dict, Any
 import os
 
 import models
-from router.account.account_schema import AccountCreate, AccountUpdate, BalanceUpdate
+from router.account.account_schema import AccountCreate, AccountUpdate, BalanceUpdate,TransactionMessageCreate,TransactionMessageUpdate
 
 def get_account_by_id(db: Session, account_id: int):
     """계정 ID로 계정 정보 조회"""
@@ -185,6 +185,133 @@ async def transfer_to_saving_account(db: Session, account_id: int, amount: int):
         return {
             "transfer_result": transfer_result,
             "account": updated_account
+        }
+    
+    except Exception as e:
+        db.rollback()
+        raise e
+    
+# account_crud.py에 추가
+
+def get_transaction_message_by_id(db: Session, transaction_id: int):
+    """트랜잭션 메시지 ID로 조회"""
+    return db.query(models.TransactionMessage).filter(models.TransactionMessage.TRANSACTION_ID == transaction_id).first()
+
+def get_transaction_messages_by_account(db: Session, account_id: int, skip: int = 0, limit: int = 100):
+    """계정 ID로 트랜잭션 메시지 조회"""
+    return db.query(models.TransactionMessage).filter(
+        models.TransactionMessage.ACCOUNT_ID == account_id
+    ).order_by(
+        models.TransactionMessage.TRANSACTION_DATE.desc(), 
+        models.TransactionMessage.CREATED_AT.desc()
+    ).offset(skip).limit(limit).all()
+
+def get_transaction_messages_by_date_range(db: Session, account_id: int, start_date: date, end_date: date):
+    """계정 ID와 날짜 범위로 트랜잭션 메시지 조회"""
+    return db.query(models.TransactionMessage).filter(
+        models.TransactionMessage.ACCOUNT_ID == account_id,
+        models.TransactionMessage.TRANSACTION_DATE >= start_date,
+        models.TransactionMessage.TRANSACTION_DATE <= end_date
+    ).order_by(
+        models.TransactionMessage.TRANSACTION_DATE.desc(), 
+        models.TransactionMessage.CREATED_AT.desc()
+    ).all()
+
+def create_transaction_message(db: Session, transaction: TransactionMessageCreate):
+    """트랜잭션 메시지 생성"""
+    db_transaction = models.TransactionMessage(
+        ACCOUNT_ID=transaction.ACCOUNT_ID,
+        TRANSACTION_DATE=transaction.TRANSACTION_DATE,
+        MESSAGE=transaction.MESSAGE,
+        AMOUNT=transaction.AMOUNT
+    )
+    db.add(db_transaction)
+    db.commit()
+    db.refresh(db_transaction)
+    return db_transaction
+
+def update_transaction_message(db: Session, transaction_id: int, transaction: TransactionMessageUpdate):
+    """트랜잭션 메시지 업데이트"""
+    db_transaction = get_transaction_message_by_id(db, transaction_id)
+    if not db_transaction:
+        return None
+    
+    update_data = transaction.dict(exclude_unset=True)
+    
+    for key, value in update_data.items():
+        setattr(db_transaction, key, value)
+    
+    db.commit()
+    db.refresh(db_transaction)
+    return db_transaction
+
+def delete_transaction_message(db: Session, transaction_id: int):
+    """트랜잭션 메시지 삭제"""
+    db_transaction = get_transaction_message_by_id(db, transaction_id)
+    if not db_transaction:
+        return False
+    
+    db.delete(db_transaction)
+    db.commit()
+    return True
+
+# 송금 처리 함수 확장 - 트랜잭션 메시지 저장 기능 추가
+async def transfer_to_saving_account_with_message(db: Session, account_id: int, amount: int, message: str = None):
+    """
+    입출금 계좌에서 적금 계좌로 송금하고 메시지 저장
+    
+    Args:
+        db (Session): 데이터베이스 세션
+        account_id (int): 적금 계정 ID
+        amount (int): 송금 금액
+        message (str, optional): 거래 메시지. 지정하지 않으면 기본 메시지 사용
+        
+    Returns:
+        dict: 송금 결과 및 계정 정보
+    """
+    try:
+        # 계정 정보 조회
+        account = get_account_by_id(db, account_id)
+        if not account:
+            raise Exception("계정을 찾을 수 없습니다")
+        
+        # 사용자 정보 조회
+        user = db.query(models.User).filter(models.User.USER_ID == account.USER_ID).first()
+        if not user:
+            raise Exception("사용자 정보를 찾을 수 없습니다")
+        
+        # 기본 메시지 설정
+        default_message = f"적금 이체: {amount}원"
+        transaction_message = message if message else default_message
+        
+        # 금융 API를 통해 송금 처리
+        from router.user.user_ssafy_api_utils import transfer_money
+        
+        transfer_result = await transfer_money(
+            user_key=user.USER_KEY,
+            withdrawal_account=account.SOURCE_ACCOUNT,  # 출금 계좌 (입출금 계좌)
+            deposit_account=account.ACCOUNT_NUM,        # 입금 계좌 (적금 계좌)
+            amount=amount,
+            llm_text=transaction_message
+        )
+        
+        # 계정 잔액 업데이트
+        balance_update = BalanceUpdate(amount=amount, description=transaction_message)
+        updated_account = update_account_balance(db, account_id, balance_update)
+        
+        # 트랜잭션 메시지 저장
+        transaction_data = TransactionMessageCreate(
+            ACCOUNT_ID=account_id,
+            TRANSACTION_DATE=datetime.now().date(),
+            MESSAGE=transaction_message,
+            AMOUNT=amount
+        )
+        transaction = create_transaction_message(db, transaction_data)
+        
+        return {
+            "transfer_result": transfer_result,
+            "account": updated_account,
+            "transaction": transaction
         }
     
     except Exception as e:
