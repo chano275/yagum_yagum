@@ -833,19 +833,31 @@ async def get_account_transactions_by_date_range(
             detail=f"기간별 트랜잭션 메시지 조회 중 오류 발생: {str(e)}"
         )
 
+
 # 트랜잭션 메시지 생성
-@router.post("/{account_id}/transactions", response_model=account_schema.TransactionMessageResponse)
+@router.post("/transactions", response_model=account_schema.TransactionMessageResponse)
 async def create_transaction_message_endpoint(
-    account_id: int,
-    transaction: account_schema.TransactionMessageCreate,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    transaction_data: dict,  # 일반 dict로 받아서 필요한 데이터 추출
+    db: Session = Depends(get_db)
 ):
     try:
+        # 전송된 데이터에서 필요한 정보 추출
+        account_id = transaction_data.get("account_id")
+        date = transaction_data.get("date")
+        text = transaction_data.get("text")
+        
         logger.info(f"트랜잭션 메시지 생성 요청: 계정 ID {account_id}")
         
+        # 필수 입력값 확인
+        if not account_id or not date or not text:
+            logger.warning("필수 입력값 누락")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="account_id, date, text는 필수 입력값입니다"
+            )
+        
         # 계정 존재 여부 확인
-        account = account_crud.get_account_by_id(db, account_id)
+        account = account_crud.get_account_by_id(db, int(account_id))
         if not account:
             logger.warning(f"계정을 찾을 수 없음: {account_id}")
             raise HTTPException(
@@ -853,25 +865,25 @@ async def create_transaction_message_endpoint(
                 detail="계정을 찾을 수 없습니다"
             )
         
-        # 권한 확인: 본인 계정만 수정 가능
-        if account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
-        
-        # 계정 ID 확인
-        if transaction.ACCOUNT_ID != account_id:
-            logger.warning(f"경로의 계정 ID({account_id})와 요청 본문의 계정 ID({transaction.ACCOUNT_ID})가 일치하지 않습니다")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="경로의 계정 ID와 요청 본문의 계정 ID가 일치해야 합니다"
-            )
+        # TransactionMessageCreate 객체 생성 (스키마에 맞게 변환)
+        transaction_schema = account_schema.TransactionMessageCreate(
+            ACCOUNT_ID=int(account_id),
+            TRANSACTION_DATE=date,
+            MESSAGE=text
+        )
         
         # 트랜잭션 메시지 생성
-        created_transaction = account_crud.create_transaction_message(db, transaction)
+        created_transaction = account_crud.create_transaction_message(db, transaction_schema)
         return created_transaction
         
     except HTTPException:
         raise
+    except ValueError as e:
+        logger.error(f"입력값 형식 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"입력값 형식 오류: {str(e)}"
+        )
     except Exception as e:
         logger.error(f"트랜잭션 메시지 생성 중 오류: {str(e)}")
         raise HTTPException(

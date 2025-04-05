@@ -223,7 +223,6 @@ def create_transaction_message(db: Session, transaction: TransactionMessageCreat
         ACCOUNT_ID=transaction.ACCOUNT_ID,
         TRANSACTION_DATE=transaction.TRANSACTION_DATE,
         MESSAGE=transaction.MESSAGE,
-        AMOUNT=transaction.AMOUNT
     )
     db.add(db_transaction)
     db.commit()

@@ -170,7 +170,6 @@ class TransactionMessageBase(BaseModel):
     ACCOUNT_ID: int
     TRANSACTION_DATE: date
     MESSAGE: str
-    AMOUNT: int
 
 # 거래 메시지 생성 모델 (요청)
 class TransactionMessageCreate(TransactionMessageBase):
