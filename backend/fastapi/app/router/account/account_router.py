@@ -241,6 +241,45 @@ async def create_account(
             detail=f"적금 가입 중 오류 발생: {str(e)}"
         )
 
+@router.get("/transfers_log", response_model=List[account_schema.DailyTransferResponse])
+async def get_my_transfers(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"로그인 사용자의 송금 내역 조회: 사용자 ID {current_user.USER_ID}")
+        
+        # 사용자의 계정 조회 (첫 번째 계정 사용)
+        accounts = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).all()
+        
+        if not accounts:
+            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 계정이 없습니다"
+            )
+        
+        # 첫 번째 계정의 송금 내역 조회
+        account_id = accounts[0].ACCOUNT_ID
+        logger.info(f"사용자의 첫 번째 계정으로 송금 내역 조회: 계정 ID {account_id}")
+        
+        # 송금 내역 조회
+        transfers = account_crud.get_account_transfers(db, account_id, start_date, end_date)
+        
+        return transfers
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"송금 내역 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"송금 내역 조회 중 오류 발생: {str(e)}"
+        )
+
+
 # 특정 계정 조회
 from router.mission import mission_crud
 
@@ -890,4 +929,3 @@ async def create_transaction_message_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"트랜잭션 메시지 생성 중 오류 발생: {str(e)}"
         )
-

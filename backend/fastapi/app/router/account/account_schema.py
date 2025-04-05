@@ -205,3 +205,16 @@ class TransactionMessageSummary(BaseModel):
 class TransferWithMessageRequest(BaseModel):
     amount: int
     message: Optional[str] = None
+
+# account_schema.py에 추가
+class DailyTransferResponse(BaseModel):
+    DAILY_TRANSFER_ID: int
+    ACCOUNT_ID: int
+    DATE: date
+    TEXT: str
+    AMOUNT: int
+    created_at: datetime
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True
