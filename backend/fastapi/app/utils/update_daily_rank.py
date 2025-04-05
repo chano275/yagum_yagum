@@ -8,7 +8,7 @@ from sqlalchemy import create_engine
 
 # 현재 파일 위치 기준으로 프로젝트 루트 경로 설정
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+project_root = os.path.dirname(current_dir)
 
 # 프로젝트 루트 경로를 시스템 경로에 추가
 sys.path.append(project_root)
@@ -142,12 +142,13 @@ def find_rank_file(data_folder, target_date):
     """
     target_filename = f"{target_date.strftime('%Y%m%d')}-rank.csv"
     file_path = os.path.join(data_folder, target_filename)
-    
+    print(file_path)
+    print(os.path.exists(file_path))
     return file_path if os.path.exists(file_path) else None
 
 def main():
     # 데이터 폴더 경로 설정
-    data_folder = os.path.join(project_root, 'backend', 'fastapi', 'app', 'baseball_data', 'daily_rank')
+    data_folder = os.path.join(project_root,'baseball_data', 'daily_rank')
     
     # 인자 파서 설정
     parser = argparse.ArgumentParser(description='일일 팀 순위 데이터베이스 업데이트')
