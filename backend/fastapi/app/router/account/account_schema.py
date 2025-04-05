@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime,date
 
 # 계정 기본 모델
 class AccountBase(BaseModel):
@@ -163,3 +163,46 @@ class AccountInterestDetailResponse(BaseModel):
     base_interest_rate: float  # 기본 이자율
     total_mission_rate: float  # 모든 미션의 비례적 이자율
     mission_details: List[MissionInterestDetail]
+
+
+# 거래 메시지 기본 모델
+class TransactionMessageBase(BaseModel):
+    ACCOUNT_ID: int
+    TRANSACTION_DATE: date
+    MESSAGE: str
+    AMOUNT: int
+
+# 거래 메시지 생성 모델 (요청)
+class TransactionMessageCreate(TransactionMessageBase):
+    pass
+
+# 거래 메시지 업데이트 모델 (요청)
+class TransactionMessageUpdate(BaseModel):
+    TRANSACTION_DATE: Optional[date] = None
+    MESSAGE: Optional[str] = None
+    AMOUNT: Optional[int] = None
+
+# 거래 메시지 응답 모델
+class TransactionMessageResponse(TransactionMessageBase):
+    TRANSACTION_ID: int
+    CREATED_AT: datetime
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+# 거래 메시지 요약 모델
+class TransactionMessageSummary(BaseModel):
+    TRANSACTION_ID: int
+    TRANSACTION_DATE: date
+    MESSAGE: str
+    AMOUNT: int
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+# 송금 요청 모델
+class TransferWithMessageRequest(BaseModel):
+    amount: int
+    message: Optional[str] = None
