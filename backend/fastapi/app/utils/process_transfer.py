@@ -76,11 +76,7 @@ async def process_actual_transfers(db, date_param=None):
         
         logger.info(f"총 {len(account_savings)}개 계정의 적립 내역이 있습니다.")
         
-        # 2. 이체 이력 테이블 확인 (실제 구현에서는 별도 테이블 생성 필요)
-        # 여기서는 DailySaving 테이블에서 TRANSFER_COMPLETE 필드가 있다고 가정
-        # 실제 환경에서는 테이블 생성이나 필드 추가 필요
-        
-        # 3. 각 계정별로 이체 처리
+        # 2. 각 계정별로 이체 처리
         for account_id, saving_amount in account_savings:
             try:
                 # 계정 정보 조회
@@ -98,27 +94,30 @@ async def process_actual_transfers(db, date_param=None):
                     continue
                 
                 # 3.1. 일일 한도 확인
-                # 해당 날짜에 이미 이체된 금액 확인
-                # 실제 구현 시 이체 이력 테이블에서 조회해야 함
-                # 여기서는 간단한 구현을 위해 0으로 가정
-                already_transferred_today = 0
+                # 해당 날짜에 이미 이체된 금액 확인 (DailyTransfer 테이블에서 조회)
+                already_transferred_today = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                    models.DailyTransfer.ACCOUNT_ID == account_id,
+                    models.DailyTransfer.DATE == date_param
+                ).scalar() or 0
                 
                 if already_transferred_today + saving_amount > account.DAILY_LIMIT:
                     # 일일 한도 초과 시 한도 내로 조정
                     original_amount = saving_amount
-                    saving_amount = account.DAILY_LIMIT - already_transferred_today
+                    saving_amount = max(0, account.DAILY_LIMIT - already_transferred_today)
                     logger.warning(f"계정 ID {account_id}: 일일 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
                 
                 # 3.2. 월간 한도 확인
-                # 해당 월에 이미 이체된 금액 확인
-                # 실제 구현 시 이체 이력 테이블에서 조회해야 함
-                # 여기서는 간단한 구현을 위해 0으로 가정
-                already_transferred_this_month = 0
+                # 해당 월에 이미 이체된 금액 확인 (DailyTransfer 테이블에서 조회)
+                already_transferred_this_month = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                    models.DailyTransfer.ACCOUNT_ID == account_id,
+                    models.DailyTransfer.DATE >= month_start,
+                    models.DailyTransfer.DATE <= date_param
+                ).scalar() or 0
                 
                 if already_transferred_this_month + saving_amount > account.MONTH_LIMIT:
                     # 월간 한도 초과 시 한도 내로 조정
                     original_amount = saving_amount
-                    saving_amount = account.MONTH_LIMIT - already_transferred_this_month
+                    saving_amount = max(0, account.MONTH_LIMIT - already_transferred_this_month)
                     logger.warning(f"계정 ID {account_id}: 월간 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
                 
                 # 이체할 금액이 0 이하라면 건너뜀
@@ -127,7 +126,22 @@ async def process_actual_transfers(db, date_param=None):
                     skipped_accounts += 1
                     continue
                 
-                # 3.3. 실제 이체 처리
+                # 3.3. 이체 메시지 정보 조회
+                transaction_message = db.query(models.TransactionMessage).filter(
+                    models.TransactionMessage.ACCOUNT_ID == account_id,
+                    models.TransactionMessage.TRANSACTION_DATE == date_param
+                ).first()
+                
+                # 메시지가 없으면 기본 메시지 사용
+                llm_text = ""
+                if transaction_message and transaction_message.MESSAGE:
+                    llm_text = transaction_message.MESSAGE
+                
+                # 메시지가 없는 경우 기본 메시지 설정
+                if not llm_text:
+                    llm_text = "(수시입출금) : 입금(이체)"
+                
+                # 3.4. 실제 이체 처리
                 try:
                     # 금융 API를 통한 이체 처리
                     from router.user.user_ssafy_api_utils import transfer_money
@@ -139,12 +153,21 @@ async def process_actual_transfers(db, date_param=None):
                         withdrawal_account=account.SOURCE_ACCOUNT,  # 출금 계좌 (입출금 계좌)
                         deposit_account=account.ACCOUNT_NUM,        # 입금 계좌 (적금 계좌)
                         amount=saving_amount,
-                        llm_text="" # 입출금 메시지
+                        llm_text=llm_text  # 입출금 메시지
                     )
                     
                     # 이체 성공 시 계정 잔액 업데이트
                     account.TOTAL_AMOUNT += saving_amount
                     
+                    # 성공 시 DailyTransfer 테이블에 기록
+                    daily_transfer = models.DailyTransfer(
+                        ACCOUNT_ID=account_id,
+                        DATE=date_param,
+                        TEXT=llm_text,
+                        AMOUNT=saving_amount,
+                        created_at=datetime.now()
+                    )
+                    db.add(daily_transfer)
                     
                     total_transferred += saving_amount
                     processed_accounts += 1
