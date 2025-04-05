@@ -266,54 +266,6 @@ async def read_team_news(
             detail=f"팀 뉴스 목록 조회 중 오류 발생: {str(e)}"
         )
 
-# 특정 날짜 범위의 뉴스 조회
-@router.get("/news/range", response_model=List[report_schema.NewsResponse])
-async def read_news_by_date_range(
-    start_date: date = Query(..., description="시작 날짜"),
-    end_date: date = Query(..., description="종료 날짜"),
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    try:
-        logger.info(f"날짜 범위로 뉴스 조회: {start_date} ~ {end_date}")
-        
-        # 날짜 유효성 검사
-        if end_date < start_date:
-            logger.warning(f"유효하지 않은 날짜 범위: {start_date} ~ {end_date}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="종료 날짜는 시작 날짜보다 이후여야 합니다"
-            )
-            
-        news = report_crud.get_news_by_date_range(db, start_date, end_date, skip, limit)
-        return news
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"날짜 범위로 뉴스 조회 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"뉴스 조회 중 오류 발생: {str(e)}"
-        )
-
-# 최신 뉴스 조회
-@router.get("/news/latest", response_model=List[report_schema.NewsResponse])
-async def read_latest_news(
-    limit: int = 10,
-    db: Session = Depends(get_db)
-):
-    try:
-        logger.info(f"최신 뉴스 조회: limit={limit}")
-        news = report_crud.get_latest_news(db, limit)
-        return news
-    except Exception as e:
-        logger.error(f"최신 뉴스 조회 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"최신 뉴스 조회 중 오류 발생: {str(e)}"
-        )
-
 # 팀 순위 조회
 @router.get("/ranking", response_model=List[report_schema.TeamRankingResponse])
 async def get_team_ranking(
