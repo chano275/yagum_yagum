@@ -241,6 +241,45 @@ async def create_account(
             detail=f"적금 가입 중 오류 발생: {str(e)}"
         )
 
+@router.get("/transfers_log", response_model=List[account_schema.DailyTransferResponse])
+async def get_my_transfers(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"로그인 사용자의 송금 내역 조회: 사용자 ID {current_user.USER_ID}")
+        
+        # 사용자의 계정 조회 (첫 번째 계정 사용)
+        accounts = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).all()
+        
+        if not accounts:
+            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 계정이 없습니다"
+            )
+        
+        # 첫 번째 계정의 송금 내역 조회
+        account_id = accounts[0].ACCOUNT_ID
+        logger.info(f"사용자의 첫 번째 계정으로 송금 내역 조회: 계정 ID {account_id}")
+        
+        # 송금 내역 조회
+        transfers = account_crud.get_account_transfers(db, account_id, start_date, end_date)
+        
+        return transfers
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"송금 내역 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"송금 내역 조회 중 오류 발생: {str(e)}"
+        )
+
+
 # 특정 계정 조회
 from router.mission import mission_crud
 
@@ -747,7 +786,7 @@ async def update_favorite_player(
             detail=f"최애 선수 업데이트 중 오류 발생: {str(e)}"
         )
     
-# 계정의 모든 트랜잭션 메시지 조회
+# 계정의 모든 송금 메시지 조회
 @router.get("/{account_id}/transactions", response_model=List[account_schema.TransactionMessageResponse])
 async def get_account_transactions(
     account_id: int,
@@ -786,7 +825,7 @@ async def get_account_transactions(
             detail=f"트랜잭션 메시지 조회 중 오류 발생: {str(e)}"
         )
 
-# 특정 기간의 트랜잭션 메시지 조회
+# 특정 기간의 송금 메시지 조회
 @router.get("/{account_id}/transactions/range", response_model=List[account_schema.TransactionMessageResponse])
 async def get_account_transactions_by_date_range(
     account_id: int,
@@ -833,49 +872,69 @@ async def get_account_transactions_by_date_range(
             detail=f"기간별 트랜잭션 메시지 조회 중 오류 발생: {str(e)}"
         )
 
-# 트랜잭션 메시지 생성
-@router.post("/{account_id}/transactions", response_model=account_schema.TransactionMessageResponse)
-async def create_transaction_message_endpoint(
-    account_id: int,
-    transaction: account_schema.TransactionMessageCreate,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+# 송금 메시지 받는 API
+@router.post("/transactions", response_model=List[account_schema.TransactionMessageResponse])
+async def create_transaction_messages_endpoint(
+    transaction_data: List[Dict],  # 송금 메시지 리스트로 받음
+    db: Session = Depends(get_db)
 ):
+    """
+    여러 트랜잭션 메시지를 한 번에 생성합니다.
+
+    - **transaction_data**: 트랜잭션 메시지 정보 리스트
+      - `account_id`: 계정 ID (필수)
+      - `date`: 트랜잭션 날짜 (필수)
+      - `text`: 트랜잭션 메시지 (필수)
+    """
+    created_transactions = []
+    
     try:
-        logger.info(f"트랜잭션 메시지 생성 요청: 계정 ID {account_id}")
-        
-        # 계정 존재 여부 확인
-        account = account_crud.get_account_by_id(db, account_id)
-        if not account:
-            logger.warning(f"계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
+        for transaction in transaction_data:
+            # 필수 입력값 확인
+            account_id = transaction.get("account_id")
+            date = transaction.get("date")
+            text = transaction.get("text")
+            
+            if not account_id or not date or not text:
+                logger.warning("필수 입력값 누락")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="account_id, date, text는 모두 필수 입력값입니다"
+                )
+            
+            # 계정 존재 여부 확인
+            account = account_crud.get_account_by_id(db, int(account_id))
+            if not account:
+                logger.warning(f"계정을 찾을 수 없음: {account_id}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"계정을 찾을 수 없습니다: {account_id}"
+                )
+            
+            # TransactionMessageCreate 객체 생성
+            transaction_schema = account_schema.TransactionMessageCreate(
+                ACCOUNT_ID=int(account_id),
+                TRANSACTION_DATE=date,
+                MESSAGE=text
             )
+            
+            # 트랜잭션 메시지 생성
+            created_transaction = account_crud.create_transaction_message(db, transaction_schema)
+            created_transactions.append(created_transaction)
         
-        # 권한 확인: 본인 계정만 수정 가능
-        if account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
-        
-        # 계정 ID 확인
-        if transaction.ACCOUNT_ID != account_id:
-            logger.warning(f"경로의 계정 ID({account_id})와 요청 본문의 계정 ID({transaction.ACCOUNT_ID})가 일치하지 않습니다")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="경로의 계정 ID와 요청 본문의 계정 ID가 일치해야 합니다"
-            )
-        
-        # 트랜잭션 메시지 생성
-        created_transaction = account_crud.create_transaction_message(db, transaction)
-        return created_transaction
+        return created_transactions
         
     except HTTPException:
         raise
+    except ValueError as e:
+        logger.error(f"입력값 형식 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"입력값 형식 오류: {str(e)}"
+        )
     except Exception as e:
         logger.error(f"트랜잭션 메시지 생성 중 오류: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"트랜잭션 메시지 생성 중 오류 발생: {str(e)}"
         )
-

@@ -223,7 +223,6 @@ def create_transaction_message(db: Session, transaction: TransactionMessageCreat
         ACCOUNT_ID=transaction.ACCOUNT_ID,
         TRANSACTION_DATE=transaction.TRANSACTION_DATE,
         MESSAGE=transaction.MESSAGE,
-        AMOUNT=transaction.AMOUNT
     )
     db.add(db_transaction)
     db.commit()
@@ -317,3 +316,14 @@ async def transfer_to_saving_account_with_message(db: Session, account_id: int, 
     except Exception as e:
         db.rollback()
         raise e
+    
+def get_account_transfers(db: Session, account_id: int, start_date=None, end_date=None):
+    """계정의 송금 내역 조회"""
+    query = db.query(models.DailyTransfer).filter(models.DailyTransfer.ACCOUNT_ID == account_id)
+    
+    if start_date:
+        query = query.filter(models.DailyTransfer.DATE >= start_date)
+    if end_date:
+        query = query.filter(models.DailyTransfer.DATE <= end_date)
+    
+    return query.order_by(models.DailyTransfer.DATE.desc()).all()

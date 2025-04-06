@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional,Dict, Any
 from datetime import date, datetime, timedelta
@@ -264,54 +265,6 @@ async def read_team_news(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"팀 뉴스 목록 조회 중 오류 발생: {str(e)}"
-        )
-
-# 특정 날짜 범위의 뉴스 조회
-@router.get("/news/range", response_model=List[report_schema.NewsResponse])
-async def read_news_by_date_range(
-    start_date: date = Query(..., description="시작 날짜"),
-    end_date: date = Query(..., description="종료 날짜"),
-    skip: int = 0,
-    limit: int = 100,
-    db: Session = Depends(get_db)
-):
-    try:
-        logger.info(f"날짜 범위로 뉴스 조회: {start_date} ~ {end_date}")
-        
-        # 날짜 유효성 검사
-        if end_date < start_date:
-            logger.warning(f"유효하지 않은 날짜 범위: {start_date} ~ {end_date}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="종료 날짜는 시작 날짜보다 이후여야 합니다"
-            )
-            
-        news = report_crud.get_news_by_date_range(db, start_date, end_date, skip, limit)
-        return news
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"날짜 범위로 뉴스 조회 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"뉴스 조회 중 오류 발생: {str(e)}"
-        )
-
-# 최신 뉴스 조회
-@router.get("/news/latest", response_model=List[report_schema.NewsResponse])
-async def read_latest_news(
-    limit: int = 10,
-    db: Session = Depends(get_db)
-):
-    try:
-        logger.info(f"최신 뉴스 조회: limit={limit}")
-        news = report_crud.get_latest_news(db, limit)
-        return news
-    except Exception as e:
-        logger.error(f"최신 뉴스 조회 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"최신 뉴스 조회 중 오류 발생: {str(e)}"
         )
 
 # 팀 순위 조회
@@ -883,3 +836,467 @@ async def get_all_system_accounts_summary(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"모든 계정 일일 요약 정보 조회 중 오류 발생: {str(e)}"
         )
+
+@router.get("/weekly-report-data", response_model=report_schema.WeeklyReportDataResponse)
+async def get_weekly_report_data(
+    report_date: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    모든 사용자의 주간 레포트 생성에 필요한 데이터를 가져옵니다.
+    로그인하지 않은 사용자도 모든 사용자의 정보를 볼 수 있습니다.
+    
+    Args:
+        report_date: 레포트 날짜 (기본값: 오늘)
+        
+    Returns:
+        WeeklyReportDataResponse: 모든 사용자의 주간 레포트에 필요한 데이터
+    """
+    try:
+        logger.info("모든 사용자의 주간 레포트 데이터 조회")
+        
+        # 모든 계정 조회
+        accounts = db.query(models.Account).all()
+        if not accounts:
+            logger.warning("조회할 계정이 없음")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="조회할 계정이 없습니다"
+            )
+        
+        # 기준 날짜 설정 (기본값: 오늘)
+        if report_date is None:
+            report_date = datetime.now().date()
+        
+        # 이번 주의 시작일과 끝일 계산
+        # 월요일을 한 주의 시작으로 설정
+        days_since_monday = report_date.weekday()  # 월요일이 0, 일요일이 6
+        
+        current_week_start = report_date - timedelta(days=days_since_monday)  # 이번 주 월요일
+        current_week_end = current_week_start + timedelta(days=6)  # 이번 주 일요일
+        
+        # 지난 주의 시작일과 끝일 계산
+        previous_week_start = current_week_start - timedelta(days=7)  # 지난 주 월요일
+        previous_week_end = current_week_start - timedelta(days=1)  # 지난 주 일요일
+        
+        # 모든 계정에 대한 데이터 수집
+        all_accounts_data = []
+        
+        for account in accounts:
+            # 사용자 정보 가져오기
+            user = db.query(models.User).filter(models.User.USER_ID == account.USER_ID).first()
+            user_name = user.NAME if user else "Unknown User"
+            
+            # 팀 정보 가져오기
+            team = db.query(models.Team).filter(models.Team.TEAM_ID == account.TEAM_ID).first()
+            team_name = team.TEAM_NAME if team else "Unknown Team"
+            
+            # 이번 주 송금 금액 계산 (DailyTransfer 테이블 사용)
+            current_week_transfers = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                models.DailyTransfer.ACCOUNT_ID == account.ACCOUNT_ID,
+                models.DailyTransfer.DATE >= current_week_start,
+                models.DailyTransfer.DATE <= current_week_end
+            ).scalar() or 0
+            
+            # 지난 주 송금 금액 계산 (DailyTransfer 테이블 사용)
+            previous_week_transfers = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                models.DailyTransfer.ACCOUNT_ID == account.ACCOUNT_ID,
+                models.DailyTransfer.DATE >= previous_week_start,
+                models.DailyTransfer.DATE <= previous_week_end
+            ).scalar() or 0
+            
+            # 이번 주 팀 전적 계산
+            current_week_wins = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 1,  # 승리
+                models.GameLog.DATE >= current_week_start,
+                models.GameLog.DATE <= current_week_end
+            ).scalar() or 0
+            
+            current_week_losses = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 2,  # 패배
+                models.GameLog.DATE >= current_week_start,
+                models.GameLog.DATE <= current_week_end
+            ).scalar() or 0
+            
+            current_week_draws = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 3,  # 무승부
+                models.GameLog.DATE >= current_week_start,
+                models.GameLog.DATE <= current_week_end
+            ).scalar() or 0
+            
+            # 지난 주 팀 전적 계산
+            previous_week_wins = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 1,  # 승리
+                models.GameLog.DATE >= previous_week_start,
+                models.GameLog.DATE <= previous_week_end
+            ).scalar() or 0
+            
+            previous_week_losses = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 2,  # 패배
+                models.GameLog.DATE >= previous_week_start,
+                models.GameLog.DATE <= previous_week_end
+            ).scalar() or 0
+            
+            previous_week_draws = db.query(func.sum(models.GameLog.COUNT)).filter(
+                models.GameLog.TEAM_ID == account.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 3,  # 무승부
+                models.GameLog.DATE >= previous_week_start,
+                models.GameLog.DATE <= previous_week_end
+            ).scalar() or 0
+            
+            # 현재 총 적립액
+            current_total_savings = account.TOTAL_AMOUNT
+            
+            # 적금 목표액
+            target_amount = account.SAVING_GOAL
+            
+            # 계정별 데이터 구성
+            account_data = {
+                "account_id": account.ACCOUNT_ID,
+                "user_name": user_name,
+                "team_name": team_name,
+                "weekly_saving": int(current_week_transfers),  # DailyTransfer 금액으로 변경
+                "before_weekly_saving": int(previous_week_transfers),  # DailyTransfer 금액으로 변경
+                "weekly_record": {
+                    "win": int(current_week_wins),
+                    "lose": int(current_week_losses),
+                    "draw": int(current_week_draws)
+                },
+                "before_weekly_record": {
+                    "win": int(previous_week_wins),
+                    "lose": int(previous_week_losses),
+                    "draw": int(previous_week_draws)
+                },
+                "current_savings": int(current_total_savings),
+                "target_amount": int(target_amount)
+            }
+            
+            all_accounts_data.append(account_data)
+            
+        # 결과 데이터 구성
+        result = {
+            "accounts_data": all_accounts_data,
+            "total_accounts": len(all_accounts_data),
+            "report_date": report_date.isoformat()
+        }
+        
+        logger.info(f"모든 사용자의 주간 레포트 데이터 조회 완료: 총 {len(all_accounts_data)}개 계정")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"주간 레포트 데이터 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"주간 레포트 데이터 조회 중 오류 발생: {str(e)}"
+        )
+    
+
+# 주간 개인 보고서 생성 API
+@router.post("/personal/weekly", response_model=report_schema.BatchReportResult, status_code=status.HTTP_207_MULTI_STATUS)
+async def create_weekly_personal_reports(
+    batch_report_data: report_schema.BatchWeeklyPersonalReportRequest,
+    db: Session = Depends(get_db)
+):
+    logger.info(f"주간 개인 보고서 생성 요청: {len(batch_report_data.reports)}개 보고서")
+    
+    # 요청에 보고서가 없는 경우 처리
+    if not batch_report_data.reports:
+        logger.warning("보고서 데이터가 없습니다.")
+        return report_schema.BatchReportResult(success=[], errors=[{
+            "message": "보고서 데이터가 없습니다",
+            "code": "NO_DATA"
+        }])
+    
+    successful_reports = []
+    error_reports = []
+    
+    # 각 보고서 개별 처리 (각각 별도의 트랜잭션으로)
+    for i, report_data in enumerate(batch_report_data.reports):
+        # 새 트랜잭션 시작
+        try:
+            logger.info(f"처리 중 {i+1}/{len(batch_report_data.reports)}: 계정 ID {report_data.account_id}")
+            
+            # 1. 계정 존재 확인
+            account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == report_data.account_id).first()
+            if not account:
+                logger.warning(f"존재하지 않는 계정: {report_data.account_id}")
+                error_reports.append({
+                    "index": i,
+                    "account_id": report_data.account_id,
+                    "detail": "존재하지 않는 계정입니다",
+                    "code": "ACCOUNT_NOT_FOUND"
+                })
+                continue
+                
+            account_id = account.ACCOUNT_ID
+            
+            # 2. 보고서 날짜 확인 및 변환
+            try:
+                report_date = datetime.strptime(report_data.date, "%Y-%m-%d").date()
+            except ValueError as e:
+                logger.warning(f"날짜 형식 오류: {report_data.date}")
+                error_reports.append({
+                    "index": i,
+                    "account_id": report_data.account_id,
+                    "detail": f"날짜 형식 오류: {str(e)}",
+                    "code": "INVALID_DATE"
+                })
+                continue
+            
+            # 보고서 날짜가 월요일인지 확인하고, 월요일이 아니면 해당 주의 월요일로 조정
+            if report_date.weekday() != 0:  # 0은 월요일
+                # 해당 주의 월요일로 보고서 날짜 조정
+                report_date = report_date - timedelta(days=report_date.weekday())
+                logger.info(f"보고서 날짜를 해당 주의 월요일({report_date})로 조정")
+            
+            # 지난주의 월요일과 일요일 계산
+            previous_week_end = report_date - timedelta(days=1)  # 지난주 일요일
+            previous_week_start = previous_week_end - timedelta(days=6)  # 지난주 월요일
+            
+            logger.info(f"지난주 기간: {previous_week_start}(월) ~ {previous_week_end}(일)")
+            
+            # 3. 지난주의 송금 내역을 통한 weekly_amount 계산
+            weekly_amount = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                models.DailyTransfer.ACCOUNT_ID == account_id,
+                models.DailyTransfer.DATE >= previous_week_start,
+                models.DailyTransfer.DATE <= previous_week_end
+            ).scalar() or 0
+            
+            logger.info(f"계정 ID {account_id}의 지난주 적금액: {weekly_amount}원")
+            
+            # 4. 이미 해당 날짜의 보고서가 있는지 확인
+            existing_report = db.query(models.WeeklyReportPersonal).filter(
+                models.WeeklyReportPersonal.ACCOUNT_ID == account_id,
+                models.WeeklyReportPersonal.DATE == report_date
+            ).first()
+            
+            # 개별 보고서에 대한 트랜잭션 시작
+            try:
+                if existing_report:
+                    # 이미 존재하는 보고서 업데이트
+                    existing_report.WEEKLY_AMOUNT = weekly_amount
+                    existing_report.LLM_CONTEXT = report_data.weekly_text
+                    db.commit()
+                    db.refresh(existing_report)
+                    
+                    logger.info(f"기존 주간 개인 보고서 업데이트: ID {existing_report.WEEKLY_PERSONAL_ID}, 지난주 적금액: {weekly_amount}원")
+                    successful_reports.append(existing_report)
+                else:
+                    # 새 보고서 생성
+                    new_report = models.WeeklyReportPersonal(
+                        ACCOUNT_ID=account_id,
+                        DATE=report_date,
+                        WEEKLY_AMOUNT=weekly_amount,
+                        LLM_CONTEXT=report_data.weekly_text
+                    )
+                    db.add(new_report)
+                    db.commit()
+                    db.refresh(new_report)
+                    
+                    logger.info(f"새 주간 개인 보고서 생성: ID {new_report.WEEKLY_PERSONAL_ID}, 지난주 적금액: {weekly_amount}원")
+                    successful_reports.append(new_report)
+            except Exception as tx_error:
+                # 개별 트랜잭션 오류 처리
+                db.rollback()
+                logger.error(f"DB 트랜잭션 오류 (계정 ID {report_data.account_id}): {str(tx_error)}")
+                error_reports.append({
+                    "index": i,
+                    "account_id": report_data.account_id,
+                    "detail": f"데이터베이스 처리 오류: {str(tx_error)}",
+                    "code": "DB_ERROR"
+                })
+                
+        except Exception as e:
+            logger.error(f"처리 중 오류 (계정 ID {report_data.account_id}): {str(e)}")
+            error_reports.append({
+                "index": i,
+                "account_id": report_data.account_id,
+                "detail": f"처리 중 오류 발생: {str(e)}",
+                "code": "GENERAL_ERROR"
+            })
+    
+    # 결과 반환
+    logger.info(f"처리 완료: {len(successful_reports)}개 성공, {len(error_reports)}개 실패")
+    
+    return report_schema.BatchReportResult(
+        success=successful_reports,
+        errors=error_reports
+    )
+
+@router.get("/team-daily-savings", response_model=report_schema.AllTeamsDailySavingResponse)
+async def get_team_daily_savings(
+    date: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    모든 팀의 일일 송금 정보를 조회합니다.
+    
+    Args:
+        date (date, optional): 조회할 날짜. 기본값은 어제.
+        
+    Returns:
+        dict: 팀별 일일 송금 정보
+    """
+    try:
+        logger.info(f"팀별 일일 송금 정보 조회: 날짜 {date or '어제'}")
+        
+        # 팀별 일일 송금 정보 조회
+        teams_data = report_crud.get_all_teams_daily_saving(db, date)
+        
+        # 응답 데이터 구성
+        response = {
+            "date": (date or (datetime.now().date() - timedelta(days=1))).isoformat(),
+            "teams_data": teams_data
+        }
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"팀별 일일 송금 정보 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"팀별 일일 송금 정보 조회 중 오류 발생: {str(e)}"
+        )
+
+
+# 팀 일일 보고서 생성 API
+@router.post("/team/daily", response_model=report_schema.DailyBatchReportResult, status_code=status.HTTP_207_MULTI_STATUS)
+async def create_daily_team_reports(
+    batch_report_data: report_schema.BatchDailyTeamReportRequest,
+    db: Session = Depends(get_db)
+):
+    logger.info(f"팀 일일 보고서 생성 요청: {len(batch_report_data.reports)}개 보고서")
+    
+    # 요청에 보고서가 없는 경우 처리
+    if not batch_report_data.reports:
+        logger.warning("보고서 데이터가 없습니다.")
+        return report_schema.DailyBatchReportResult(success=[], errors=[{
+            "index": 0,
+            "team_id": 0,
+            "detail": "보고서 데이터가 없습니다",
+            "code": "NO_DATA"
+        }])
+    
+    successful_reports = []
+    error_reports = []
+    
+    # 각 보고서 개별 처리 (각각 별도의 트랜잭션으로)
+    for i, report_data in enumerate(batch_report_data.reports):
+        try:
+            logger.info(f"처리 중 {i+1}/{len(batch_report_data.reports)}: 팀 ID {report_data.team_id}")
+            
+            # 1. 팀 존재 확인
+            team = db.query(models.Team).filter(models.Team.TEAM_ID == report_data.team_id).first()
+            if not team:
+                logger.warning(f"존재하지 않는 팀: {report_data.team_id}")
+                error_reports.append({
+                    "index": i,
+                    "team_id": report_data.team_id,
+                    "detail": "존재하지 않는 팀입니다",
+                    "code": "TEAM_NOT_FOUND"
+                })
+                continue
+                
+            team_id = team.TEAM_ID
+            
+            # 2. 보고서 날짜 확인 및 변환
+            try:
+                report_date = datetime.strptime(report_data.date, "%Y-%m-%d").date()
+            except ValueError as e:
+                logger.warning(f"날짜 형식 오류: {report_data.date}")
+                error_reports.append({
+                    "index": i,
+                    "team_id": report_data.team_id,
+                    "detail": f"날짜 형식 오류: {str(e)}",
+                    "code": "INVALID_DATE"
+                })
+                continue
+            
+            # 3. 해당 팀의 평균 적금액 계산
+            # 해당 팀에 속한 모든 계정의 총액 구하기
+            team_accounts = db.query(models.Account).filter(
+                models.Account.TEAM_ID == team_id
+            ).all()
+            
+            if team_accounts:
+                team_avg_amount = sum(account.TOTAL_AMOUNT for account in team_accounts) / len(team_accounts)
+            else:
+                team_avg_amount = 0
+                
+            logger.info(f"팀 ID {team_id}의 평균 적금액: {team_avg_amount}원")
+            
+            # 4. 이미 해당 날짜의 보고서가 있는지 확인
+            existing_report = db.query(models.DailyReport).filter(
+                models.DailyReport.TEAM_ID == team_id,
+                models.DailyReport.DATE == report_date
+            ).first()
+            
+            # 개별 보고서에 대한 트랜잭션 시작
+            try:
+                if existing_report:
+                    # 이미 존재하는 보고서 업데이트
+                    existing_report.TEAM_AVG_AMOUNT = team_avg_amount
+                    existing_report.LLM_CONTEXT = report_data.llm_context
+                    db.commit()
+                    db.refresh(existing_report)
+                    
+                    logger.info(f"기존 팀 일일 보고서 업데이트: ID {existing_report.DAILY_REPORT_ID}, 팀 평균 적금액: {team_avg_amount}원")
+                    successful_reports.append(existing_report)
+                else:
+                    # 새 보고서 생성
+                    new_report = models.DailyReport(
+                        TEAM_ID=team_id,
+                        DATE=report_date,
+                        TEAM_AVG_AMOUNT=team_avg_amount,
+                        LLM_CONTEXT=report_data.llm_context
+                    )
+                    db.add(new_report)
+                    db.commit()
+                    db.refresh(new_report)
+                    
+                    logger.info(f"새 팀 일일 보고서 생성: ID {new_report.DAILY_REPORT_ID}, 팀 평균 적금액: {team_avg_amount}원")
+                    successful_reports.append(new_report)
+            except Exception as tx_error:
+                # 개별 트랜잭션 오류 처리
+                db.rollback()
+                logger.error(f"DB 트랜잭션 오류 (팀 ID {report_data.team_id}): {str(tx_error)}")
+                error_reports.append({
+                    "index": i,
+                    "team_id": report_data.team_id,
+                    "detail": f"데이터베이스 처리 오류: {str(tx_error)}",
+                    "code": "DB_ERROR"
+                })
+                
+        except Exception as e:
+            logger.error(f"처리 중 오류 (팀 ID {report_data.team_id}): {str(e)}")
+            error_reports.append({
+                "index": i,
+                "team_id": report_data.team_id,
+                "detail": f"처리 중 오류 발생: {str(e)}",
+                "code": "GENERAL_ERROR"
+            })
+    
+    # 결과 반환
+    serializable_reports = []
+    for report in successful_reports:
+        # SQLAlchemy DailyReport 객체를 DailyReportResponse 객체로 변환
+        report_response = report_schema.DailyReportResponse(
+            DAILY_REPORT_ID=report.DAILY_REPORT_ID,
+            TEAM_ID=report.TEAM_ID,
+            DATE=report.DATE,
+            LLM_CONTEXT=report.LLM_CONTEXT,
+            TEAM_AVG_AMOUNT=report.TEAM_AVG_AMOUNT
+        )
+        serializable_reports.append(report_response)
+
+    return report_schema.DailyBatchReportResult(
+        success=serializable_reports,
+        errors=error_reports
+    )
