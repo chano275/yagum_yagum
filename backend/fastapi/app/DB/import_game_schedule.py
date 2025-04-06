@@ -47,7 +47,7 @@ def import_game_schedule():
         print(f"CSV 파일을 찾았습니다: {csv_file_path}")
 
         # CSV 파일 읽기 (칼럼 이름 없음)
-        df = pd.read_csv(csv_file_path, header=None, names=['날짜', '원정', '홈홈'])
+        df = pd.read_csv(csv_file_path, header=None, names=['날짜', '원정', '홈'])
         print(f"CSV 파일을 읽었습니다. 총 {len(df)} 개의 경기 일정이 있습니다.")
 
         # 팀 이름과 ID 매핑 (team 테이블 기준)
