@@ -211,7 +211,7 @@ class DailyTransferResponse(BaseModel):
     DAILY_TRANSFER_ID: int
     ACCOUNT_ID: int
     DATE: date
-    TEXT: str
+    TEXT: Optional[str] = None
     AMOUNT: int
     created_at: datetime
     
