@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional,Dict,Any
@@ -279,6 +279,126 @@ async def get_my_transfers(
             detail=f"송금 내역 조회 중 오류 발생: {str(e)}"
         )
 
+@router.get("/daily-savings-detail", response_model=List[account_schema.DailySavingDetailResponse])
+async def get_my_daily_savings_detail(
+    date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    로그인한 사용자의 특정 날짜(기본값: 어제) 적금 상세 내역을 조회합니다.
+    
+    Args:
+        date (date, optional): 조회할 날짜. 기본값은 어제.
+        
+    Returns:
+        List[DailySavingDetailResponse]: 적금 상세 내역 목록 (규칙 정보 포함)
+    """
+    try:
+        logger.info(f"로그인 사용자의 적금 상세 내역 조회: 사용자 ID {current_user.USER_ID}")
+        
+        # 날짜 설정 (기본값: 어제)
+        if date is None:
+            date = datetime.now().date() - timedelta(days=1)
+            
+        logger.info(f"조회 날짜: {date}")
+        
+        # 사용자의 계정 조회 (첫 번째 계정 사용)
+        accounts = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).all()
+        
+        if not accounts:
+            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="연결된 계정이 없습니다"
+            )
+        
+        # 첫 번째 계정의 상세 내역 조회
+        account_id = accounts[0].ACCOUNT_ID
+        logger.info(f"사용자의 첫 번째 계정으로 상세 내역 조회: 계정 ID {account_id}")
+        
+        # 해당 날짜의 적금 내역 조회
+        daily_savings = db.query(models.DailySaving).filter(
+            models.DailySaving.ACCOUNT_ID == account_id,
+            models.DailySaving.DATE == date
+        ).all()
+        
+        # 결과 목록
+        result = []
+        
+        for saving in daily_savings:
+            # 적금 규칙 타입 조회
+            rule_type = db.query(models.SavingRuleType).filter(
+                models.SavingRuleType.SAVING_RULE_TYPE_ID == saving.SAVING_RULED_TYPE_ID
+            ).first()
+            
+            # 적금 규칙 상세 조회
+            rule_detail = db.query(models.SavingRuleDetail).filter(
+                models.SavingRuleDetail.SAVING_RULE_DETAIL_ID == saving.SAVING_RULED_DETAIL_ID
+            ).first()
+            
+            # 규칙 설명 가져오기
+            rule_description = rule_detail.RULE_DESCRIPTION if rule_detail else "알 수 없는 규칙"
+            
+            # 적금 규칙 조회
+            saving_rule = None
+            record_type = None
+            if rule_detail:
+                saving_rule = db.query(models.SavingRuleList).filter(
+                    models.SavingRuleList.SAVING_RULE_ID == rule_detail.SAVING_RULE_ID
+                ).first()
+                
+                if saving_rule:
+                    # 기록 타입 조회
+                    record_type = db.query(models.RecordType).filter(
+                        models.RecordType.RECORD_TYPE_ID == saving_rule.RECORD_TYPE_ID
+                    ).first()
+            
+            # 사용자 적금 규칙 조회 (적립 금액 단위 확인용)
+            user_rule = db.query(models.UserSavingRule).filter(
+                models.UserSavingRule.ACCOUNT_ID == account_id,
+                models.UserSavingRule.SAVING_RULE_DETAIL_ID == saving.SAVING_RULED_DETAIL_ID
+            ).first()
+            
+            # 선수 정보 (해당되는 경우)
+            player = None
+            if user_rule and user_rule.PLAYER_ID:
+                player = db.query(models.Player).filter(
+                    models.Player.PLAYER_ID == user_rule.PLAYER_ID
+                ).first()
+                
+                # 선수 이름을 규칙 설명에 포함
+                if player and "이(가)" in rule_description:
+                    rule_description = rule_description.replace("이(가)", f"{player.PLAYER_NAME}이(가)")
+            
+            # 상세 정보 구성
+            detail = {
+                "DAILY_SAVING_ID": saving.DAILY_SAVING_ID,
+                "ACCOUNT_ID": saving.ACCOUNT_ID,
+                "DATE": saving.DATE,
+                "SAVING_RULED_DETAIL_ID": saving.SAVING_RULED_DETAIL_ID,
+                "SAVING_RULED_TYPE_ID": saving.SAVING_RULED_TYPE_ID,
+                "COUNT": saving.COUNT,
+                "DAILY_SAVING_AMOUNT": saving.DAILY_SAVING_AMOUNT,
+                "rule_type_name": rule_type.SAVING_RULE_TYPE_NAME if rule_type else None,
+                "rule_description": rule_description,
+                "record_name": record_type.RECORD_NAME if record_type else None,
+                "player_name": player.PLAYER_NAME if player else None,
+                "unit_amount": user_rule.USER_SAVING_RULED_AMOUNT if user_rule else None
+            }
+            
+            result.append(detail)
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"적금 상세 내역 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"적금 상세 내역 조회 중 오류 발생: {str(e)}"
+        )
 
 # 특정 계정 조회
 from router.mission import mission_crud
@@ -938,3 +1058,4 @@ async def create_transaction_messages_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"트랜잭션 메시지 생성 중 오류 발생: {str(e)}"
         )
+    

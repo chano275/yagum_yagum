@@ -93,7 +93,7 @@ async def process_actual_transfers(db, date_param=None):
                 ).first()
                 
                 # 메시지가 없으면 기본 메시지 사용
-                llm_text = "(수시입출금) : 입금(이체)"
+                llm_text = "야금야금 출금"
                 if transaction_message and transaction_message.MESSAGE:
                     llm_text = transaction_message.MESSAGE
                 
