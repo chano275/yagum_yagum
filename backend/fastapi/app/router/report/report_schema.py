@@ -7,7 +7,7 @@ class DailyReportBase(BaseModel):
     TEAM_ID: int
     DATE: date
     LLM_CONTEXT: str
-    TEAM_AVG_AMOUNT: int
+    TEAM_AVG_AMOUNT: Optional[int] = None
 
 # 일일 보고서 생성 모델 (요청)
 class DailyReportCreate(DailyReportBase):
@@ -199,3 +199,54 @@ class WeeklyReportDataResponse(BaseModel):
     accounts_data: List[AccountWeeklyReport]
     total_accounts: int
     report_date: str
+    
+# 배치 처리를 위한 스키마 정의
+class WeeklyPersonalReportRequest(BaseModel):
+    account_id: int
+    date: str  # "YYYY-MM-DD" 형식으로 받음
+    weekly_text: str
+
+class BatchWeeklyPersonalReportRequest(BaseModel):
+    reports: List[WeeklyPersonalReportRequest]
+
+# 부분 성공 결과를 위한 응답 스키마
+class BatchReportResult(BaseModel):
+    success: List[WeeklyReportPersonalResponse]
+    errors: List[Dict[str, Any]]
+
+
+# 팀별 일일 송금 정보 응답 모델
+class TeamDailySavingResponse(BaseModel):
+    team_id: int # 팀 id
+    team: str  # 우리 팀
+    opponent: str  # 상대 팀
+    game_record: str  # 경기 기록 (승리, 패배, 무승부)
+    total_daily_saving: int  # 우리 팀 전체 송금액
+    opponent_total_daily_saving: int  # 상대 팀 전체 송금액
+
+# 여러 팀의 일일 송금 정보를 포함하는 응답 모델
+class AllTeamsDailySavingResponse(BaseModel):
+    date: str  # 데이터 기준 날짜
+    teams_data: List[TeamDailySavingResponse]  # 팀별 데이터 목록
+
+# 단일 일일 팀 보고서 요청 모델
+class DailyTeamReportRequest(BaseModel):
+    team_id: int
+    date: str  # YYYY-MM-DD 형식
+    llm_context: str
+
+# 배치 일일 팀 보고서 요청 모델
+class BatchDailyTeamReportRequest(BaseModel):
+    reports: List[DailyTeamReportRequest]
+
+# 에러 응답 항목 모델
+class ErrorReport(BaseModel):
+    index: int
+    team_id: int
+    detail: str
+    code: str
+
+# 배치 처리 결과 응답 모델
+class DailyBatchReportResult(BaseModel):
+    success: List[DailyReportResponse]
+    errors: List[ErrorReport]

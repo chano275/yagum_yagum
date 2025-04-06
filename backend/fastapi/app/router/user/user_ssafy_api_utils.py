@@ -320,7 +320,7 @@ async def transfer_money(user_key, withdrawal_account, deposit_account, amount, 
             "depositAccountNo": deposit_account,  # 입금계좌번호
             "transactionBalance": str(amount),    # 거래금액 (문자열로 변환)
             "withdrawalAccountNo": withdrawal_account,  # 출금계좌번호
-            "depositTransactionSummary": llm_text,  # 거래 요약정보 (입금계좌)
+            "depositTransactionSummary": "야금야금 출금",  # 거래 요약정보 (입금계좌)
             "withdrawalTransactionSummary": llm_text  # 거래 요약정보 (출금계좌)
         }
         

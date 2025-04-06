@@ -786,7 +786,7 @@ async def update_favorite_player(
             detail=f"최애 선수 업데이트 중 오류 발생: {str(e)}"
         )
     
-# 계정의 모든 트랜잭션 메시지 조회
+# 계정의 모든 송금 메시지 조회
 @router.get("/{account_id}/transactions", response_model=List[account_schema.TransactionMessageResponse])
 async def get_account_transactions(
     account_id: int,
@@ -825,7 +825,7 @@ async def get_account_transactions(
             detail=f"트랜잭션 메시지 조회 중 오류 발생: {str(e)}"
         )
 
-# 특정 기간의 트랜잭션 메시지 조회
+# 특정 기간의 송금 메시지 조회
 @router.get("/{account_id}/transactions/range", response_model=List[account_schema.TransactionMessageResponse])
 async def get_account_transactions_by_date_range(
     account_id: int,
@@ -872,48 +872,57 @@ async def get_account_transactions_by_date_range(
             detail=f"기간별 트랜잭션 메시지 조회 중 오류 발생: {str(e)}"
         )
 
-
-# 트랜잭션 메시지 생성
-@router.post("/transactions", response_model=account_schema.TransactionMessageResponse)
-async def create_transaction_message_endpoint(
-    transaction_data: dict,  # 일반 dict로 받아서 필요한 데이터 추출
+# 송금 메시지 받는 API
+@router.post("/transactions", response_model=List[account_schema.TransactionMessageResponse])
+async def create_transaction_messages_endpoint(
+    transaction_data: List[Dict],  # 송금 메시지 리스트로 받음
     db: Session = Depends(get_db)
 ):
+    """
+    여러 트랜잭션 메시지를 한 번에 생성합니다.
+
+    - **transaction_data**: 트랜잭션 메시지 정보 리스트
+      - `account_id`: 계정 ID (필수)
+      - `date`: 트랜잭션 날짜 (필수)
+      - `text`: 트랜잭션 메시지 (필수)
+    """
+    created_transactions = []
+    
     try:
-        # 전송된 데이터에서 필요한 정보 추출
-        account_id = transaction_data.get("account_id")
-        date = transaction_data.get("date")
-        text = transaction_data.get("text")
-        
-        logger.info(f"트랜잭션 메시지 생성 요청: 계정 ID {account_id}")
-        
-        # 필수 입력값 확인
-        if not account_id or not date or not text:
-            logger.warning("필수 입력값 누락")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="account_id, date, text는 필수 입력값입니다"
+        for transaction in transaction_data:
+            # 필수 입력값 확인
+            account_id = transaction.get("account_id")
+            date = transaction.get("date")
+            text = transaction.get("text")
+            
+            if not account_id or not date or not text:
+                logger.warning("필수 입력값 누락")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="account_id, date, text는 모두 필수 입력값입니다"
+                )
+            
+            # 계정 존재 여부 확인
+            account = account_crud.get_account_by_id(db, int(account_id))
+            if not account:
+                logger.warning(f"계정을 찾을 수 없음: {account_id}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"계정을 찾을 수 없습니다: {account_id}"
+                )
+            
+            # TransactionMessageCreate 객체 생성
+            transaction_schema = account_schema.TransactionMessageCreate(
+                ACCOUNT_ID=int(account_id),
+                TRANSACTION_DATE=date,
+                MESSAGE=text
             )
+            
+            # 트랜잭션 메시지 생성
+            created_transaction = account_crud.create_transaction_message(db, transaction_schema)
+            created_transactions.append(created_transaction)
         
-        # 계정 존재 여부 확인
-        account = account_crud.get_account_by_id(db, int(account_id))
-        if not account:
-            logger.warning(f"계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        # TransactionMessageCreate 객체 생성 (스키마에 맞게 변환)
-        transaction_schema = account_schema.TransactionMessageCreate(
-            ACCOUNT_ID=int(account_id),
-            TRANSACTION_DATE=date,
-            MESSAGE=text
-        )
-        
-        # 트랜잭션 메시지 생성
-        created_transaction = account_crud.create_transaction_message(db, transaction_schema)
-        return created_transaction
+        return created_transactions
         
     except HTTPException:
         raise
