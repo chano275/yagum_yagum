@@ -172,9 +172,6 @@ def process_json_game_logs(json_dir="baseball_data/json_data"):
     
     if not json_files:
         logger.warning(f"{json_dir_path} 내에 처리할 JSON 파일이 없습니다.")
-        json_files = [f for f in os.listdir(json_dir_path) if f.endswith('.json')]
-        if json_files:
-            logger.info(f"다음 JSON 파일을 찾았습니다: {json_files}")
         return
     
     logger.info(f"처리할 JSON 파일 수: {len(json_files)}")
@@ -186,129 +183,108 @@ def process_json_game_logs(json_dir="baseball_data/json_data"):
         logger.info(f"파일 처리 중: {json_file}")
         
         try:
-            # 파일명에서 날짜 추출 (예: 20250330-play_log.json -> 2025-03-30)
-            file_date_str = None
-            for date_format in ['%Y%m%d', '%Y-%m-%d']:
-                try:
-                    # 파일명의 처음 8자가 날짜인 경우 (YYYYMMDD)
-                    if json_file[:8].isdigit():
-                        file_date_str = json_file[:8]
-                        game_date = datetime.strptime(file_date_str, '%Y%m%d').date()
-                        break
-                    # 날짜 형식이 YYYY-MM-DD인 경우
-                    elif '-' in json_file[:10] and len(json_file[:10].split('-')) == 3:
-                        file_date_str = json_file[:10]
-                        game_date = datetime.strptime(file_date_str, '%Y-%m-%d').date()
-                        break
-                except (ValueError, IndexError):
-                    continue
-            
-            # 날짜를 추출하지 못한 경우
-            if file_date_str is None:
-                logger.warning(f"파일명에서 날짜를 추출할 수 없습니다: {json_file}, 현재 날짜로 처리합니다.")
-                game_date = date.today()
-            
             # JSON 파일 읽기
             with open(file_path, 'r', encoding='utf-8') as f:
-                game_records = json.load(f)
+                game_records_dict = json.load(f)
             
-            # 각 기록 처리
-            for record in game_records:
-                # 필수 필드 확인
-                if '팀' not in record or '기록' not in record or '기록값' not in record:
-                    logger.warning(f"필수 필드가 없는 레코드가 발견되었습니다: {record}")
-                    continue
-                
+            # 날짜별로 기록 처리
+            for game_date, records in game_records_dict.items():
                 # 날짜 파싱
-                # try:
-                #     # JSON에 날짜가 있는 경우
-                #     record_date = datetime.strptime(record['날짜'], '%Y-%m-%d').date()
-                # except (ValueError, TypeError):
-                #     # 파일명에서 추출한 날짜 사용
-                record_date = game_date
-                
-                # 팀 정보 처리
-                team_name = record['팀']
-                if team_name not in team_mapping:
-                    logger.warning(f"알 수 없는 팀: {team_name}, 건너뜁니다.")
+                try:
+                    record_date = datetime.strptime(game_date, '%Y-%m-%d').date()
+                except (ValueError, TypeError):
+                    logger.warning(f"날짜 파싱 실패: {game_date}")
                     continue
                 
-                team_id = team_mapping[team_name]
-                
-                # 기록 유형 처리
-                record_type = record['기록']
-                record_value = record['기록값']
-                
-                # 경기결과 처리
-                if record_type == '경기결과':
-                    if record_value == 'W':
-                        record_type_id = 1  # 승리
-                    elif record_value == 'L':
-                        record_type_id = 2  # 패배
-                    elif record_value == 'D':
-                        record_type_id = 3  # 무승부
-                    else:
-                        logger.warning(f"알 수 없는 경기 결과 값: {record_value}, 건너뜁니다.")
+                # 각 기록 처리
+                for record in records:
+                    # 필수 필드 확인
+                    if not all(key in record for key in ['팀', '기록', '기록값']):
+                        logger.warning(f"필수 필드가 없는 레코드 건너뜀: {record}")
                         continue
                     
-                    # 팀 테이블 업데이트
-                    team = session.query(models.Team).filter(models.Team.TEAM_ID == team_id).first()
-                    if team:
+                    # 팀 정보 처리
+                    team_name = record['팀']
+                    if team_name not in team_mapping:
+                        logger.warning(f"알 수 없는 팀: {team_name}, 건너뜁니다.")
+                        continue
+                    
+                    team_id = team_mapping[team_name]
+                    
+                    # 기록 유형 처리
+                    record_type = record['기록']
+                    record_value = record['기록값']
+                    
+                    # 경기결과 처리
+                    if record_type == '경기결과':
                         if record_value == 'W':
-                            team.TOTAL_WIN += 1
-                            logger.info(f"{team_name} 팀 승리 기록 추가")
+                            record_type_id = 1  # 승리
                         elif record_value == 'L':
-                            team.TOTAL_LOSE += 1
-                            logger.info(f"{team_name} 팀 패배 기록 추가")
+                            record_type_id = 2  # 패배
                         elif record_value == 'D':
-                            team.TOTAL_DRAW += 1
-                            logger.info(f"{team_name} 팀 무승부 기록 추가")
+                            record_type_id = 3  # 무승부
+                        else:
+                            logger.warning(f"알 수 없는 경기 결과 값: {record_value}, 건너뜁니다.")
+                            continue
                         
-                        session.commit()
-                    
-                    # 기록값은 항상 1로 설정 (경기 수)
-                    count = 1
-                else:
-                    # 일반 기록 타입 처리
-                    if record_type not in record_type_mapping or record_type_mapping[record_type] is None:
-                        logger.warning(f"알 수 없는 기록 유형: {record_type}, 건너뜁니다.")
-                        continue
-                    
-                    record_type_id = record_type_mapping[record_type]
-                    
-                    # 기록값을 숫자로 변환
-                    try:
-                        count = int(float(record_value))
-                    except (ValueError, TypeError):
-                        # 숫자가 아닌 경우 1로 처리 (발생 횟수)
+                        # 팀 테이블 업데이트
+                        team = session.query(models.Team).filter(models.Team.TEAM_ID == team_id).first()
+                        if team:
+                            if record_value == 'W':
+                                team.TOTAL_WIN += 1
+                                logger.info(f"{team_name} 팀 승리 기록 추가")
+                            elif record_value == 'L':
+                                team.TOTAL_LOSE += 1
+                                logger.info(f"{team_name} 팀 패배 기록 추가")
+                            elif record_value == 'D':
+                                team.TOTAL_DRAW += 1
+                                logger.info(f"{team_name} 팀 무승부 기록 추가")
+                            
+                            session.commit()
+                        
+                        # 기록값은 항상 1로 설정 (경기 수)
                         count = 1
-                
-                # 이미 동일한 날짜, 팀, 기록 유형의 게임 로그가 있는지 확인
-                existing_log = session.query(models.GameLog).filter(
-                    models.GameLog.DATE == record_date,
-                    models.GameLog.TEAM_ID == team_id,
-                    models.GameLog.RECORD_TYPE_ID == record_type_id
-                ).first()
-                
-                if existing_log:
-                    # 기존 로그 업데이트
-                    existing_log.COUNT = count
-                    logger.info(f"기존 로그 업데이트: 날짜={record_date}, 팀={team_name}, 기록={record_type}, 값={count}")
-                else:
-                    # 새 로그 생성
-                    new_log = models.GameLog(
-                        DATE=record_date,
-                        TEAM_ID=team_id,
-                        RECORD_TYPE_ID=record_type_id,
-                        COUNT=count
-                    )
-                    session.add(new_log)
-                    logger.info(f"새 로그 추가: 날짜={record_date}, 팀={team_name}, 기록={record_type}, 값={count}")
+                    else:
+                        # 일반 기록 타입 처리
+                        if record_type not in record_type_mapping or record_type_mapping[record_type] is None:
+                            logger.warning(f"알 수 없는 기록 유형: {record_type}, 건너뜁니다.")
+                            continue
+                        
+                        record_type_id = record_type_mapping[record_type]
+                        
+                        # 기록값을 숫자로 변환
+                        try:
+                            count = int(float(record_value))
+                        except (ValueError, TypeError):
+                            # 숫자가 아닌 경우 1로 처리 (발생 횟수)
+                            count = 1
                     
-                    total_records += 1
-            
-            # 변경사항 커밋
-            session.commit()
+                    # 이미 동일한 날짜, 팀, 기록 유형의 게임 로그가 있는지 확인
+                    existing_log = session.query(models.GameLog).filter(
+                        models.GameLog.DATE == record_date,
+                        models.GameLog.TEAM_ID == team_id,
+                        models.GameLog.RECORD_TYPE_ID == record_type_id
+                    ).first()
+                    
+                    if existing_log:
+                        # 기존 로그 업데이트
+                        existing_log.COUNT = count
+                        logger.info(f"기존 로그 업데이트: 날짜={record_date}, 팀={team_name}, 기록={record_type}, 값={count}")
+                    else:
+                        # 새 로그 생성
+                        new_log = models.GameLog(
+                            DATE=record_date,
+                            TEAM_ID=team_id,
+                            RECORD_TYPE_ID=record_type_id,
+                            COUNT=count
+                        )
+                        session.add(new_log)
+                        logger.info(f"새 로그 추가: 날짜={record_date}, 팀={team_name}, 기록={record_type}, 값={count}")
+                        
+                        total_records += 1
+                
+                # 변경사항 커밋
+                session.commit()
             
         except Exception as e:
             session.rollback()
