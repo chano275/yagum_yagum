@@ -217,6 +217,99 @@ async def read_user_me(current_user: models.User = Depends(get_current_user)):
             detail=f"사용자 정보 조회 중 오류가 발생했습니다: {str(e)}"
         )
 
+@router.get("/transaction-history", response_model=List[dict])
+async def read_transaction_history(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    transaction_type: str = "A",
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    로그인한 사용자의 계좌 거래 내역을 조회합니다.
+    
+    Args:
+        start_date (str, optional): 조회 시작 날짜 (YYYYMMDD 형식). 지정하지 않으면 1개월 전.
+        end_date (str, optional): 조회 종료 날짜 (YYYYMMDD 형식). 지정하지 않으면 오늘.
+        transaction_type (str, optional): 거래구분 (A: 전체, M: 입금, D: 출금). 기본값은 A.
+        
+    Returns:
+        List[dict]: 거래 내역 목록
+    """
+    try:
+        logger.info(f"사용자 거래 내역 조회 요청: 사용자 ID {current_user.USER_ID}")
+        
+        # 사용자 키 확인
+        user_key = current_user.USER_KEY
+        if not user_key:
+            logger.warning(f"사용자 키가 없음: 사용자 ID {current_user.USER_ID}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="사용자 인증 정보가 없습니다"
+            )
+        
+        # 사용자의 출금 계좌 정보 확인 (SOURCE_ACCOUNT)
+        source_account = current_user.SOURCE_ACCOUNT
+        if not source_account:
+            logger.warning(f"출금 계좌 정보가 없음: 사용자 ID {current_user.USER_ID}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="계좌 정보가 없습니다"
+            )
+        
+        # 날짜 설정 (기본값: 1개월)
+        if not end_date:
+            today = datetime.now()
+            end_date = today.strftime("%Y%m%d")
+        
+        if not start_date:
+            # 1개월 전
+            one_month_ago = datetime.now() - timedelta(days=30)
+            start_date = one_month_ago.strftime("%Y%m%d")
+        
+        # 날짜 형식 검증
+        try:
+            datetime.strptime(start_date, "%Y%m%d")
+            datetime.strptime(end_date, "%Y%m%d")
+        except ValueError:
+            logger.warning(f"날짜 형식 오류: {start_date}, {end_date}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="날짜 형식이 올바르지 않습니다. YYYYMMDD 형식으로 입력해주세요."
+            )
+        
+        # 거래 내역 조회
+        from router.user.user_ssafy_api_utils import get_transaction_history
+        transactions = await get_transaction_history(
+            user_key=user_key,
+            account_num=source_account,
+            start_date=start_date,
+            end_date=end_date,
+            transaction_type=transaction_type
+        )
+        transactions = transactions.get("list")
+        # 트랜잭션 정보 가공 및 반환
+        result = []
+        for transaction in transactions:
+            result.append({
+                "transactionDate": transaction.get("transactionDate"),
+                "balance": transaction.get("transactionBalance"),
+                "summary" :transaction.get("transactionSummary"),
+                "afterBalance" : transaction.get("transactionAfterBalance")
+            })
+        
+        logger.info(f"거래 내역 조회 완료: {len(result)}건")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"거래 내역 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"거래 내역 조회 중 오류 발생: {str(e)}"
+        )
+
 # 사용자 삭제
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: int, db: Session = Depends(get_db), 
@@ -319,3 +412,4 @@ async def get_user_accounts(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"사용자 계좌 정보 조회 중 오류 발생: {str(e)}"
         )
+    
