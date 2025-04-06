@@ -1,11 +1,11 @@
 # process_transfers.py
 import os
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine, func
-from datetime import date, datetime, timedelta
 import asyncio
 import logging
 import argparse
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, func
+from datetime import date, datetime, timedelta
 
 # 현재 스크립트 위치 기준으로 절대 경로 구성
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,6 +20,7 @@ import sys
 sys.path.append(project_root)
 import models
 from database import engine
+
 # 로깅 설정
 logging.basicConfig(
     level=logging.INFO,
@@ -33,12 +34,11 @@ logger = logging.getLogger(__name__)
 
 async def process_actual_transfers(db, date_param=None):
     """
-    특정 날짜(기본값: 오늘)의 daily_saving 내역을 기준으로 실제 적금 이체를 처리합니다.
-    일일 한도와 월간 한도를 고려하여 이체 금액을 제한합니다.
+    특정 날짜(기본값: 어제)의 DailyTransfer 내역을 기준으로 실제 이체를 처리합니다.
     
     Args:
         db (Session): 데이터베이스 세션
-        date_param (date, optional): 처리할 날짜. 기본값은 오늘.
+        date_param (date, optional): 처리할 날짜. 기본값은 어제.
     
     Returns:
         dict: 처리 결과 요약 정보
@@ -47,15 +47,7 @@ async def process_actual_transfers(db, date_param=None):
     if date_param is None:
         date_param = datetime.now().date() - timedelta(days=1)
     
-    # 월의 시작일과 끝일 계산 (월간 한도 확인용)
-    month_start = date_param.replace(day=1)
-    if date_param.month == 12:
-        next_month = date_param.replace(year=date_param.year + 1, month=1, day=1)
-    else:
-        next_month = date_param.replace(month=date_param.month + 1, day=1)
-    month_end = next_month - timedelta(days=1)
-    
-    logger.info(f"[{date_param}] daily_saving 내역 기반 실제 적금 이체 처리 시작...")
+    logger.info(f"[{date_param}] DailyTransfer 내역 기반 실제 이체 처리 시작...")
     
     # 처리 결과 요약용 변수
     total_transferred = 0
@@ -64,123 +56,79 @@ async def process_actual_transfers(db, date_param=None):
     failed_accounts = 0
     
     try:
-        # 1. 날짜별 계정별 daily_saving 내역 집계
-        account_savings = db.query(
-            models.DailySaving.ACCOUNT_ID,
-            func.sum(models.DailySaving.DAILY_SAVING_AMOUNT).label("total_amount")
-        ).filter(
-            models.DailySaving.DATE == date_param
-        ).group_by(
-            models.DailySaving.ACCOUNT_ID
+        # 해당 날짜의 DailyTransfer 내역 조회
+        daily_transfers = db.query(models.DailyTransfer).filter(
+            models.DailyTransfer.DATE == date_param
         ).all()
         
-        logger.info(f"총 {len(account_savings)}개 계정의 적립 내역이 있습니다.")
+        logger.info(f"총 {len(daily_transfers)}개 계정의 이체 내역이 있습니다.")
         
-        # 2. 각 계정별로 이체 처리
-        for account_id, saving_amount in account_savings:
+        # 각 계정별로 이체 처리
+        for daily_transfer in daily_transfers:
             try:
                 # 계정 정보 조회
-                account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
+                account = db.query(models.Account).filter(
+                    models.Account.ACCOUNT_ID == daily_transfer.ACCOUNT_ID
+                ).first()
+                
                 if not account:
-                    logger.warning(f"계정 ID {account_id}를 찾을 수 없습니다. 이체를 건너뜁니다.")
+                    logger.warning(f"계정 ID {daily_transfer.ACCOUNT_ID}를 찾을 수 없습니다. 이체를 건너뜁니다.")
                     skipped_accounts += 1
                     continue
                 
                 # 사용자 정보 조회
-                user = db.query(models.User).filter(models.User.USER_ID == account.USER_ID).first()
+                user = db.query(models.User).filter(
+                    models.User.USER_ID == account.USER_ID
+                ).first()
+                
                 if not user:
-                    logger.warning(f"계정 ID {account_id}의 사용자 정보를 찾을 수 없습니다. 이체를 건너뜁니다.")
+                    logger.warning(f"계정 ID {daily_transfer.ACCOUNT_ID}의 사용자 정보를 찾을 수 없습니다. 이체를 건너뜁니다.")
                     skipped_accounts += 1
                     continue
                 
-                # 3.1. 일일 한도 확인
-                # 해당 날짜에 이미 이체된 금액 확인 (DailyTransfer 테이블에서 조회)
-                already_transferred_today = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
-                    models.DailyTransfer.ACCOUNT_ID == account_id,
-                    models.DailyTransfer.DATE == date_param
-                ).scalar() or 0
-                
-                if already_transferred_today + saving_amount > account.DAILY_LIMIT:
-                    # 일일 한도 초과 시 한도 내로 조정
-                    original_amount = saving_amount
-                    saving_amount = max(0, account.DAILY_LIMIT - already_transferred_today)
-                    logger.warning(f"계정 ID {account_id}: 일일 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
-                
-                # 3.2. 월간 한도 확인
-                # 해당 월에 이미 이체된 금액 확인 (DailyTransfer 테이블에서 조회)
-                already_transferred_this_month = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
-                    models.DailyTransfer.ACCOUNT_ID == account_id,
-                    models.DailyTransfer.DATE >= month_start,
-                    models.DailyTransfer.DATE <= date_param
-                ).scalar() or 0
-                
-                if already_transferred_this_month + saving_amount > account.MONTH_LIMIT:
-                    # 월간 한도 초과 시 한도 내로 조정
-                    original_amount = saving_amount
-                    saving_amount = max(0, account.MONTH_LIMIT - already_transferred_this_month)
-                    logger.warning(f"계정 ID {account_id}: 월간 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
-                
-                # 이체할 금액이 0 이하라면 건너뜀
-                if saving_amount <= 0:
-                    logger.warning(f"계정 ID {account_id}: 이체 금액이 0원 이하여서 이체를 건너뜁니다.")
-                    skipped_accounts += 1
-                    continue
-                
-                # 3.3. 이체 메시지 정보 조회
+                # 트랜잭션 메시지 조회
                 transaction_message = db.query(models.TransactionMessage).filter(
-                    models.TransactionMessage.ACCOUNT_ID == account_id,
+                    models.TransactionMessage.ACCOUNT_ID == account.ACCOUNT_ID,
                     models.TransactionMessage.TRANSACTION_DATE == date_param
                 ).first()
                 
                 # 메시지가 없으면 기본 메시지 사용
-                llm_text = ""
+                llm_text = "(수시입출금) : 입금(이체)"
                 if transaction_message and transaction_message.MESSAGE:
                     llm_text = transaction_message.MESSAGE
                 
-                # 메시지가 없는 경우 기본 메시지 설정
-                if not llm_text:
-                    llm_text = "(수시입출금) : 입금(이체)"
-                
-                # 3.4. 실제 이체 처리
+                # 이체 처리
                 try:
                     # 금융 API를 통한 이체 처리
                     from router.user.user_ssafy_api_utils import transfer_money
                     
-                    logger.info(f"계정 ID {account_id}: {saving_amount}원 이체 시작 (출금계좌: {account.SOURCE_ACCOUNT}, 입금계좌: {account.ACCOUNT_NUM})")
+                    saving_amount = daily_transfer.AMOUNT
+                    
+                    logger.info(f"계정 ID {account.ACCOUNT_ID}: {saving_amount}원 이체 시작 (출금계좌: {account.SOURCE_ACCOUNT}, 입금계좌: {account.ACCOUNT_NUM})")
                     
                     transfer_result = await transfer_money(
                         user_key=user.USER_KEY,
                         withdrawal_account=account.SOURCE_ACCOUNT,  # 출금 계좌 (입출금 계좌)
                         deposit_account=account.ACCOUNT_NUM,        # 입금 계좌 (적금 계좌)
                         amount=saving_amount,
-                        llm_text=llm_text  # 입출금 메시지
+                        llm_text=llm_text  # 트랜잭션 메시지
                     )
                     
                     # 이체 성공 시 계정 잔액 업데이트
                     account.TOTAL_AMOUNT += saving_amount
                     
-                    # 성공 시 DailyTransfer 테이블에 기록
-                    daily_transfer = models.DailyTransfer(
-                        ACCOUNT_ID=account_id,
-                        DATE=date_param,
-                        TEXT=llm_text,
-                        AMOUNT=saving_amount,
-                        created_at=datetime.now()
-                    )
-                    db.add(daily_transfer)
-                    
                     total_transferred += saving_amount
                     processed_accounts += 1
                     
-                    logger.info(f"계정 ID {account_id}: {saving_amount}원 이체 성공")
+                    logger.info(f"계정 ID {account.ACCOUNT_ID}: {saving_amount}원 이체 성공")
                     
                 except Exception as e:
-                    logger.error(f"계정 ID {account_id} 이체 처리 중 오류: {str(e)}")
+                    logger.error(f"계정 ID {account.ACCOUNT_ID} 이체 처리 중 오류: {str(e)}")
                     failed_accounts += 1
                     continue
                     
             except Exception as e:
-                logger.error(f"계정 ID {account_id} 처리 중 오류: {str(e)}")
+                logger.error(f"계정 ID {daily_transfer.ACCOUNT_ID} 처리 중 오류: {str(e)}")
                 failed_accounts += 1
                 continue
         
@@ -205,7 +153,7 @@ async def process_actual_transfers(db, date_param=None):
 
 async def process_transfers_for_range(start_date=None, end_date=None, db_session=None):
     """
-    지정된 날짜 범위의 daily_saving 내역에 대해 이체를 처리합니다.
+    지정된 날짜 범위의 daily_saving 내역에 대해 메시지를 처리합니다.
     
     Args:
         start_date (date, optional): 시작 날짜. 기본값은 어제.
@@ -243,7 +191,7 @@ async def process_transfers_for_range(start_date=None, end_date=None, db_session
             db_session.close()
 
 async def main():
-    parser = argparse.ArgumentParser(description='Daily Saving 내역 기반 적금 이체 처리')
+    parser = argparse.ArgumentParser(description='Daily Saving 내역 기반 메시지 처리')
     parser.add_argument('--date', type=str, help='처리할 날짜 (YYYY-MM-DD 형식, 기본값: 어제)')
     parser.add_argument('--start-date', type=str, help='처리 시작 날짜 (YYYY-MM-DD 형식)')
     parser.add_argument('--end-date', type=str, help='처리 종료 날짜 (YYYY-MM-DD 형식)')

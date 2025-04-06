@@ -1,7 +1,7 @@
 # process_savings.py
 import os
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from datetime import date, datetime, timedelta
 
 # 현재 스크립트 위치 기준으로 절대 경로 구성
@@ -12,11 +12,12 @@ project_root = os.path.dirname(current_dir)
 from dotenv import load_dotenv
 load_dotenv()
 
-# models 모듈 import
+# 모듈 import를 위한 경로 설정
 import sys
 sys.path.append(project_root)
 import models
 from database import engine
+
 def process_savings_for_date(game_date=None, session=None):
     """
     특정 날짜의 게임 기록을 기반으로 사용자 적금 규칙에 따라 적립금을 처리합니다.
@@ -31,6 +32,14 @@ def process_savings_for_date(game_date=None, session=None):
     # 날짜 설정 (기본값: 오늘)
     if game_date is None:
         game_date = date.today()
+    
+    # 월의 시작일과 끝일 계산 (월간 한도 확인용)
+    month_start = game_date.replace(day=1)
+    if game_date.month == 12:
+        next_month = game_date.replace(year=game_date.year + 1, month=1, day=1)
+    else:
+        next_month = game_date.replace(month=game_date.month + 1, day=1)
+    month_end = next_month - timedelta(days=1)
     
     # 세션 관리
     close_session = False
@@ -80,6 +89,19 @@ def process_savings_for_date(game_date=None, session=None):
         for account in accounts:
             account_total_saved = 0  # 이 계정에 적립된 총액
             account_savings_count = 0  # 이 계정의 적립 건수
+            
+            # 일일 한도 확인
+            already_transferred_today = session.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                models.DailyTransfer.ACCOUNT_ID == account.ACCOUNT_ID,
+                models.DailyTransfer.DATE == game_date
+            ).scalar() or 0
+            
+            # 월간 한도 확인
+            already_transferred_this_month = session.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                models.DailyTransfer.ACCOUNT_ID == account.ACCOUNT_ID,
+                models.DailyTransfer.DATE >= month_start,
+                models.DailyTransfer.DATE <= game_date
+            ).scalar() or 0
             
             # 3.1. 팀 관련 규칙 처리 (기본 규칙, 상대팀)
             team_rules = session.query(models.UserSavingRule).filter(
@@ -159,7 +181,6 @@ def process_savings_for_date(game_date=None, session=None):
                                 if len(recent_wins) >= 3:
                                     # 동일한 상대에 대한 3연승 확인
                                     # 여기서는 단순화를 위해 3일 연속 승리가 있으면 스윕으로 간주
-                                    # 실제로는 각 경기 일정과 승리 기록을 보다 정확히 매칭해야 함
                                     sweep_count = 1
                                     print(f"스윕 감지: 팀 {team_id}가 최근 3일간 동일한 상대팀 {opponents[0]}에 대해 연승")
                         
@@ -167,6 +188,23 @@ def process_savings_for_date(game_date=None, session=None):
                         if sweep_count > 0:
                             # 적립 금액 계산
                             saving_amount = rule.USER_SAVING_RULED_AMOUNT * sweep_count
+                            
+                            # 일일 한도 확인 및 조정
+                            if already_transferred_today + saving_amount > account.DAILY_LIMIT:
+                                original_amount = saving_amount
+                                saving_amount = max(0, account.DAILY_LIMIT - already_transferred_today)
+                                print(f"계정 ID {account.ACCOUNT_ID}: 일일 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
+                            
+                            # 월간 한도 확인 및 조정
+                            if already_transferred_this_month + saving_amount > account.MONTH_LIMIT:
+                                original_amount = saving_amount
+                                saving_amount = max(0, account.MONTH_LIMIT - already_transferred_this_month)
+                                print(f"계정 ID {account.ACCOUNT_ID}: 월간 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
+                            
+                            # 이체할 금액이 0 이하라면 건너뜀
+                            if saving_amount <= 0:
+                                print(f"계정 ID {account.ACCOUNT_ID}: 이체 금액이 0원 이하여서 이체를 건너뜁니다.")
+                                continue
                             
                             # DailySaving에 기록
                             daily_saving = models.DailySaving(
@@ -180,11 +218,21 @@ def process_savings_for_date(game_date=None, session=None):
                             )
                             session.add(daily_saving)
                             
-                            # 계정 잔액 업데이트
+                            # DailyTransfer에도 기록
+                            daily_transfer = models.DailyTransfer(
+                                ACCOUNT_ID=account.ACCOUNT_ID,
+                                DATE=game_date,
+                                AMOUNT=saving_amount,
+                                created_at=datetime.now(),
+                                TEXT = "기본 메시지"
+                            )
+                            session.add(daily_transfer)
+                            
+                            # 계정 통계 업데이트
                             account_total_saved += saving_amount
                             account_savings_count += 1
                             
-                            print(f"계정 {account.ACCOUNT_ID}: 기본 규칙 - 스윕 {sweep_count}회 발생, {saving_amount}원 적립")
+                            print(f"계정 ID {account.ACCOUNT_ID}: 기본 규칙 - 스윕 {sweep_count}회 발생, {saving_amount}원 적립")
                     
                     # 일반 기록 처리 (스윕 외 다른 기록)
                     elif (team_id in team_stats and 
@@ -195,6 +243,23 @@ def process_savings_for_date(game_date=None, session=None):
                         
                         # 적립 금액 계산
                         saving_amount = rule.USER_SAVING_RULED_AMOUNT * count
+                        
+                        # 일일 한도 확인 및 조정
+                        if already_transferred_today + saving_amount > account.DAILY_LIMIT:
+                            original_amount = saving_amount
+                            saving_amount = max(0, account.DAILY_LIMIT - already_transferred_today)
+                            print(f"계정 ID {account.ACCOUNT_ID}: 일일 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
+                        
+                        # 월간 한도 확인 및 조정
+                        if already_transferred_this_month + saving_amount > account.MONTH_LIMIT:
+                            original_amount = saving_amount
+                            saving_amount = max(0, account.MONTH_LIMIT - already_transferred_this_month)
+                            print(f"계정 ID {account.ACCOUNT_ID}: 월간 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
+                        
+                        # 이체할 금액이 0 이하라면 건너뜀
+                        if saving_amount <= 0:
+                            print(f"계정 ID {account.ACCOUNT_ID}: 이체 금액이 0원 이하여서 이체를 건너뜁니다.")
+                            continue
                         
                         # DailySaving에 기록
                         daily_saving = models.DailySaving(
@@ -208,8 +273,16 @@ def process_savings_for_date(game_date=None, session=None):
                         )
                         session.add(daily_saving)
                         
-                        # 계정 잔액 업데이트
-                        # account.TOTAL_AMOUNT += saving_amount
+                        # DailyTransfer에도 기록
+                        daily_transfer = models.DailyTransfer(
+                            ACCOUNT_ID=account.ACCOUNT_ID,
+                            DATE=game_date,
+                            AMOUNT=saving_amount,
+                            created_at=datetime.now()
+                        )
+                        session.add(daily_transfer)
+                        
+                        # 계정 통계 업데이트
                         account_total_saved += saving_amount
                         account_savings_count += 1
                         
@@ -219,8 +292,8 @@ def process_savings_for_date(game_date=None, session=None):
                         ).first()
                         record_name = record_type.RECORD_NAME if record_type else f"기록 {record_type_id}"
                         
-                        print(f"계정 {account.ACCOUNT_ID}: 기본 규칙 - {record_name} 기록 {count}회 발생, {saving_amount}원 적립")
-                    
+                        print(f"계정 ID {account.ACCOUNT_ID}: 기본 규칙 - {record_name} 기록 {count}회 발생, {saving_amount}원 적립")
+                
                 # 상대팀 규칙: 상대 팀의 기록에 따라 적립
                 elif rule_type.SAVING_RULE_TYPE_NAME == "상대팀":
                     team_id = account.TEAM_ID
@@ -237,6 +310,23 @@ def process_savings_for_date(game_date=None, session=None):
                             # 적립 금액 계산
                             saving_amount = rule.USER_SAVING_RULED_AMOUNT * count
                             
+                            # 일일 한도 확인 및 조정
+                            if already_transferred_today + saving_amount > account.DAILY_LIMIT:
+                                original_amount = saving_amount
+                                saving_amount = max(0, account.DAILY_LIMIT - already_transferred_today)
+                                print(f"계정 ID {account.ACCOUNT_ID}: 일일 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
+                            
+                            # 월간 한도 확인 및 조정
+                            if already_transferred_this_month + saving_amount > account.MONTH_LIMIT:
+                                original_amount = saving_amount
+                                saving_amount = max(0, account.MONTH_LIMIT - already_transferred_this_month)
+                                print(f"계정 ID {account.ACCOUNT_ID}: 월간 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
+                            
+                            # 이체할 금액이 0 이하라면 건너뜀
+                            if saving_amount <= 0:
+                                print(f"계정 ID {account.ACCOUNT_ID}: 이체 금액이 0원 이하여서 이체를 건너뜁니다.")
+                                continue
+                            
                             # DailySaving에 기록
                             daily_saving = models.DailySaving(
                                 ACCOUNT_ID=account.ACCOUNT_ID,
@@ -249,8 +339,16 @@ def process_savings_for_date(game_date=None, session=None):
                             )
                             session.add(daily_saving)
                             
-                            # 계정 잔액 업데이트
-                            # account.TOTAL_AMOUNT += saving_amount
+                            # DailyTransfer에도 기록
+                            daily_transfer = models.DailyTransfer(
+                                ACCOUNT_ID=account.ACCOUNT_ID,
+                                DATE=game_date,
+                                AMOUNT=saving_amount,
+                                created_at=datetime.now()
+                            )
+                            session.add(daily_transfer)
+                            
+                            # 계정 통계 업데이트
                             account_total_saved += saving_amount
                             account_savings_count += 1
                             
@@ -265,7 +363,7 @@ def process_savings_for_date(game_date=None, session=None):
                             ).first()
                             record_name = record_type.RECORD_NAME if record_type else f"기록 {record_type_id}"
                             
-                            print(f"계정 {account.ACCOUNT_ID}: 상대팀 규칙 - {opposing_team_name}의 {record_name} 기록 {count}회 발생, {saving_amount}원 적립")
+                            print(f"계정 ID {account.ACCOUNT_ID}: 상대팀 규칙 - {opposing_team_name}의 {record_name} 기록 {count}회 발생, {saving_amount}원 적립")
             
             # 3.2. 선수 관련 규칙 처리 (투수, 타자)
             player_rules = session.query(models.UserSavingRule).filter(
@@ -304,6 +402,23 @@ def process_savings_for_date(game_date=None, session=None):
                     # 적립 금액 계산
                     saving_amount = rule.USER_SAVING_RULED_AMOUNT * count
                     
+                    # 일일 한도 확인 및 조정
+                    if already_transferred_today + saving_amount > account.DAILY_LIMIT:
+                        original_amount = saving_amount
+                        saving_amount = max(0, account.DAILY_LIMIT - already_transferred_today)
+                        print(f"계정 ID {account.ACCOUNT_ID}: 일일 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
+                    
+                    # 월간 한도 확인 및 조정
+                    if already_transferred_this_month + saving_amount > account.MONTH_LIMIT:
+                        original_amount = saving_amount
+                        saving_amount = max(0, account.MONTH_LIMIT - already_transferred_this_month)
+                        print(f"계정 ID {account.ACCOUNT_ID}: 월간 한도 초과로 이체 금액 조정 ({original_amount}원 → {saving_amount}원)")
+                    
+                    # 이체할 금액이 0 이하라면 건너뜀
+                    if saving_amount <= 0:
+                        print(f"계정 ID {account.ACCOUNT_ID}: 이체 금액이 0원 이하여서 이체를 건너뜁니다.")
+                        continue
+                    
                     # DailySaving에 기록
                     daily_saving = models.DailySaving(
                         ACCOUNT_ID=account.ACCOUNT_ID,
@@ -316,8 +431,16 @@ def process_savings_for_date(game_date=None, session=None):
                     )
                     session.add(daily_saving)
                     
-                    # 계정 잔액 업데이트
-                    # account.TOTAL_AMOUNT += saving_amount
+                    # DailyTransfer에도 기록
+                    daily_transfer = models.DailyTransfer(
+                        ACCOUNT_ID=account.ACCOUNT_ID,
+                        DATE=game_date,
+                        AMOUNT=saving_amount,
+                        created_at=datetime.now()
+                    )
+                    session.add(daily_transfer)
+                    
+                    # 계정 통계 업데이트
                     account_total_saved += saving_amount
                     account_savings_count += 1
                     
@@ -331,7 +454,7 @@ def process_savings_for_date(game_date=None, session=None):
                     ).first()
                     record_name = record_type.RECORD_NAME if record_type else f"기록 {record_type_id}"
                     
-                    print(f"계정 {account.ACCOUNT_ID}: 선수 규칙 - 선수 {player_name}, {record_name} 기록 {count}회 발생, {saving_amount}원 적립")
+                    print(f"계정 ID {account.ACCOUNT_ID}: 선수 규칙 - 선수 {player_name}, {record_name} 기록 {count}회 발생, {saving_amount}원 적립")
             
             # 3.3. 계정에 적립된 내역이 있으면 통계에 추가
             if account_total_saved > 0:
@@ -429,6 +552,14 @@ def clear_existing_savings(game_date=None, session=None):
            # 적립 내역 삭제
            session.delete(saving)
            deleted_count += 1
+       
+       # DailyTransfer 테이블의 해당 날짜 레코드도 삭제
+       daily_transfers = session.query(models.DailyTransfer).filter(
+           models.DailyTransfer.DATE == game_date
+       ).all()
+       
+       for transfer in daily_transfers:
+           session.delete(transfer)
        
        # 변경 사항 커밋
        session.commit()
