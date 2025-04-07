@@ -95,6 +95,7 @@ class GameResultResponse(GameResultBase):
 
 # 팀 성적 응답 모델
 class TeamRecordResponse(BaseModel):
+    RANK: int
     TEAM_ID: int
     TEAM_NAME: str
     TOTAL_WIN: int

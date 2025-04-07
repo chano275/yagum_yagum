@@ -310,6 +310,72 @@ async def read_transaction_history(
             detail=f"거래 내역 조회 중 오류 발생: {str(e)}"
         )
 
+@router.post("/transfer-money")
+async def transfer_money(
+    deposit_account_no = str,
+    balance = int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+        로그인한 사용자의 계좌에서 다른 계좌로 돈을 이체합니다.
+
+        deposit_account_no : 입금 계좌 번호
+        balance : 이체 금액
+    """
+    try:
+        logger.info(f"사용자 계좌 이체 요청: 사용자 ID {current_user.USER_ID}")
+        
+        # 사용자 키 확인
+        user_key = current_user.USER_KEY
+        if not user_key:
+            logger.warning(f"사용자 키가 없음: 사용자 ID {current_user.USER_ID}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="사용자 인증 정보가 없습니다"
+            )
+        
+        # 사용자의 출금 계좌 정보 확인 (SOURCE_ACCOUNT)
+        source_account = current_user.SOURCE_ACCOUNT
+        if not source_account:
+            logger.warning(f"출금 계좌 정보가 없음: 사용자 ID {current_user.USER_ID}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="계좌 정보가 없습니다"
+            )
+        
+        # 계좌 이체 
+        from router.user.user_ssafy_api_utils import post_transfer_money
+        transfer = await post_transfer_money(
+            user_key=user_key,
+            deposit_account_no=deposit_account_no,
+            transaction_balance=balance,
+            withdrawal_account_no=source_account,
+            text=current_user.NAME
+        )
+        # # 트랜잭션 정보 가공 및 반환
+        # result = []
+        # for transaction in transfer:
+        #     result.append({
+        #         "transactionDate": transaction.get("transactionDate"),
+        #         "balance": transaction.get("transactionBalance"),
+        #         "summary" :transaction.get("transactionSummary"),
+        #         "afterBalance" : transaction.get("transactionAfterBalance")
+        #     })
+        
+        logger.info(f"계좌 이체 완료")
+        return "계좌 이체 완료"
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"계좌 이체 요청 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"계좌 이체 요청 중 오류 발생: {str(e)}"
+        )
+
+
 # 사용자 삭제
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: int, db: Session = Depends(get_db), 

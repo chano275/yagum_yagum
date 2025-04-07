@@ -233,4 +233,8 @@ def get_all_team_records(db: Session, skip: int = 0, limit: int = 100):
     # 승률 기준으로 정렬
     results.sort(key=lambda x: x["WIN_RATE"], reverse=True)
     
+    # 정렬 후 순위 추가
+    for rank, team_data in enumerate(results, 1):
+        team_data["RANK"] = rank
+    
     return results
