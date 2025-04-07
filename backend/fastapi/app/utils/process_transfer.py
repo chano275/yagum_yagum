@@ -21,6 +21,9 @@ sys.path.append(project_root)
 import models
 from database import engine
 
+# update_daily_balances 모듈에서 필요한 함수 import
+from update_daily_balances import update_daily_balances, calculate_daily_interest
+
 # 로깅 설정
 logging.basicConfig(
     level=logging.INFO,
@@ -35,6 +38,7 @@ logger = logging.getLogger(__name__)
 async def process_actual_transfers(db, date_param=None):
     """
     특정 날짜(기본값: 어제)의 DailyTransfer 내역을 기준으로 실제 이체를 처리합니다.
+    이체 처리 후 바로 daily_balances 테이블 업데이트와 이자 계산도 수행합니다.
     
     Args:
         db (Session): 데이터베이스 세션
@@ -135,7 +139,7 @@ async def process_actual_transfers(db, date_param=None):
         # 변경사항 커밋
         db.commit()
         
-        summary = {
+        transfer_summary = {
             "date": date_param,
             "total_transferred": total_transferred,
             "processed_accounts": processed_accounts,
@@ -144,7 +148,25 @@ async def process_actual_transfers(db, date_param=None):
         }
         
         logger.info(f"[{date_param}] 이체 처리 완료: {processed_accounts}개 계정 성공, {skipped_accounts}개 건너뜀, {failed_accounts}개 실패, 총 {total_transferred}원 이체")
-        return summary
+        
+        # 이체 처리 후 일일 잔액 업데이트
+        logger.info(f"[{date_param}] 일일 잔액 업데이트 시작...")
+        balance_summary = await update_daily_balances(db, date_param)
+        logger.info(f"[{date_param}] 일일 잔액 업데이트 완료")
+        
+        # 일일 이자 계산
+        logger.info(f"[{date_param}] 일일 이자 계산 시작...")
+        interest_summary = await calculate_daily_interest(db, date_param)
+        logger.info(f"[{date_param}] 일일 이자 계산 완료")
+        
+        # 전체 처리 결과 병합
+        combined_summary = {
+            "transfer": transfer_summary,
+            "balance": balance_summary,
+            "interest": interest_summary
+        }
+        
+        return combined_summary
         
     except Exception as e:
         db.rollback()
@@ -153,7 +175,7 @@ async def process_actual_transfers(db, date_param=None):
 
 async def process_transfers_for_range(start_date=None, end_date=None, db_session=None):
     """
-    지정된 날짜 범위의 daily_saving 내역에 대해 메시지를 처리합니다.
+    지정된 날짜 범위의 daily_saving 내역에 대해 이체, 잔액 업데이트, 이자 계산을 처리합니다.
     
     Args:
         start_date (date, optional): 시작 날짜. 기본값은 어제.
@@ -191,7 +213,7 @@ async def process_transfers_for_range(start_date=None, end_date=None, db_session
             db_session.close()
 
 async def main():
-    parser = argparse.ArgumentParser(description='Daily Saving 내역 기반 메시지 처리')
+    parser = argparse.ArgumentParser(description='Daily Transfer 처리 및 잔액/이자 업데이트')
     parser.add_argument('--date', type=str, help='처리할 날짜 (YYYY-MM-DD 형식, 기본값: 어제)')
     parser.add_argument('--start-date', type=str, help='처리 시작 날짜 (YYYY-MM-DD 형식)')
     parser.add_argument('--end-date', type=str, help='처리 종료 날짜 (YYYY-MM-DD 형식)')
