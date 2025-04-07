@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, and_
+from sqlalchemy import func, desc, and_, or_
 from datetime import datetime, date, timedelta
 from typing import Optional, List, Dict, Any
 
@@ -386,3 +386,110 @@ def calculate_interest_stats(db: Session, account_id: int):
         "min_daily_interest": min_interest,
         "days_count": days_count
     }
+
+def get_all_teams_daily_saving(db: Session, target_date: date = None):
+    """
+    모든 팀의 일일 송금 정보를 조회합니다.
+    
+    Args:
+        db (Session): 데이터베이스 세션
+        target_date (date, optional): 조회할 날짜. 기본값은 어제.
+    
+    Returns:
+        list: 팀별 일일 송금 정보 목록
+    """
+    # 날짜 설정 (기본값: 어제)
+    if target_date is None:
+        target_date = datetime.now().date() - timedelta(days=1)
+    
+    # 결과 저장 리스트
+    teams_data = []
+    
+    # 1. 모든 팀 조회
+    teams = db.query(models.Team).all()
+    
+    # 2. 각 팀에 대해 정보 수집
+    for team in teams:
+        # 해당 날짜의 경기 스케줄 조회 (팀이 참여한 경기)
+        game = db.query(models.GameSchedule).filter(
+            models.GameSchedule.DATE == target_date,
+            or_(
+                models.GameSchedule.HOME_TEAM_ID == team.TEAM_ID,
+                models.GameSchedule.AWAY_TEAM_ID == team.TEAM_ID
+            )
+        ).first()
+        
+        # 경기가 없으면 건너뜀
+        if not game:
+            continue
+        
+        # 3. 상대팀 정보 조회
+        if game.HOME_TEAM_ID == team.TEAM_ID:
+            opponent_id = game.AWAY_TEAM_ID
+            is_home = True
+        else:
+            opponent_id = game.HOME_TEAM_ID
+            is_home = False
+            
+        opponent = db.query(models.Team).filter(models.Team.TEAM_ID == opponent_id).first()
+        
+        # 4. 경기 결과 조회 (승/패/무)
+        game_record = "무승부"  # 기본값
+        
+        # 승리 기록 확인
+        win_log = db.query(models.GameLog).filter(
+            models.GameLog.DATE == target_date,
+            models.GameLog.TEAM_ID == team.TEAM_ID,
+            models.GameLog.RECORD_TYPE_ID == 1  # 승리
+        ).first()
+        
+        if win_log:
+            game_record = "승리"
+        else:
+            # 패배 기록 확인
+            lose_log = db.query(models.GameLog).filter(
+                models.GameLog.DATE == target_date,
+                models.GameLog.TEAM_ID == team.TEAM_ID,
+                models.GameLog.RECORD_TYPE_ID == 2  # 패배
+            ).first()
+            
+            if lose_log:
+                game_record = "패배"
+        
+        # 5. 우리 팀 일일 송금액 조회
+        our_team_accounts = db.query(models.Account).filter(models.Account.TEAM_ID == team.TEAM_ID).all()
+        total_daily_saving = 0
+        
+        for account in our_team_accounts:
+            # DailyTransfer 테이블에서 해당 날짜의 송금액 조회
+            transfers = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                models.DailyTransfer.ACCOUNT_ID == account.ACCOUNT_ID,
+                models.DailyTransfer.DATE == target_date
+            ).scalar() or 0
+            
+            total_daily_saving += transfers
+        
+        # 6. 상대 팀 일일 송금액 조회
+        opponent_accounts = db.query(models.Account).filter(models.Account.TEAM_ID == opponent_id).all()
+        opponent_total_daily_saving = 0
+        
+        for account in opponent_accounts:
+            # DailyTransfer 테이블에서 해당 날짜의 송금액 조회
+            transfers = db.query(func.sum(models.DailyTransfer.AMOUNT)).filter(
+                models.DailyTransfer.ACCOUNT_ID == account.ACCOUNT_ID,
+                models.DailyTransfer.DATE == target_date
+            ).scalar() or 0
+            
+            opponent_total_daily_saving += transfers
+        
+        # 7. 결과 데이터 추가
+        teams_data.append({
+            "team_id" : team.TEAM_ID,
+            "team": team.TEAM_NAME,
+            "opponent": opponent.TEAM_NAME if opponent else "Unknown",
+            "game_record": game_record,
+            "total_daily_saving": total_daily_saving,
+            "opponent_total_daily_saving": opponent_total_daily_saving
+        })
+    
+    return teams_data

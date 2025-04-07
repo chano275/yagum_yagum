@@ -8,10 +8,16 @@ from database import get_db
 import models
 import os
 import io
+import tempfile
 from PIL import Image
+import utils.ticket_certificate as ticket_ocr
 from router.mission import mission_schema, mission_crud
 from router.user.user_router import get_current_user
 from datetime import datetime
+
+# OCR 모듈 import
+from utils.ticket_certificate import decode_qr_and_barcodes, clova_ocr
+
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,121 +42,6 @@ async def read_missions(
             detail=f"미션 조회 중 오류 발생: {str(e)}"
         )
 
-# # 계정 미션 목록 조회
-# @router.get("/account/{account_id}", response_model=List[mission_schema.UsedMissionDetailResponse])
-# async def read_account_missions(
-#     account_id: int,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"계정 미션 목록 조회: 계정 ID {account_id}")
-        
-#         # 계정 존재 여부 및 소유권 확인
-#         account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
-#         if not account:
-#             logger.warning(f"계정을 찾을 수 없음: {account_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="계정을 찾을 수 없습니다"
-#             )
-            
-#         if account.USER_ID != current_user.USER_ID:
-#             logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_403_FORBIDDEN,
-#                 detail="이 계정의 미션 정보를 조회할 권한이 없습니다"
-#             )
-            
-#         # 미션 목록 조회
-#         used_missions = mission_crud.get_used_missions_by_account(db, account_id)
-        
-#         # 응답 형식에 맞게 변환
-#         result = []
-#         for used_mission in used_missions:
-#             mission = mission_crud.get_mission_by_id(db, used_mission.MISSION_ID)
-#             result.append({
-#                 "USED_MISSION_ID": used_mission.USED_MISSION_ID,
-#                 "ACCOUNT_ID": used_mission.ACCOUNT_ID,
-#                 "MISSION_ID": used_mission.MISSION_ID,
-#                 "COUNT": used_mission.COUNT,
-#                 "MAX_COUNT": used_mission.MAX_COUNT,
-#                 "MISSION_RATE": used_mission.MISSION_RATE,
-#                 "created_at": used_mission.created_at,
-#                 "mission": mission
-#             })
-            
-#         return result
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"계정 미션 목록 조회 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"계정 미션 목록 조회 중 오류 발생: {str(e)}"
-#         )
-
-# # 계정의 미션 삭제 (미션 등록 취소)
-# @router.delete("/account/{account_id}/mission/{mission_id}", status_code=status.HTTP_204_NO_CONTENT)
-# async def remove_mission_from_account(
-#     account_id: int,
-#     mission_id: int,
-#     db: Session = Depends(get_db),
-#     current_user: models.User = Depends(get_current_user)
-# ):
-#     try:
-#         logger.info(f"계정의 미션 삭제 요청: 계정 ID {account_id}, 미션 ID {mission_id}")
-        
-#         # 계정 존재 여부 및 소유권 확인
-#         account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
-#         if not account:
-#             logger.warning(f"계정을 찾을 수 없음: {account_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="계정을 찾을 수 없습니다"
-#             )
-            
-#         if account.USER_ID != current_user.USER_ID:
-#             logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_403_FORBIDDEN,
-#                 detail="이 계정의 미션을 삭제할 권한이 없습니다"
-#             )
-            
-#         # 미션 등록 여부 확인
-#         used_mission = mission_crud.get_used_mission(db, account_id, mission_id)
-#         if not used_mission:
-#             logger.warning(f"등록되지 않은 미션: 계정 ID {account_id}, 미션 ID {mission_id}")
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND,
-#                 detail="이 계정에 등록되지 않은 미션입니다"
-#             )
-            
-#         # 완료된 미션인 경우 (이자율에 영향을 미치는 경우)
-#         was_completed = used_mission.COUNT >= used_mission.MAX_COUNT
-        
-#         # 미션 삭제
-#         success = mission_crud.delete_used_mission(db, used_mission.USED_MISSION_ID)
-#         if not success:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="미션 삭제 중 오류가 발생했습니다"
-#             )
-            
-#         # 이자율 업데이트 (이전에 완료된 미션이었다면)
-#         if was_completed:
-#             mission_crud.update_account_interest_rate(db, account_id)
-            
-#         logger.info(f"계정의 미션 삭제 완료: 계정 ID {account_id}, 미션 ID {mission_id}")
-#         return None
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         logger.error(f"계정의 미션 삭제 중 오류: {str(e)}")
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"계정의 미션 삭제 중 오류 발생: {str(e)}"
-#         )
 
 # 순위 예측 생성
 @router.post("/rank-predictions", response_model=mission_schema.TeamRankPredictionResponse)
@@ -307,45 +198,162 @@ async def get_user_predictions(
             detail=f"사용자 순위 예측 조회 중 오류 발생: {str(e)}"
         )
     
+# OCR 엔드포인트 추가
 @router.post("/ocr", response_model=mission_schema.OCRResponse)
-async def check_ocr(file: UploadFile = File(...)):
+async def check_ocr(
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     """
-    이미지 파일을 받아 OCR 처리하는 엔드포인트
-    
-    Args:
-        file: 업로드된 이미지 파일
-    
-    Returns:
-        OCRResponse: OCR 처리 결과
+    이미지 파일을 받아 OCR 처리하여 티켓을 검증하고 미션 완료 처리
     """
-    # 파일 확장자 검증
-    allowed_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
-    file_ext = os.path.splitext(file.filename)[1].lower()
-    
-    if file_ext not in allowed_extensions:
-        return JSONResponse(
-            status_code=400,
-            content={"success": False, "error": f"지원하지 않는 파일 형식입니다. 지원 형식: {', '.join(allowed_extensions)}", "text": ""}
-        )
-    
     try:
-        # 이미지 파일 읽기
-        contents = await file.read()
-        image = Image.open(io.BytesIO(contents))
+        logger.info(f"OCR 요청: 사용자 ID {current_user.USER_ID}")
         
-        ### TODO 
-        '''
-            OCR 모듈 이용해서 티켓번호 읽기 
-            DB에 있는 티켓인지 검증
-            티켓 사용한걸로 변경 -> ticket 테이블에 user_id 추가 -> 나중에 사용한 OCR 기록 보려고
-            금리 적용 -> used_mission에 추가가
+        # 파일 확장자 검증
+        allowed_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        
+        if file_ext not in allowed_extensions:
+            logger.warning(f"지원하지 않는 파일 형식: {file_ext}")
+            return JSONResponse(
+                status_code=400,
+                content={"success": False, "error": f"지원하지 않는 파일 형식입니다. 지원 형식: {', '.join(allowed_extensions)}", "text": ""}
+            )
+        
+        # 임시 파일에 저장
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_file:
+            temp_file_path = temp_file.name
+            contents = await file.read()
+            temp_file.write(contents)
+        
+        try:
+            # OCR 모듈을 이용해 티켓 번호 읽기
+            # 먼저 QR 코드/바코드 검사 시도
+            ticket_number = decode_qr_and_barcodes(temp_file_path)
             
-        '''
-        
-        
+            # QR/바코드 인식 실패 시 Clova OCR 시도
+            if not ticket_number:
+                ticket_number = clova_ocr(temp_file_path)
+            
+            # 티켓 번호를 찾지 못한 경우
+            if not ticket_number:
+                logger.warning("티켓 번호를 인식할 수 없음")
+                return mission_schema.OCRResponse(
+                    success=False,
+                    text="",
+                    error="티켓 번호를 인식할 수 없습니다."
+                )
+            
+            # DB에 있는 티켓인지 검증
+            ticket = db.query(models.TicketNumber).filter(
+                models.TicketNumber.TICKET_NUMBER == ticket_number
+            ).first()
+            
+            if not ticket:
+                logger.warning(f"유효하지 않은 티켓 번호: {ticket_number}")
+                return mission_schema.OCRResponse(
+                    success=False,
+                    text=ticket_number,
+                    error="유효하지 않은 티켓 번호입니다."
+                )
+            
+            # 이미 사용된 티켓인지 확인 (ACCOUNT_ID가 NULL이 아닌 경우)
+            if ticket.ACCOUNT_ID is not None:
+                logger.warning(f"이미 사용된 티켓: {ticket_number}")
+                return mission_schema.OCRResponse(
+                    success=False,
+                    text=ticket_number,
+                    error="이미 사용된 티켓입니다."
+                )
+            
+            # 사용자의 계정 정보 조회
+            account = db.query(models.Account).filter(
+                models.Account.USER_ID == current_user.USER_ID
+            ).first()
+            
+            if not account:
+                logger.warning(f"사용자에게 연결된 계정이 없음: 사용자 ID {current_user.USER_ID}")
+                return mission_schema.OCRResponse(
+                    success=False,
+                    text=ticket_number,
+                    error="계정 정보를 찾을 수 없습니다."
+                )
+            
+            # 티켓에 계정 연결
+            ticket.ACCOUNT_ID = account.ACCOUNT_ID
+            ticket.VERIFIED_STATUS = True
+            
+            # 입장권 인증 미션 찾기 (미션 이름 "직관 인증시 우대금리")
+            mission = db.query(models.Mission).filter(
+                models.Mission.MISSION_NAME == "직관 인증시 우대금리"
+            ).first()
+            
+            if not mission:
+                logger.warning("직관 인증 미션 정보를 찾을 수 없음")
+                db.commit()  # 티켓 상태는 업데이트
+                return mission_schema.OCRResponse(
+                    success=True,
+                    text=ticket_number,
+                    error="티켓은 인증되었으나, 해당 미션을 찾을 수 없습니다."
+                )
+            
+            # 이미 등록된 미션인지 확인
+            used_mission = mission_crud.get_used_mission(db, account.ACCOUNT_ID, mission.MISSION_ID)
+            
+            if not used_mission:
+                # 미션이 등록되어 있지 않으면 자동 등록
+                used_mission_data = mission_schema.UsedMissionCreate(
+                    ACCOUNT_ID=account.ACCOUNT_ID,
+                    MISSION_ID=mission.MISSION_ID,
+                    COUNT=0
+                )
+                used_mission = mission_crud.create_used_mission(db, used_mission_data)
+                if not used_mission:
+                    logger.error("미션 등록 중 오류 발생")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="미션 등록 중 오류가 발생했습니다"
+                    )
+            
+            # 카운트가 최대치에 도달했는지 확인
+            if used_mission.COUNT >= used_mission.MAX_COUNT:
+                # 티켓 상태는 업데이트하지만 미션 카운트는 증가시키지 않음
+                db.commit()
+                logger.warning(f"미션 최대 횟수({used_mission.MAX_COUNT}) 도달: 계정 ID {account.ACCOUNT_ID}")
+                return mission_schema.OCRResponse(
+                    success=True,
+                    text=ticket_number,
+                    error=f"티켓은 인증되었으나, 미션 최대 적용 횟수({used_mission.MAX_COUNT}회)에 도달하여 금리가 추가 적용되지 않았습니다."
+                )
+            
+            # 미션 카운트 증가
+            used_mission.COUNT += 1
+            
+            # 변경사항 커밋
+            db.commit()
+            
+            # 이자율 업데이트
+            mission_crud.update_account_interest_rate(db, account.ACCOUNT_ID)
+            
+            # 성공 응답
+            logger.info(f"티켓 인증 및 미션 적용 성공: 계정 ID {account.ACCOUNT_ID}, 티켓 번호 {ticket_number}")
+            return mission_schema.OCRResponse(
+                success=True,
+                text=ticket_number,
+                error=None
+            )
+                
+        finally:
+            # 임시 파일 삭제
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
         
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"success": False, "error": f"OCR 처리 중 오류 발생: {str(e)}", "text": ""}
+        logger.error(f"OCR 처리 중 오류 발생: {str(e)}")
+        return mission_schema.OCRResponse(
+            success=False,
+            text="",
+            error=f"OCR 처리 중 오류 발생: {str(e)}"
         )
