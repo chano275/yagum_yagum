@@ -8,10 +8,11 @@ import {
   View,
   Text,
   Image,
+  FlatList,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
-import { Calendar } from "react-native-calendars";
+import * as Calendar from "expo-calendar";
 import { Ionicons } from "@expo/vector-icons";
 import { useTeam } from "@/context/TeamContext";
 import { useRoute } from "@react-navigation/native";
@@ -71,17 +72,17 @@ interface SeriesMatch {
   startTime?: number; // 정렬용 시작 시간 추가
 }
 
-// CustomDay 컴포넌트 props 타입
-interface CustomDayProps {
-  date: {
-    dateString: string;
-    day: number;
-    month: number;
-    year: number;
-  };
-  state: string;
+// 커스텀 캘린더 날짜 타입
+interface CalendarDay {
+  date: Date;
+  dateString: string;
+  day: number;
+  month: number;
+  year: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  isSelected: boolean;
   marking?: MarkingData;
-  onPress?: (date: any) => void;
 }
 
 // 모바일 기준 너비 설정
@@ -92,6 +93,13 @@ const MAX_MOBILE_WIDTH = 430;
 const formatShortDate = (dateStr: string): string => {
   const date = new Date(dateStr);
   return `${date.getMonth() + 1}/${date.getDate()}`;
+};
+
+const formatYYYYMMDD = (date: Date): string => {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
 const isConsecutiveDates = (dates: string[]): boolean => {
@@ -110,59 +118,6 @@ const isConsecutiveDates = (dates: string[]): boolean => {
   }
   return true;
 };
-
-// 캘린더 헤더를 위한 스타일 컴포넌트 추가
-const CalendarHeaderContainer = styled.View`
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 16px 8px 16px;
-  background-color: #ffffff;
-`;
-
-// 월 제목 행 추가 - 화살표와 월 표시를 위한 컨테이너
-const MonthRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  width: 100%;
-  justify-content: space-between;
-  margin-bottom: 10px;
-`;
-
-// 월 타이틀을 감싸는 컨테이너 추가
-const MonthTitleContainer = styled.View`
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-`;
-
-const MonthTitle = styled.Text`
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
-`;
-
-// 오늘 버튼 컨테이너 - 버튼을 중앙에 배치
-const TodayButtonContainer = styled.View`
-  width: 100%;
-  align-items: center;
-  margin-top: 5px;
-`;
-
-const TodayButton = styled.TouchableOpacity<{ teamColor: string }>`
-  background-color: ${(props) => props.teamColor};
-  padding: 6px 12px;
-  border-radius: 16px;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-`;
-
-const TodayButtonText = styled.Text`
-  color: white;
-  font-size: 13px;
-  font-weight: bold;
-  margin-left: 4px;
-`;
 
 // 스타일 컴포넌트 정의
 const AppWrapper = styled.View`
@@ -251,6 +206,74 @@ const CardContent = styled.View<StyledProps>`
 
 const CalendarCard = styled(Card)`
   padding: 0;
+`;
+
+// 커스텀 캘린더 스타일 컴포넌트
+const CalendarContainer = styled.View`
+  background-color: white;
+  padding-bottom: 10px;
+`;
+
+const CalendarHeaderContainer = styled.View`
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 16px 8px 16px;
+`;
+
+const MonthRow = styled.View`
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  justify-content: space-between;
+  margin-bottom: 10px;
+`;
+
+const MonthTitleContainer = styled.View`
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+`;
+
+const MonthTitle = styled.Text`
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+`;
+
+const WeekdayRow = styled.View`
+  flex-direction: row;
+  margin-bottom: 8px;
+  padding-horizontal: 12px;
+`;
+
+const WeekdayText = styled.Text`
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+`;
+
+const DaysContainer = styled.View`
+  flex-wrap: wrap;
+  flex-direction: row;
+`;
+
+const DayCell = styled.TouchableOpacity<{
+  isToday: boolean;
+  isSelected: boolean;
+  isCurrentMonth: boolean;
+  backgroundColor: string;
+  teamColor: string;
+}>`
+  width: ${100 / 7}%;
+  aspect-ratio: 1;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 5px;
+  opacity: ${(props) => (props.isCurrentMonth ? 1 : 0.4)};
+  background-color: ${(props) => props.backgroundColor};
+  border-width: ${(props) => (props.isToday || props.isSelected ? 1 : 0)}px;
+  border-color: ${(props) => props.teamColor};
 `;
 
 // 3연전 관련 컴포넌트
@@ -360,24 +383,19 @@ const SavingsScreen = () => {
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
 
-  // calendarRef 추가 - 캘린더 컴포넌트 제어를 위한 참조
-  const calendarRef = useRef(null);
-
-  // 현재 표시 중인 달 상태 추가 (YYYY-MM 형식)
-  const [currentMonth, setCurrentMonth] = useState<string>(
-    new Date().toISOString().split("T")[0].substring(0, 7)
-  );
-
   // 상태 변수
   const [viewMode, setViewMode] = useState<ViewMode>("calendar");
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
+    formatYYYYMMDD(new Date())
   );
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
   const [gameSchedules, setGameSchedules] = useState<GameSchedule[]>([]);
   const [seriesMatches, setSeriesMatches] = useState<SeriesMatch[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSeriesLoading, setIsSeriesLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
+  const [calendarPermission, setCalendarPermission] = useState<boolean>(false);
 
   // 네비게이션 파라미터 처리
   useFocusEffect(
@@ -408,28 +426,18 @@ const SavingsScreen = () => {
     KIA: require("../../assets/icon.png"),
   };
 
-  // 월 이동 함수 - react-native-calendars 라이브러리의 메서드 활용
-  const moveMonth = (addition: number) => {
-    if (calendarRef.current) {
-      // 라이브러리의 내장 메서드 사용
-      calendarRef.current.addMonth(addition);
-    }
-  };
+  // 캘린더 권한 요청
+  useEffect(() => {
+    (async () => {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      setCalendarPermission(status === "granted");
 
-  // 오늘 날짜로 이동하는 함수
-  const goToToday = () => {
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
-    setSelectedDate(todayStr);
-
-    // 캘린더 이동 - 라이브러리의 내장 메서드 사용
-    if (calendarRef.current) {
-      calendarRef.current.setCurrentDate(todayStr);
-    }
-
-    // 현재 월 업데이트
-    setCurrentMonth(todayStr.substring(0, 7));
-  };
+      if (status === "granted") {
+        // 여기서 시스템 캘린더 이벤트를 가져오는 로직을 구현할 수 있습니다
+        // 예: const calendars = await Calendar.getCalendarsAsync();
+      }
+    })();
+  }, []);
 
   // 팀 ID 가져오기 함수
   const getTeamIdByName = (name: string): number => {
@@ -465,7 +473,7 @@ const SavingsScreen = () => {
     return logoMap[teamName] || teamLogos.NC;
   };
 
-  // 3연전 시리즈 식별 함수 - 현재/과거 경기 우선 정렬 로직 추가
+  // 3연전 시리즈 식별 함수
   const identifySeriesMatches = (games: GameSchedule[]): SeriesMatch[] => {
     const seriesMatchesData: SeriesMatch[] = [];
     const today = new Date();
@@ -579,7 +587,7 @@ const SavingsScreen = () => {
     return result;
   };
 
-  // API에서 경기 일정 가져오기 - 로깅 추가
+  // API에서 경기 일정 가져오기
   useEffect(() => {
     const fetchGameSchedules = async () => {
       try {
@@ -623,7 +631,7 @@ const SavingsScreen = () => {
     }
   }, [teamName]); // 팀 변경시 다시 불러오기
 
-  // 날짜별 경기 일정 및 마킹 데이터 생성 - 무작위 값 제거
+  // 날짜별 경기 일정 및 마킹 데이터 생성
   const markedDates = useMemo(() => {
     if (isLoading || !gameSchedules.length) return {};
 
@@ -663,27 +671,86 @@ const SavingsScreen = () => {
     return markedDates[selectedDate].fixture;
   }, [selectedDate, markedDates]);
 
-  // 월 변경 이벤트 핸들러
-  const handleMonthChange = (month) => {
-    if (month) {
-      const newMonth = `${month.year}-${String(month.month).padStart(2, "0")}`;
-      setCurrentMonth(newMonth);
+  // 캘린더 날짜 생성 함수
+  const generateCalendarDays = (month: Date) => {
+    const year = month.getFullYear();
+    const monthIndex = month.getMonth();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 해당 월의 첫 날과 마지막 날 구하기
+    const firstDayOfMonth = new Date(year, monthIndex, 1);
+    const lastDayOfMonth = new Date(year, monthIndex + 1, 0);
+
+    // 첫 주의 시작일 (이전 달의 일부 날짜 포함)
+    const startDate = new Date(firstDayOfMonth);
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+
+    // 마지막 주의 종료일 (다음 달의 일부 날짜 포함)
+    const endDate = new Date(lastDayOfMonth);
+    const remainingDays = 6 - endDate.getDay();
+    endDate.setDate(endDate.getDate() + remainingDays);
+
+    const days: CalendarDay[] = [];
+    let currentDate = new Date(startDate);
+
+    // 캘린더에 표시할 모든 날짜 생성
+    while (currentDate <= endDate) {
+      const dateString = formatYYYYMMDD(currentDate);
+
+      days.push({
+        date: new Date(currentDate),
+        dateString,
+        day: currentDate.getDate(),
+        month: currentDate.getMonth() + 1,
+        year: currentDate.getFullYear(),
+        isCurrentMonth: currentDate.getMonth() === monthIndex,
+        isToday: formatYYYYMMDD(currentDate) === formatYYYYMMDD(today),
+        isSelected: dateString === selectedDate,
+        marking: markedDates[dateString],
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
     }
+
+    return days;
   };
 
-  // CustomDay 컴포넌트
-  // CustomDay 컴포넌트 수정
-  const CustomDay = ({ date, state, marking, onPress }: CustomDayProps) => {
-    const isDisabled = state === "disabled";
+  // 현재 월 변경 시 날짜 다시 생성
+  useEffect(() => {
+    const days = generateCalendarDays(currentMonth);
+    setCalendarDays(days);
+  }, [currentMonth, markedDates, selectedDate]);
 
+  // 월 이동 함수
+  const moveMonth = (addition: number) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() + addition);
+    setCurrentMonth(newMonth);
+  };
+
+  // 요일 헤더 컴포넌트
+  const renderWeekdayHeader = () => {
+    const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+    return (
+      <WeekdayRow>
+        {weekdays.map((day) => (
+          <WeekdayText key={day}>{day}</WeekdayText>
+        ))}
+      </WeekdayRow>
+    );
+  };
+
+  // 날짜 셀 렌더링 함수
+  const renderDayCell = (day: CalendarDay) => {
     // 경기 결과에 따른 배경색과 라벨 설정
     let bgColor = "transparent";
     let statusLabel = "";
     let statusColor = "#333";
     let badgeBgColor = "transparent";
 
-    if (marking) {
-      const { gameResult } = marking;
+    if (day.marking) {
+      const { gameResult } = day.marking;
 
       switch (gameResult) {
         case "win":
@@ -719,50 +786,30 @@ const SavingsScreen = () => {
       }
     }
 
-    // 오늘 날짜 강조
-    const isToday = new Date().toISOString().split("T")[0] === date.dateString;
-    // 선택된 날짜 강조
-    const isSelected = selectedDate === date.dateString;
-
-    const todayStyle = isToday
-      ? {
-          borderWidth: 1,
-          borderColor: teamColor.primary,
-        }
-      : {};
-
-    const selectedStyle =
-      isSelected && !isToday
-        ? {
-            backgroundColor: bgColor || "#f0f0f0",
-            borderWidth: 1,
-            borderColor: teamColor.primary,
-          }
-        : { backgroundColor: bgColor };
+    // 선택된 날짜 또는 오늘 날짜는 배경색 변경
+    if (day.isSelected) {
+      bgColor = day.marking ? bgColor : "#f0f0f0";
+    }
 
     return (
-      <TouchableOpacity
-        onPress={() => onPress && onPress(date)}
-        style={{
-          width: "100%",
-          height: 60,
-          alignItems: "center",
-          justifyContent: "flex-start",
-          paddingTop: 5,
-          opacity: isDisabled ? 0.4 : 1,
-          ...todayStyle,
-          ...selectedStyle,
-        }}
+      <DayCell
+        key={day.dateString}
+        onPress={() => setSelectedDate(day.dateString)}
+        isToday={day.isToday}
+        isSelected={day.isSelected}
+        isCurrentMonth={day.isCurrentMonth}
+        backgroundColor={bgColor}
+        teamColor={teamColor.primary}
       >
         {/* 날짜 표시 */}
         <Text
           style={{
             fontSize: 14,
-            color: isDisabled ? "#ccc" : "#333",
-            fontWeight: isToday || isSelected ? "bold" : "normal",
+            color: day.isCurrentMonth ? "#333" : "#ccc",
+            fontWeight: day.isToday || day.isSelected ? "bold" : "normal",
           }}
         >
-          {date.day}
+          {day.day}
         </Text>
 
         {/* 경기 결과 */}
@@ -798,22 +845,23 @@ const SavingsScreen = () => {
           }}
         >
           {/* 적금 금액 */}
-          {marking?.amount !== null && marking?.amount !== undefined && (
-            <Text
-              style={{
-                fontSize: 10,
-                fontWeight: "bold",
-                color: teamColor.primary,
-              }}
-            >
-              {marking.amount.toLocaleString()}원
-            </Text>
-          )}
+          {day.marking?.amount !== null &&
+            day.marking?.amount !== undefined && (
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: "bold",
+                  color: teamColor.primary,
+                }}
+              >
+                {day.marking.amount.toLocaleString()}원
+              </Text>
+            )}
 
           {/* 팀 로고 */}
-          {marking?.teamLogo && (
+          {day.marking?.teamLogo && (
             <Image
-              source={marking.teamLogo}
+              source={day.marking.teamLogo}
               style={{
                 width: 15,
                 height: 15,
@@ -823,7 +871,42 @@ const SavingsScreen = () => {
             />
           )}
         </View>
-      </TouchableOpacity>
+      </DayCell>
+    );
+  };
+
+  // 커스텀 캘린더 렌더링
+  const renderCustomCalendar = () => {
+    return (
+      <CalendarContainer>
+        <CalendarHeaderContainer>
+          <MonthRow>
+            <TouchableOpacity
+              onPress={() => moveMonth(-1)}
+              style={{ padding: 10 }}
+            >
+              <Ionicons name="chevron-back" size={24} color="#666" />
+            </TouchableOpacity>
+            <MonthTitleContainer>
+              <MonthTitle>{`${currentMonth.getFullYear()}년 ${
+                currentMonth.getMonth() + 1
+              }월`}</MonthTitle>
+            </MonthTitleContainer>
+            <TouchableOpacity
+              onPress={() => moveMonth(1)}
+              style={{ padding: 10 }}
+            >
+              <Ionicons name="chevron-forward" size={24} color="#666" />
+            </TouchableOpacity>
+          </MonthRow>
+        </CalendarHeaderContainer>
+
+        {renderWeekdayHeader()}
+
+        <DaysContainer>
+          {calendarDays.map((day) => renderDayCell(day))}
+        </DaysContainer>
+      </CalendarContainer>
     );
   };
 
@@ -1001,74 +1084,7 @@ const SavingsScreen = () => {
             <Text>경기 일정을 불러오는데 실패했습니다.</Text>
           </View>
         ) : (
-          <Calendar
-            ref={calendarRef} // 캘린더 ref 설정
-            current={currentMonth + "-01"} // 현재 월에 맞게 설정
-            onDayPress={(day) => setSelectedDate(day.dateString)}
-            onMonthChange={handleMonthChange}
-            hideArrows={true} // 기본 화살표 숨기기 (커스텀 헤더 사용)
-            enableSwipeMonths={true} // 스와이프로 월 이동 활성화
-            dayComponent={({ date, state }) => (
-              <CustomDay
-                date={date}
-                state={state}
-                marking={markedDates[date.dateString]}
-                onPress={(selectedDate) =>
-                  setSelectedDate(selectedDate.dateString)
-                }
-              />
-            )}
-            theme={{
-              backgroundColor: "#ffffff",
-              calendarBackground: "#ffffff",
-              textSectionTitleColor: "#b6c1cd",
-              selectedDayBackgroundColor: teamColor.primary,
-              selectedDayTextColor: "#ffffff",
-              todayTextColor: teamColor.primary,
-              dayTextColor: "#2d4150",
-              textDisabledColor: "#d9e1e8",
-              monthTextColor: "transparent", // 헤더에서 직접 렌더링하므로 숨김
-              indicatorColor: teamColor.primary,
-              textDayHeaderFontWeight: "600",
-            }}
-            renderHeader={(date) => {
-              return (
-                <CalendarHeaderContainer>
-                  <MonthRow>
-                    <TouchableOpacity
-                      onPress={() => moveMonth(-1)} // 이전 달로 이동
-                      style={{ padding: 10 }}
-                    >
-                      <Ionicons name="chevron-back" size={24} color="#666" />
-                    </TouchableOpacity>
-
-                    <MonthTitleContainer>
-                      <MonthTitle>{`${date.getFullYear()}년 ${
-                        date.getMonth() + 1
-                      }월`}</MonthTitle>
-                    </MonthTitleContainer>
-
-                    <TouchableOpacity
-                      onPress={() => moveMonth(1)} // 다음 달로 이동
-                      style={{ padding: 10 }}
-                    >
-                      <Ionicons name="chevron-forward" size={24} color="#666" />
-                    </TouchableOpacity>
-                  </MonthRow>
-
-                  <TodayButtonContainer>
-                    <TodayButton
-                      teamColor={teamColor.primary}
-                      onPress={goToToday}
-                    >
-                      <Ionicons name="calendar" size={14} color="white" />
-                      <TodayButtonText>오늘</TodayButtonText>
-                    </TodayButton>
-                  </TodayButtonContainer>
-                </CalendarHeaderContainer>
-              );
-            }}
-          />
+          renderCustomCalendar()
         )}
       </CalendarCard>
 

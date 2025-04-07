@@ -11,23 +11,27 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCalendarsUsageDescription": "앱이 캘린더에 접근하여 적금 관련 일정을 표시하고 관리하기 위해 권한이 필요합니다.",
+        "NSRemindersUsageDescription": "앱이 미리 알림에 접근하여 적금 관련 알림을 설정하기 위해 권한이 필요합니다. (선택 사항)" // 필요시 추가
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-font"
-    ]
+    "plugins": ["expo-font", ["expo-calendar", {}]]
   }
 }

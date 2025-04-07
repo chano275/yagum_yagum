@@ -30,7 +30,6 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-native": "0.76.7",
-    "react-native-calendars": "^1.1310.0",
     "react-native-chart-kit": "^6.12.0",
     "react-native-gesture-handler": "~2.20.2",
     "react-native-reanimated": "^3.17.2",
@@ -47,7 +46,8 @@
     "stylis": "^4.3.6",
     "use-sync-external-store": "^1.4.0",
     "victory-native": "^41.16.1",
-    "zustand": "^5.0.3"
+    "zustand": "^5.0.3",
+    "expo-calendar": "~14.0.6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
