@@ -589,3 +589,79 @@ async def get_transaction_history(user_key, account_num, start_date, end_date, t
     except Exception as e:
         logger.error(f"거래 내역 조회 중 오류: {str(e)}")
         raise
+
+async def post_transfer_money(user_key, deposit_account_no, transaction_balance, withdrawal_account_no,text=None):
+    """
+    금융 API를 통해 계좌 거래 내역을 조회합니다.
+    
+    Args:
+        user_key (str): 사용자 키
+        deposit_account_no (str): 입금 계좌 번호
+        transaction_balance (str) : 이체 금액
+        withdrawal_account_no (str) : 출금 계좌 번호
+        text (str) : 입출금 메시지
+    
+    """
+    try:
+        # API 이름 설정
+        api_name = "updateDemandDepositAccountTransfer"
+        api_url = f"{SSAFY_API_BASE_URL}/edu/demandDeposit/updateDemandDepositAccountTransfer"
+        
+        # 헤더 생성
+        from utils.api_header_utils import generate_api_header
+        header = generate_api_header(
+            api_name=api_name,
+            user_key=user_key,
+            api_key=DEFAULT_API_KEY
+        )
+        
+        # 요청 데이터 구성
+        request_data = {
+            "Header": header,
+            "depositAccountNo" : deposit_account_no,
+            "transactionBalance" : transaction_balance,
+            "withdrawalAccountNo" : withdrawal_account_no,
+            "depositTransactionSummary" : text,
+            "withdrawalTransactionSummary" : text,
+        }
+        
+        logger.info(f"계좌 이체 요청: {withdrawal_account_no}에서 {deposit_account_no}로 {transaction_balance}원원")
+        
+        # API 요청
+        response = requests.post(
+            api_url,
+            json=request_data,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        logger.info(f"API 응답 상태 코드: {response.status_code}")
+        
+        # 응답 확인
+        if response.status_code in [200, 201]:
+            try:
+                response_data = response.json()
+                
+                # 응답 코드 확인
+                header = response_data.get("Header", {})
+                response_code = header.get("responseCode")
+                
+                if response_code != "H0000":
+                    response_message = header.get("responseMessage", "알 수 없는 오류")
+                    logger.error(f"API 오류 응답: {response_code} - {response_message}")
+                    raise Exception(f"금융 API 오류: {response_code} - {response_message}")
+                
+                # 거래 내역 추출
+                transaction_list = response_data.get("REC", [])
+                
+                return transaction_list
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON 파싱 오류: {str(e)}")
+                raise Exception(f"API 응답 파싱 오류: {str(e)}")
+        else:
+            logger.error(f"API 응답 오류: {response.status_code} - {response.text}")
+            raise Exception(f"금융 API 응답 오류: {response.status_code}")
+            
+    except Exception as e:
+        logger.error(f"계좌 이체 중 오류: {str(e)}")
+        raise
