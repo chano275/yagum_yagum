@@ -1,31 +1,47 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useWindowDimensions, SafeAreaView, ScrollView, Platform, Pressable, View, Text, Animated, Image, Alert, ActivityIndicator, TouchableOpacity, Dimensions } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import styled from 'styled-components/native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  useWindowDimensions,
+  SafeAreaView,
+  ScrollView,
+  Platform,
+  Pressable,
+  View,
+  Text,
+  Animated,
+  Image,
+  Alert,
+  ActivityIndicator,
+  TouchableOpacity,
+  Dimensions,
+} from "react-native";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import styled from "styled-components/native";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   AppWrapper,
   MobileContainer,
   getAdjustedWidth,
   StyledProps,
-  BASE_MOBILE_WIDTH
-} from '../constants/layout';
-import * as Haptics from 'expo-haptics';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useStore } from '../store/useStore';
-import * as Clipboard from 'expo-clipboard';
-import Toast from 'react-native-root-toast';
-import { useAccountStore } from '../store/useStore';
-import { RootStackParamList } from '../navigation/AppNavigator';
+  BASE_MOBILE_WIDTH,
+} from "../constants/layout";
+import * as Haptics from "expo-haptics";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useStore } from "../store/useStore";
+import * as Clipboard from "expo-clipboard";
+import Toast from "react-native-root-toast";
+import { useAccountStore } from "../store/useStore";
+import { RootStackParamList } from "../navigation/AppNavigator";
+import { useTeam } from "../context/TeamContext";
+import { teamColors, teamIdToCode, teamNameToCode } from "../styles/teamColors";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Home">;
 
 const Container = styled.View<StyledProps>`
   flex: 1;
   width: 100%;
   padding: ${({ width }) => {
-    const baseWidth = Platform.OS === 'web' ? BASE_MOBILE_WIDTH : width;
+    const baseWidth = Platform.OS === "web" ? BASE_MOBILE_WIDTH : width;
     return baseWidth * 0.045;
   }}px;
 `;
@@ -34,7 +50,7 @@ const Header = styled.View<StyledProps>`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: ${props => props.width * 0.04}px;
+  margin-bottom: ${(props) => props.width * 0.04}px;
 `;
 
 const HeaderTitle = styled.Text<StyledProps>`
@@ -54,14 +70,14 @@ const IconButton = styled.TouchableOpacity<StyledProps>`
 `;
 
 const ServiceCardWrapper = styled.TouchableOpacity<StyledProps>`
-  background-color: #F0F2FF;
+  background-color: #f0f2ff;
   border-radius: ${({ width }) => width * 0.025}px;
-  padding: ${props => props.width * 0.045}px;
-  margin-bottom: ${props => props.width * 0.025}px;
+  padding: ${(props) => props.width * 0.045}px;
+  margin-bottom: ${(props) => props.width * 0.025}px;
   width: 100%;
   ${Platform.select({
     ios: {
-      shadowColor: '#2D5BFF',
+      shadowColor: "#2D5BFF",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.08,
       shadowRadius: 4,
@@ -70,37 +86,40 @@ const ServiceCardWrapper = styled.TouchableOpacity<StyledProps>`
       elevation: 2,
     },
     web: {
-      boxShadow: '0 2px 4px rgba(45, 91, 255, 0.08)'
-    }
+      boxShadow: "0 2px 4px rgba(45, 91, 255, 0.08)",
+    },
   })}
 `;
 
-const webStyles = Platform.OS === 'web' ? {
-  serviceCard: {
-    transition: 'all 0.2s ease-in-out',
-    ':hover': {
-      transform: 'scale(1.01)',
-      boxShadow: '0 4px 12px rgba(107, 119, 248, 0.15)',
-      cursor: 'pointer'
-    }
-  },
-  startButton: {
-    transition: 'all 0.2s ease-in-out',
-    ':hover': {
-      transform: 'scale(1.02)',
-      opacity: 0.95,
-      cursor: 'pointer'
-    }
-  },
-  iconButton: {
-    transition: 'all 0.2s ease-in-out',
-    ':hover': {
-      transform: 'scale(1.1)',
-      opacity: 0.8,
-      cursor: 'pointer'
-    }
-  }
-} : {};
+const webStyles =
+  Platform.OS === "web"
+    ? {
+        serviceCard: {
+          transition: "all 0.2s ease-in-out",
+          ":hover": {
+            transform: "scale(1.01)",
+            boxShadow: "0 4px 12px rgba(107, 119, 248, 0.15)",
+            cursor: "pointer",
+          },
+        },
+        startButton: {
+          transition: "all 0.2s ease-in-out",
+          ":hover": {
+            transform: "scale(1.02)",
+            opacity: 0.95,
+            cursor: "pointer",
+          },
+        },
+        iconButton: {
+          transition: "all 0.2s ease-in-out",
+          ":hover": {
+            transform: "scale(1.1)",
+            opacity: 0.8,
+            cursor: "pointer",
+          },
+        },
+      }
+    : {};
 
 const ServiceTitleContainer = styled.View`
   flex-direction: row;
@@ -136,7 +155,7 @@ const ServiceTitle = styled.Text<StyledProps>`
 `;
 
 const ColoredText = styled.Text`
-  color: #2D5BFF;
+  color: #2d5bff;
   font-weight: bold;
 `;
 
@@ -185,24 +204,24 @@ const SectionTitle = styled.Text<StyledProps>`
 const AuthCard = styled.View<StyledProps>`
   background-color: white;
   border-radius: ${({ width }) => width * 0.025}px;
-  padding: ${props => props.width * 0.045}px;
-  margin-bottom: ${props => props.width * 0.05}px;
+  padding: ${(props) => props.width * 0.045}px;
+  margin-bottom: ${(props) => props.width * 0.05}px;
   width: 100%;
-  min-height: ${props => props.width * 0.52}px;
+  min-height: ${(props) => props.width * 0.52}px;
   ${Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-  },
-  android: {
-    elevation: 3,
-  },
-  web: {
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.08)'
-  }
-})}
+    ios: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 6,
+    },
+    android: {
+      elevation: 3,
+    },
+    web: {
+      boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.08)",
+    },
+  })}
 `;
 
 const AuthCardContent = styled.View`
@@ -321,7 +340,7 @@ const ButtonContainer = styled.View`
 
 const ActionButton = styled.TouchableOpacity<StyledProps>`
   flex: 1;
-  background-color: #F0F2FF;
+  background-color: #f0f2ff;
   padding: ${({ width }) => width * 0.035}px;
   border-radius: ${({ width }) => width * 0.02}px;
   align-items: center;
@@ -329,7 +348,7 @@ const ActionButton = styled.TouchableOpacity<StyledProps>`
 
 const ButtonLabel = styled.Text<StyledProps>`
   font-size: ${({ width }) => width * 0.036}px;
-  color: #2D5BFF;
+  color: #2d5bff;
   font-weight: 600;
 `;
 
@@ -340,6 +359,7 @@ const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const { isLoggedIn } = useStore();
   const { accountInfo, isLoading, error, fetchAccountInfo } = useAccountStore();
+  const { setTeamData } = useTeam();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideUpAnim = useRef(new Animated.Value(50)).current;
@@ -358,15 +378,72 @@ const HomeScreen = () => {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 800,
-        useNativeDriver: true
+        useNativeDriver: true,
       }),
       Animated.timing(slideUpAnim, {
         toValue: 0,
         duration: 800,
-        useNativeDriver: true
-      })
+        useNativeDriver: true,
+      }),
     ]).start();
   }, [fadeAnim, slideUpAnim]);
+
+  // 계좌 정보를 받아온 후 팀 정보 설정
+  useEffect(() => {
+    if (
+      isLoggedIn &&
+      accountInfo?.savings_accounts &&
+      accountInfo.savings_accounts.length > 0
+    ) {
+      // 적금 계좌가 있는 경우 팀 정보 설정
+      const account = accountInfo.savings_accounts[0];
+
+      // SSG 랜더스 팀 인식 (팀 이름에서 확인)
+      if (
+        account.team_name &&
+        (account.team_name.includes("SSG") ||
+          account.team_name.includes("랜더스"))
+      ) {
+        console.log("[HomeScreen] SSG 랜더스 팀 감지:", account.team_name);
+
+        // SSG 랜더스 팀 데이터 설정
+        setTeamData({
+          team_id: 6, // SSG 랜더스 ID
+          team_name: account.team_name,
+          team_color: "#E10600", // 빨간색
+          team_color_secondary: "#FFFFFF",
+          team_color_background: "#FFB81C",
+        });
+      }
+      // 다른 팀인 경우
+      else if (account.team_name) {
+        const teamCode = teamNameToCode[account.team_name] || "KIA";
+        console.log(
+          "[HomeScreen] 팀 감지:",
+          account.team_name,
+          "코드:",
+          teamCode
+        );
+
+        // 팀 데이터 설정
+        setTeamData({
+          team_id: Object.keys(teamIdToCode).find(
+            (key) => teamIdToCode[Number(key)] === teamCode
+          )
+            ? Number(
+                Object.keys(teamIdToCode).find(
+                  (key) => teamIdToCode[Number(key)] === teamCode
+                )
+              )
+            : 1,
+          team_name: account.team_name,
+          team_color: teamColors[teamCode]?.primary || "#2D5BFF",
+          team_color_secondary: teamColors[teamCode]?.secondary || "#FFFFFF",
+          team_color_background: teamColors[teamCode]?.background || "#FFFFFF",
+        });
+      }
+    }
+  }, [isLoggedIn, accountInfo]);
 
   const onFirstCardPress = () => {
     // 카드 애니메이션 먼저 실행
@@ -374,15 +451,15 @@ const HomeScreen = () => {
       Animated.timing(firstCardScale, {
         toValue: 0.98,
         duration: 150,
-        useNativeDriver: true
+        useNativeDriver: true,
       }),
       Animated.timing(firstCardScale, {
         toValue: 1,
         duration: 150,
-        useNativeDriver: true
-      })
+        useNativeDriver: true,
+      }),
     ]).start(() => {
-      if (Platform.OS !== 'web') {
+      if (Platform.OS !== "web") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       handleComponentPress(0);
@@ -395,15 +472,15 @@ const HomeScreen = () => {
       Animated.timing(recommendCardScale, {
         toValue: 0.97,
         duration: 100,
-        useNativeDriver: true
+        useNativeDriver: true,
       }),
       Animated.timing(recommendCardScale, {
         toValue: 1,
         duration: 100,
-        useNativeDriver: true
-      })
+        useNativeDriver: true,
+      }),
     ]).start(() => {
-      if (Platform.OS !== 'web') {
+      if (Platform.OS !== "web") {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       handleComponentPress(2);
@@ -411,13 +488,14 @@ const HomeScreen = () => {
   };
 
   const onStartButtonPress = () => {
-    if (Platform.OS !== 'web') {
+    if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    navigation.navigate('Login');
+    navigation.navigate("Login");
   };
 
-  const AnimatedServiceCard = Animated.createAnimatedComponent(ServiceCardWrapper);
+  const AnimatedServiceCard =
+    Animated.createAnimatedComponent(ServiceCardWrapper);
   const AnimatedStartButton = Animated.createAnimatedComponent(StartButton);
   const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
@@ -427,11 +505,11 @@ const HomeScreen = () => {
       <AnimatedServiceCard
         width={width}
         style={[
-          { 
-            backgroundColor: '#F0F2FF',
+          {
+            backgroundColor: "#F0F2FF",
             ...Platform.select({
               ios: {
-                shadowColor: '#2D5BFF',
+                shadowColor: "#2D5BFF",
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.08,
                 shadowRadius: 4,
@@ -440,11 +518,11 @@ const HomeScreen = () => {
                 elevation: 2,
               },
               web: {
-                boxShadow: '0 2px 4px rgba(45, 91, 255, 0.08)'
-              }
-            })
+                boxShadow: "0 2px 4px rgba(45, 91, 255, 0.08)",
+              },
+            }),
           },
-          { transform: [{ scale: firstCardScale }] }
+          { transform: [{ scale: firstCardScale }] },
         ]}
         onPress={onFirstCardPress}
         activeOpacity={1}
@@ -452,7 +530,7 @@ const HomeScreen = () => {
         <ServiceTitleContainer>
           <ContentContainer>
             <ServiceIcon
-              source={require('../../assets/baseball.png')}
+              source={require("../../assets/baseball.png")}
               style={{ width: 40, height: 40 }}
               resizeMode="contain"
             />
@@ -461,17 +539,19 @@ const HomeScreen = () => {
                 {isLoggedIn ? (
                   <>
                     <Text style={{ fontSize: width * 0.034 }}>
-                      <BlackText>{accountInfo?.user_name || '김싸피'}</BlackText>
+                      <BlackText>
+                        {accountInfo?.user_name || "김싸피"}
+                      </BlackText>
                       <LightText>님을 위한 맞춤 서비스,</LightText>
                     </Text>
-                    {'\n'}
+                    {"\n"}
                     <ColoredText>야금야금</ColoredText>
                     <BlackText>적금</BlackText>
                   </>
                 ) : (
                   <>
                     <Text style={{ fontSize: width * 0.036 }}>
-                      나만의 응원팀으로{'\n'}
+                      나만의 응원팀으로{"\n"}
                       야금야금 적금 시작하기
                     </Text>
                   </>
@@ -479,7 +559,11 @@ const HomeScreen = () => {
               </ServiceTitle>
             </ServiceTextContainer>
           </ContentContainer>
-          <MaterialIcons name="chevron-right" size={24} color="rgba(0, 0, 0, 0.25)" />
+          <MaterialIcons
+            name="chevron-right"
+            size={24}
+            color="rgba(0, 0, 0, 0.25)"
+          />
         </ServiceTitleContainer>
       </AnimatedServiceCard>
     );
@@ -494,67 +578,87 @@ const HomeScreen = () => {
             {isLoggedIn ? (
               <>
                 <AccountRow>
-                  <AccountIcon source={require('../../assets/shinhan-icon.png')} />
+                  <AccountIcon
+                    source={require("../../assets/shinhan-icon.png")}
+                  />
                   <AccountNumberContainer>
-                    <AccountTypeText width={width}>입출금 통장(자유예금)</AccountTypeText>
+                    <AccountTypeText width={width}>
+                      입출금 통장(자유예금)
+                    </AccountTypeText>
                     <AccountNumberRow>
-                      <AccountNumberText width={width}>{accountInfo?.source_account.account_num || '111-222-333333'}</AccountNumberText>
-                      <CopyButton onPress={async () => {
-                        await Clipboard.setStringAsync(accountInfo?.source_account.account_num || '111-222-333333');
-                        Toast.show('✓ 계좌번호가 복사되었습니다', {
-                          duration: Toast.durations.SHORT,
-                          position: Toast.positions.BOTTOM,
-                          shadow: true,
-                          animation: true,
-                          hideOnPress: true,
-                          delay: 0,
-                          backgroundColor: 'rgba(45, 45, 45, 0.95)',
-                          textColor: '#ffffff',
-                          opacity: 0.95,
-                          containerStyle: {
-                            borderRadius: 16,
-                            paddingHorizontal: 20,
-                            paddingVertical: 14,
-                            marginBottom: 40,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 8,
-                            ...Platform.select({
-                              ios: {
-                                shadowColor: '#000',
-                                shadowOffset: { width: 0, height: 4 },
-                                shadowOpacity: 0.15,
-                                shadowRadius: 8,
-                              },
-                              android: {
-                                elevation: 6,
-                              },
-                              web: {
-                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                              }
-                            })
-                          }
-                        });
-                      }}>
-                        <Ionicons name="copy-outline" size={16} color="rgba(0, 0, 0, 0.35)" />
+                      <AccountNumberText width={width}>
+                        {accountInfo?.source_account.account_num ||
+                          "111-222-333333"}
+                      </AccountNumberText>
+                      <CopyButton
+                        onPress={async () => {
+                          await Clipboard.setStringAsync(
+                            accountInfo?.source_account.account_num ||
+                              "111-222-333333"
+                          );
+                          Toast.show("✓ 계좌번호가 복사되었습니다", {
+                            duration: Toast.durations.SHORT,
+                            position: Toast.positions.BOTTOM,
+                            shadow: true,
+                            animation: true,
+                            hideOnPress: true,
+                            delay: 0,
+                            backgroundColor: "rgba(45, 45, 45, 0.95)",
+                            textColor: "#ffffff",
+                            opacity: 0.95,
+                            containerStyle: {
+                              borderRadius: 16,
+                              paddingHorizontal: 20,
+                              paddingVertical: 14,
+                              marginBottom: 40,
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 8,
+                              ...Platform.select({
+                                ios: {
+                                  shadowColor: "#000",
+                                  shadowOffset: { width: 0, height: 4 },
+                                  shadowOpacity: 0.15,
+                                  shadowRadius: 8,
+                                },
+                                android: {
+                                  elevation: 6,
+                                },
+                                web: {
+                                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                                },
+                              }),
+                            },
+                          });
+                        }}
+                      >
+                        <Ionicons
+                          name="copy-outline"
+                          size={16}
+                          color="rgba(0, 0, 0, 0.35)"
+                        />
                       </CopyButton>
                     </AccountNumberRow>
                   </AccountNumberContainer>
                 </AccountRow>
                 <BalanceRow>
-                  <Balance width={width}>{accountInfo?.source_account.total_amount.toLocaleString()}원</Balance>
+                  <Balance width={width}>
+                    {accountInfo?.source_account.total_amount.toLocaleString()}
+                    원
+                  </Balance>
                 </BalanceRow>
               </>
             ) : (
               <AuthCardHeader width={width}>
                 <View style={{ flex: 1 }}>
                   <AuthCardText width={width}>
-                    간편하게 <Text style={{ color: '#2D5BFF' }}>본인인증</Text>하고{'\n'}
+                    간편하게 <Text style={{ color: "#2D5BFF" }}>본인인증</Text>
+                    하고{"\n"}
                     서비스를 이용해보세요.
                   </AuthCardText>
                 </View>
                 <AuthCardImage
-                  source={require('../../assets/verification.png')}
+                  source={require("../../assets/verification.png")}
                   width={width}
                   resizeMode="contain"
                 />
@@ -587,15 +691,18 @@ const HomeScreen = () => {
   const handleComponentPress = (index: number) => {
     if ((index === 0 || index === 2) && isLoggedIn) {
       // 적금 계좌가 있는지 확인
-      if (accountInfo?.savings_accounts && accountInfo.savings_accounts.length > 0) {
+      if (
+        accountInfo?.savings_accounts &&
+        accountInfo.savings_accounts.length > 0
+      ) {
         // 적금 계좌가 있으면 Main으로 이동
-        navigation.navigate('Main');
+        navigation.navigate("Main");
       } else {
         // 적금 계좌가 없으면 가입 화면으로 이동
-        navigation.navigate('SavingsJoin');
+        navigation.navigate("SavingsJoin");
       }
     } else if ((index === 0 || index === 2) && !isLoggedIn) {
-      navigation.navigate('Login');
+      navigation.navigate("Login");
     }
   };
 
@@ -604,10 +711,10 @@ const HomeScreen = () => {
       <AppWrapper>
         <MobileContainer width={width}>
           <LinearGradient
-            colors={['#FFFFFF', '#E6EFFE']}
+            colors={["#FFFFFF", "#E6EFFE"]}
             locations={[0.19, 1.0]}
             style={{
-              position: 'absolute',
+              position: "absolute",
               left: 0,
               right: 0,
               top: 0,
@@ -620,12 +727,12 @@ const HomeScreen = () => {
                 { flex: 1 },
                 {
                   opacity: fadeAnim,
-                  transform: [{ translateY: slideUpAnim }]
-                }
+                  transform: [{ translateY: slideUpAnim }],
+                },
               ]}
               contentContainerStyle={{
                 flexGrow: 1,
-                width: '100%'
+                width: "100%",
               }}
             >
               <Container width={width}>
@@ -633,10 +740,18 @@ const HomeScreen = () => {
                   <HeaderTitle width={width}>홈</HeaderTitle>
                   <IconContainer>
                     <IconButton width={width}>
-                      <MaterialIcons name="chat-bubble-outline" size={iconSize} color="black" />
+                      <MaterialIcons
+                        name="chat-bubble-outline"
+                        size={iconSize}
+                        color="black"
+                      />
                     </IconButton>
                     <IconButton width={width}>
-                      <MaterialIcons name="mic-none" size={iconSize} color="black" />
+                      <MaterialIcons
+                        name="mic-none"
+                        size={iconSize}
+                        color="black"
+                      />
                     </IconButton>
                     <IconButton width={width} onPress={onStartButtonPress}>
                       <MaterialIcons
@@ -655,76 +770,151 @@ const HomeScreen = () => {
                   <AnimatedServiceCard
                     width={width}
                     style={[
-                      { backgroundColor: '#FFFFFF' },
-                      { transform: [{ scale: recommendCardScale }] }
+                      { backgroundColor: "#FFFFFF" },
+                      { transform: [{ scale: recommendCardScale }] },
                     ]}
                     onPress={onRecommendCardPress}
                     activeOpacity={1}
                   >
-                    <SectionTitle width={width} style={{ marginBottom: width * 0.005 }}>추천</SectionTitle>
-                    {isLoggedIn && accountInfo?.savings_accounts && accountInfo.savings_accounts.length > 0 ? (
+                    <SectionTitle
+                      width={width}
+                      style={{ marginBottom: width * 0.005 }}
+                    >
+                      추천
+                    </SectionTitle>
+                    {isLoggedIn &&
+                    accountInfo?.savings_accounts &&
+                    accountInfo.savings_accounts.length > 0 ? (
                       <View style={{ padding: 10 }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                          <Text style={{ fontSize: width * 0.045, fontWeight: 'bold', color: '#333' }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            justifyContent: "space-between",
+                            marginBottom: 10,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: width * 0.045,
+                              fontWeight: "bold",
+                              color: "#333",
+                            }}
+                          >
                             {accountInfo.savings_accounts[0].team_name} 적금
                           </Text>
-                          <Text style={{ fontSize: width * 0.04, color: '#666' }}>
+                          <Text
+                            style={{ fontSize: width * 0.04, color: "#666" }}
+                          >
                             {accountInfo.savings_accounts[0].account_num}
                           </Text>
                         </View>
-                        
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                          <Text style={{ fontSize: width * 0.04, color: '#666' }}>현재 적립액</Text>
-                          <Text style={{ fontSize: width * 0.04, fontWeight: 'bold', color: '#333' }}>
-                            {accountInfo.savings_accounts[0].total_amount.toLocaleString()}원
+
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            justifyContent: "space-between",
+                            marginBottom: 10,
+                          }}
+                        >
+                          <Text
+                            style={{ fontSize: width * 0.04, color: "#666" }}
+                          >
+                            현재 적립액
+                          </Text>
+                          <Text
+                            style={{
+                              fontSize: width * 0.04,
+                              fontWeight: "bold",
+                              color: "#333",
+                            }}
+                          >
+                            {accountInfo.savings_accounts[0].total_amount.toLocaleString()}
+                            원
                           </Text>
                         </View>
-                        
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                          <Text style={{ fontSize: width * 0.04, color: '#666' }}>목표 금액</Text>
-                          <Text style={{ fontSize: width * 0.04, fontWeight: 'bold', color: '#333' }}>
-                            {accountInfo.savings_accounts[0].saving_goal.toLocaleString()}원
+
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            justifyContent: "space-between",
+                            marginBottom: 10,
+                          }}
+                        >
+                          <Text
+                            style={{ fontSize: width * 0.04, color: "#666" }}
+                          >
+                            목표 금액
+                          </Text>
+                          <Text
+                            style={{
+                              fontSize: width * 0.04,
+                              fontWeight: "bold",
+                              color: "#333",
+                            }}
+                          >
+                            {accountInfo.savings_accounts[0].saving_goal.toLocaleString()}
+                            원
                           </Text>
                         </View>
-                        
+
                         <View style={{ marginBottom: 5 }}>
-                          <Text style={{ fontSize: width * 0.035, color: '#666', marginBottom: 5 }}>
-                            목표 달성률: {accountInfo.savings_accounts[0].progress_percentage}%
+                          <Text
+                            style={{
+                              fontSize: width * 0.035,
+                              color: "#666",
+                              marginBottom: 5,
+                            }}
+                          >
+                            목표 달성률:{" "}
+                            {
+                              accountInfo.savings_accounts[0]
+                                .progress_percentage
+                            }
+                            %
                           </Text>
-                          <View style={{ 
-                            height: 10, 
-                            backgroundColor: '#EEEEEE', 
-                            borderRadius: 5, 
-                            overflow: 'hidden' 
-                          }}>
-                            <View style={{ 
-                              width: `${accountInfo.savings_accounts[0].progress_percentage}%`, 
-                              height: '100%', 
-                              backgroundColor: '#2D5BFF' 
-                            }} />
+                          <View
+                            style={{
+                              height: 10,
+                              backgroundColor: "#EEEEEE",
+                              borderRadius: 5,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <View
+                              style={{
+                                width: `${accountInfo.savings_accounts[0].progress_percentage}%`,
+                                height: "100%",
+                                backgroundColor: "#2D5BFF",
+                              }}
+                            />
                           </View>
                         </View>
                       </View>
                     ) : (
                       <ServiceTitleContainer>
                         <ServiceTextContainer width={width}>
-                          <ServiceTitle width={width} style={{ marginBottom: 4 }}>
-                            <ColoredText style={{ fontWeight: '700' }}>야금야금</ColoredText>
+                          <ServiceTitle
+                            width={width}
+                            style={{ marginBottom: 4 }}
+                          >
+                            <ColoredText style={{ fontWeight: "700" }}>
+                              야금야금
+                            </ColoredText>
                           </ServiceTitle>
                           <ServiceDescription width={width}>
                             지루했던 금융에
-                            {'\n'}
+                            {"\n"}
                             야구의 재미를 더하다!
                           </ServiceDescription>
                         </ServiceTextContainer>
                         <ServiceIcon
-                          source={require('../../assets/recommend.png')}
+                          source={require("../../assets/recommend.png")}
                           resizeMode="contain"
                           style={{
                             width: 170,
                             height: 170,
-                            marginLeft: 'auto',
-                            marginRight: -10
+                            marginLeft: "auto",
+                            marginRight: -10,
                           }}
                         />
                       </ServiceTitleContainer>
@@ -732,15 +922,15 @@ const HomeScreen = () => {
                   </AnimatedServiceCard>
                 </RecommendSection>
                 {isLoggedIn && (
-                  <TouchableOpacity 
-                    style={{ 
-                      backgroundColor: '#2D5BFF',
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: "#2D5BFF",
                       padding: width * 0.03,
                       borderRadius: width * 0.02,
-                      marginTop: width * 0.03
+                      marginTop: width * 0.03,
                     }}
                     onPress={() => {
-                      navigation.navigate('Service');
+                      navigation.navigate("Service");
                     }}
                   >
                     <ButtonLabel width={width} style={{ color: "#FFFFFF" }}>
@@ -757,4 +947,4 @@ const HomeScreen = () => {
   );
 };
 
-export default HomeScreen; 
+export default HomeScreen;
