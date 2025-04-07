@@ -101,7 +101,7 @@ def get_article_content(article_url):
     }
 
 # 뉴스 기사 크롤링
-def crawl_news(date, team):
+def crawl_news(date: str, team: str) -> list:
     team_mapping = {
     "HT": "KIA",
     "SS": "삼성",
