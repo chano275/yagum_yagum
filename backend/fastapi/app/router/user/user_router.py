@@ -295,7 +295,8 @@ async def read_transaction_history(
                 "transactionDate": transaction.get("transactionDate"),
                 "balance": transaction.get("transactionBalance"),
                 "summary" :transaction.get("transactionSummary"),
-                "afterBalance" : transaction.get("transactionAfterBalance")
+                "afterBalance" : transaction.get("transactionAfterBalance"),
+                "transactionType" : transaction.get("transactionTypeName")
             })
         
         logger.info(f"거래 내역 조회 완료: {len(result)}건")
