@@ -159,10 +159,20 @@ class MissionInterestDetail(BaseModel):
     CURRENT_COUNT: int
     ADDITIONAL_RATE: float
 
+class MissionDetail(BaseModel):
+    mission_id: int
+    mission_name: str
+    mission_rate: float
+    current_count: int
+    max_count: int
+    is_completed: bool
+
 class AccountInterestDetailResponse(BaseModel):
-    base_interest_rate: float  # 기본 이자율
-    total_mission_rate: float  # 모든 미션의 비례적 이자율
-    mission_details: List[MissionInterestDetail]
+    base_interest_rate: float
+    mission_interest_rate: float
+    total_interest_rate: float
+    total_mission_rate: float  # 추가된 필드
+    mission_details: List[MissionDetail]  # 추가된 필드
 
 
 # 거래 메시지 기본 모델

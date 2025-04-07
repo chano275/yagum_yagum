@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional,Dict,Any
+from typing import List, Optional, Dict, Any
 from datetime import date
 import logging
 import os
@@ -17,6 +17,20 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# 현재 로그인한 사용자의 계정 가져오기 헬퍼 함수
+async def get_user_account(db: Session, current_user: models.User):
+    """로그인한 사용자의 첫 번째 계정을 반환합니다."""
+    accounts = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).all()
+    
+    if not accounts:
+        logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="연결된 계정이 없습니다"
+        )
+    
+    return accounts[0]
 
 @router.post("/create", response_model=account_schema.AccountCreateResponse)
 async def create_account(
@@ -251,19 +265,11 @@ async def get_my_transfers(
     try:
         logger.info(f"로그인 사용자의 송금 내역 조회: 사용자 ID {current_user.USER_ID}")
         
-        # 사용자의 계정 조회 (첫 번째 계정 사용)
-        accounts = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).all()
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
+        account_id = account.ACCOUNT_ID
         
-        if not accounts:
-            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="연결된 계정이 없습니다"
-            )
-        
-        # 첫 번째 계정의 송금 내역 조회
-        account_id = accounts[0].ACCOUNT_ID
-        logger.info(f"사용자의 첫 번째 계정으로 송금 내역 조회: 계정 ID {account_id}")
+        logger.info(f"사용자의 계정으로 송금 내역 조회: 계정 ID {account_id}")
         
         # 송금 내역 조회
         transfers = account_crud.get_account_transfers(db, account_id, start_date, end_date)
@@ -303,19 +309,11 @@ async def get_my_daily_savings_detail(
             
         logger.info(f"조회 날짜: {date}")
         
-        # 사용자의 계정 조회 (첫 번째 계정 사용)
-        accounts = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).all()
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
+        account_id = account.ACCOUNT_ID
         
-        if not accounts:
-            logger.warning(f"사용자 ID {current_user.USER_ID}에 연결된 계정이 없습니다")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="연결된 계정이 없습니다"
-            )
-        
-        # 첫 번째 계정의 상세 내역 조회
-        account_id = accounts[0].ACCOUNT_ID
-        logger.info(f"사용자의 첫 번째 계정으로 상세 내역 조회: 계정 ID {account_id}")
+        logger.info(f"사용자의 계정으로 상세 내역 조회: 계정 ID {account_id}")
         
         # 해당 날짜의 적금 내역 조회
         daily_savings = db.query(models.DailySaving).filter(
@@ -400,31 +398,17 @@ async def get_my_daily_savings_detail(
             detail=f"적금 상세 내역 조회 중 오류 발생: {str(e)}"
         )
 
-# 특정 계정 조회
-from router.mission import mission_crud
-
-@router.get("/{account_id}", response_model=account_schema.AccountDetailResponse)
-async def read_account(
-    account_id: int, 
+@router.get("/detail", response_model=account_schema.AccountDetailResponse)
+async def read_account_detail(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"계정 상세 정보 조회 요청: 계정 ID {account_id}")
+        logger.info(f"계정 상세 정보 조회 요청: 사용자 ID {current_user.USER_ID}")
         
-        # 계정 조회
-        account = account_crud.get_account_by_id(db, account_id)
-        if not account:
-            logger.warning(f"계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        # 권한 확인: 본인 계정만 조회 가능
-        if account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
+        account_id = account.ACCOUNT_ID
         
         # 이자율 정보 계산
         from router.mission import mission_crud  # 순환 참조 방지를 위해 여기서 import
@@ -469,32 +453,47 @@ async def read_account(
             detail=f"계정 상세 정보 조회 중 오류 발생: {str(e)}"
         )
 
-@router.get("/{account_id}/interest-details", response_model=account_schema.AccountInterestDetailResponse)
+@router.get("/interest-details", response_model=account_schema.AccountInterestDetailResponse)
 async def get_account_interest_details(
-    account_id: int, 
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"계정 이자율 상세 정보 조회 요청: 계정 ID {account_id}")
+        logger.info(f"계정 이자율 상세 정보 조회 요청: 사용자 ID {current_user.USER_ID}")
         
-        # 계정 조회
-        account = account_crud.get_account_by_id(db, account_id)
-        if not account:
-            logger.warning(f"계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        # 권한 확인: 본인 계정만 조회 가능
-        if account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
+        account_id = account.ACCOUNT_ID
         
         # 이자율 정보 계산
         from router.mission import mission_crud  # 순환 참조 방지를 위해 여기서 import
         interest_details = mission_crud.calculate_account_interest_details(db, account_id)
+        
+        # 필수 필드가 없어서 발생하는 에러 해결을 위해 필드 추가
+        if 'total_mission_rate' not in interest_details:
+            # total_mission_rate는 mission_interest_rate와 동일하게 처리
+            interest_details['total_mission_rate'] = interest_details.get('mission_interest_rate', 0)
+        
+        if 'mission_details' not in interest_details:
+            # 미션 상세 정보 조회
+            used_missions = db.query(models.UsedMission).filter(
+                models.UsedMission.ACCOUNT_ID == account_id
+            ).all()
+            
+            mission_details = []
+            for used_mission in used_missions:
+                mission = used_mission.mission
+                mission_detail = {
+                    "mission_id": mission.MISSION_ID,
+                    "mission_name": mission.MISSION_NAME,
+                    "mission_rate": mission.MISSION_RATE,
+                    "current_count": used_mission.COUNT,
+                    "max_count": used_mission.MAX_COUNT,
+                    "is_completed": used_mission.COUNT >= used_mission.MAX_COUNT
+                }
+                mission_details.append(mission_detail)
+            
+            interest_details['mission_details'] = mission_details
         
         return interest_details
         
@@ -507,30 +506,18 @@ async def get_account_interest_details(
             detail=f"계정 이자율 상세 정보 조회 중 오류 발생: {str(e)}"
         )
 
-# 적금 계좌 초기 세팅 계좌 번호 제외
-@router.put("/{account_id}/setup", response_model=account_schema.AccountResponse)
+@router.put("/setup", response_model=account_schema.AccountResponse)
 async def setup_account(
-    account_id: int,
     account_setup: account_schema.AccountSetup,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"계좌 설정 요청: 계정 ID {account_id}")
+        logger.info(f"계좌 설정 요청: 사용자 ID {current_user.USER_ID}")
         
-        # 계정 존재 여부 확인
-        db_account = account_crud.get_account_by_id(db, account_id)
-        if not db_account:
-            logger.warning(f"설정할 계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        # 권한 확인: 본인 계정만 업데이트 가능
-        if db_account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {db_account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
+        account_id = account.ACCOUNT_ID
         
         # 필수 필드 확인
         if not account_setup.TEAM_ID or not account_setup.SAVING_GOAL or not account_setup.DAILY_LIMIT or not account_setup.MONTH_LIMIT or not account_setup.SOURCE_ACCOUNT:
@@ -541,17 +528,17 @@ async def setup_account(
             )
             
         # 계정 설정 업데이트
-        db_account.TEAM_ID = account_setup.TEAM_ID
-        db_account.SAVING_GOAL = account_setup.SAVING_GOAL
-        db_account.DAILY_LIMIT = account_setup.DAILY_LIMIT
-        db_account.MONTH_LIMIT = account_setup.MONTH_LIMIT
-        db_account.SOURCE_ACCOUNT = account_setup.SOURCE_ACCOUNT
+        account.TEAM_ID = account_setup.TEAM_ID
+        account.SAVING_GOAL = account_setup.SAVING_GOAL
+        account.DAILY_LIMIT = account_setup.DAILY_LIMIT
+        account.MONTH_LIMIT = account_setup.MONTH_LIMIT
+        account.SOURCE_ACCOUNT = account_setup.SOURCE_ACCOUNT
         
         db.commit()
-        db.refresh(db_account)
+        db.refresh(account)
         
         logger.info(f"계좌 설정 완료: 계정 ID {account_id}")
-        return db_account
+        return account
         
     except HTTPException:
         raise
@@ -562,31 +549,19 @@ async def setup_account(
             detail=f"계좌 설정 중 오류 발생: {str(e)}"
         )
 
-# 계정 일일 잔액 내역 조회
-@router.get("/{account_id}/daily-balances", response_model=List[dict])
+@router.get("/daily-balances", response_model=List[dict])
 async def get_daily_balances(
-    account_id: int,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"계정 일일 잔액 내역 조회: 계정 ID {account_id}")
+        logger.info(f"계정 일일 잔액 내역 조회: 사용자 ID {current_user.USER_ID}")
         
-        # 계정 존재 여부 확인
-        db_account = account_crud.get_account_by_id(db, account_id)
-        if not db_account:
-            logger.warning(f"계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        # 권한 확인: 본인 계정만 조회 가능
-        if db_account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {db_account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
+        account_id = account.ACCOUNT_ID
         
         # 일일 잔액 내역 조회
         balances = account_crud.get_account_daily_balances(db, account_id, start_date, end_date)
@@ -611,128 +586,17 @@ async def get_daily_balances(
             detail=f"일일 잔액 내역 조회 중 오류 발생: {str(e)}"
         )
 
-# 계정 적금 내역 조회
-@router.get("/{account_id}/savings", response_model=List[dict])
-async def get_savings(
-    account_id: int,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
-    try:
-        logger.info(f"계정 적금 내역 조회: 계정 ID {account_id}")
-        
-        # 계정 존재 여부 확인
-        db_account = account_crud.get_account_by_id(db, account_id)
-        if not db_account:
-            logger.warning(f"계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        # 권한 확인: 본인 계정만 조회 가능
-        if db_account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {db_account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
-        
-        # 적금 내역 조회
-        savings = account_crud.get_account_savings(db, account_id, start_date, end_date)
-        
-        # ORM 모델을 딕셔너리로 변환하면서 필요한 정보만 포함
-        result = []
-        for saving in savings:
-            # 적금 규칙 유형 이름 조회
-            rule_type = db.query(models.SavingRuleType).filter(
-                models.SavingRuleType.SAVING_RULE_TYPE_ID == saving.SAVING_RULED_TYPE_ID
-            ).first()
-            rule_type_name = rule_type.SAVING_RULE_TYPE_NAME if rule_type else None
-            
-            # 기록 유형 이름 조회
-            record_type_name = None
-            # 적금 규칙 상세 조회
-            rule_detail = db.query(models.SavingRuleDetail).filter(
-                models.SavingRuleDetail.SAVING_RULE_DETAIL_ID == saving.SAVING_RULED_DETAIL_ID
-            ).first()
-            
-            if rule_detail:
-                # 해당 적금 규칙 조회
-                saving_rule = db.query(models.SavingRuleList).filter(
-                    models.SavingRuleList.SAVING_RULE_ID == rule_detail.SAVING_RULE_ID
-                ).first()
-                
-                if saving_rule:
-                    # 기록 유형 이름 조회
-                    record_type = db.query(models.RecordType).filter(
-                        models.RecordType.RECORD_TYPE_ID == saving_rule.RECORD_TYPE_ID
-                    ).first()
-                    record_type_name = record_type.RECORD_NAME if record_type else None
-            
-            # 선수 이름 (해당되는 경우)
-            player_name = None
-            if rule_type and rule_type.SAVING_RULE_TYPE_NAME not in ["기본 규칙", "상대팀"]:
-                # 사용자 적금 규칙 조회
-                user_rule = db.query(models.UserSavingRule).filter(
-                    models.UserSavingRule.ACCOUNT_ID == account_id,
-                    models.UserSavingRule.SAVING_RULE_DETAIL_ID == saving.SAVING_RULED_DETAIL_ID
-                ).first()
-                
-                if user_rule and user_rule.PLAYER_ID:
-                    player = db.query(models.Player).filter(
-                        models.Player.PLAYER_ID == user_rule.PLAYER_ID
-                    ).first()
-                    
-                    if player:
-                        player_name = player.PLAYER_NAME
-            
-            # 결과 딕셔너리 구성 - 간소화된 버전
-            saving_dict = {
-                "DAILY_SAVING_ID": saving.DAILY_SAVING_ID,
-                "DATE": saving.DATE,
-                "COUNT": saving.COUNT,
-                "DAILY_SAVING_AMOUNT": saving.DAILY_SAVING_AMOUNT,
-                "RULE_TYPE_NAME": rule_type_name,
-                "RECORD_TYPE_NAME": record_type_name,
-                "PLAYER_NAME": player_name
-            }
-            
-            result.append(saving_dict)
-        
-        return result
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"적금 내역 조회 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"적금 내역 조회 중 오류 발생: {str(e)}"
-        )
-
-# 계정 적금 규칙 설정 조회
-@router.get("/{account_id}/saving-rules", response_model=List[dict])
+@router.get("/saving-rules", response_model=List[dict])
 async def get_saving_rules(
-    account_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"계정 적금 규칙 설정 조회: 계정 ID {account_id}")
+        logger.info(f"계정 적금 규칙 설정 조회: 사용자 ID {current_user.USER_ID}")
         
-        # 계정 존재 여부 확인
-        db_account = account_crud.get_account_by_id(db, account_id)
-        if not db_account:
-            logger.warning(f"계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        # 권한 확인: 본인 계정만 조회 가능
-        if db_account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {db_account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
+        account_id = account.ACCOUNT_ID
         
         # 적금 규칙 설정 조회
         rules = account_crud.get_account_saving_rules(db, account_id)
@@ -810,26 +674,14 @@ async def get_saving_rules(
             detail=f"적금 규칙 설정 조회 중 오류 발생: {str(e)}"
         )
     
-@router.get("/{account_id}/favorite-player", response_model=player_schema.PlayerResponse)
+@router.get("/favorite-player", response_model=player_schema.PlayerResponse)
 async def get_favorite_player(
-    account_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        # 계정 존재 여부 및 소유권 확인
-        account = account_crud.get_account_by_id(db, account_id)
-        if not account:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        if account.USER_ID != current_user.USER_ID:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="권한이 없습니다"
-            )
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
         
         # 최애 선수 확인
         if not account.FAVORITE_PLAYER_ID:
@@ -855,27 +707,15 @@ async def get_favorite_player(
             detail=f"최애 선수 조회 중 오류 발생: {str(e)}"
         )
     
-@router.put("/{account_id}/favorite-player", response_model=account_schema.AccountResponse)
+@router.put("/favorite-player", response_model=account_schema.AccountResponse)
 async def update_favorite_player(
-    account_id: int,
     player_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        # 계정 존재 여부 및 소유권 확인
-        account = account_crud.get_account_by_id(db, account_id)
-        if not account:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        if account.USER_ID != current_user.USER_ID:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="권한이 없습니다"
-            )
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
         
         # 선수 존재 여부 확인
         player = db.query(models.Player).filter(models.Player.PLAYER_ID == player_id).first()
@@ -907,30 +747,19 @@ async def update_favorite_player(
         )
     
 # 계정의 모든 송금 메시지 조회
-@router.get("/{account_id}/transactions", response_model=List[account_schema.TransactionMessageResponse])
+@router.get("/transactions", response_model=List[account_schema.TransactionMessageResponse])
 async def get_account_transactions(
-    account_id: int,
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"계정 트랜잭션 메시지 조회: 계정 ID {account_id}")
+        logger.info(f"계정 트랜잭션 메시지 조회: 사용자 ID {current_user.USER_ID}")
         
-        # 계정 존재 여부 확인
-        account = account_crud.get_account_by_id(db, account_id)
-        if not account:
-            logger.warning(f"계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        # 권한 확인: 본인 계정만 조회 가능
-        if account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
+        account_id = account.ACCOUNT_ID
         
         # 트랜잭션 메시지 조회
         transactions = account_crud.get_transaction_messages_by_account(db, account_id, skip, limit)
@@ -946,16 +775,15 @@ async def get_account_transactions(
         )
 
 # 특정 기간의 송금 메시지 조회
-@router.get("/{account_id}/transactions/range", response_model=List[account_schema.TransactionMessageResponse])
+@router.get("/transactions/range", response_model=List[account_schema.TransactionMessageResponse])
 async def get_account_transactions_by_date_range(
-    account_id: int,
     start_date: date,
     end_date: date,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"기간별 트랜잭션 메시지 조회: 계정 ID {account_id}, 기간 {start_date} ~ {end_date}")
+        logger.info(f"기간별 트랜잭션 메시지 조회: 사용자 ID {current_user.USER_ID}, 기간 {start_date} ~ {end_date}")
         
         # 날짜 유효성 검사
         if end_date < start_date:
@@ -965,19 +793,9 @@ async def get_account_transactions_by_date_range(
                 detail="종료 날짜는 시작 날짜보다 이후여야 합니다"
             )
             
-        # 계정 존재 여부 확인
-        account = account_crud.get_account_by_id(db, account_id)
-        if not account:
-            logger.warning(f"계정을 찾을 수 없음: {account_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="계정을 찾을 수 없습니다"
-            )
-        
-        # 권한 확인: 본인 계정만 조회 가능
-        if account.USER_ID != current_user.USER_ID:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 계정 소유자 ID {account.USER_ID}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
+        account_id = account.ACCOUNT_ID
         
         # 기간별 트랜잭션 메시지 조회
         transactions = account_crud.get_transaction_messages_by_date_range(db, account_id, start_date, end_date)
@@ -991,7 +809,7 @@ async def get_account_transactions_by_date_range(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"기간별 트랜잭션 메시지 조회 중 오류 발생: {str(e)}"
         )
-
+        
 # 송금 메시지 받는 API
 @router.post("/transactions", response_model=List[account_schema.TransactionMessageResponse])
 async def create_transaction_messages_endpoint(
@@ -1058,4 +876,90 @@ async def create_transaction_messages_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"트랜잭션 메시지 생성 중 오류 발생: {str(e)}"
         )
-    
+
+@router.get("/savings", response_model=List[dict])
+async def get_savings(
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        logger.info(f"계정 적금 내역 조회: 사용자 ID {current_user.USER_ID}")
+        
+        # 사용자의 계정 조회
+        account = await get_user_account(db, current_user)
+        account_id = account.ACCOUNT_ID
+        
+        # 적금 내역 조회
+        savings = account_crud.get_account_savings(db, account_id, start_date, end_date)
+        
+        # ORM 모델을 딕셔너리로 변환하면서 필요한 정보만 포함
+        result = []
+        for saving in savings:
+            # 적금 규칙 유형 이름 조회
+            rule_type = db.query(models.SavingRuleType).filter(
+                models.SavingRuleType.SAVING_RULE_TYPE_ID == saving.SAVING_RULED_TYPE_ID
+            ).first()
+            rule_type_name = rule_type.SAVING_RULE_TYPE_NAME if rule_type else None
+            
+            # 기록 유형 이름 조회
+            record_type_name = None
+            # 적금 규칙 상세 조회
+            rule_detail = db.query(models.SavingRuleDetail).filter(
+                models.SavingRuleDetail.SAVING_RULE_DETAIL_ID == saving.SAVING_RULED_DETAIL_ID
+            ).first()
+            
+            if rule_detail:
+                # 해당 적금 규칙 조회
+                saving_rule = db.query(models.SavingRuleList).filter(
+                    models.SavingRuleList.SAVING_RULE_ID == rule_detail.SAVING_RULE_ID
+                ).first()
+                
+                if saving_rule:
+                    # 기록 유형 이름 조회
+                    record_type = db.query(models.RecordType).filter(
+                        models.RecordType.RECORD_TYPE_ID == saving_rule.RECORD_TYPE_ID
+                    ).first()
+                    record_type_name = record_type.RECORD_NAME if record_type else None
+            
+            # 선수 이름 (해당되는 경우)
+            player_name = None
+            if rule_type and rule_type.SAVING_RULE_TYPE_NAME not in ["기본 규칙", "상대팀"]:
+                # 사용자 적금 규칙 조회
+                user_rule = db.query(models.UserSavingRule).filter(
+                    models.UserSavingRule.ACCOUNT_ID == account_id,
+                    models.UserSavingRule.SAVING_RULE_DETAIL_ID == saving.SAVING_RULED_DETAIL_ID
+                ).first()
+                
+                if user_rule and user_rule.PLAYER_ID:
+                    player = db.query(models.Player).filter(
+                        models.Player.PLAYER_ID == user_rule.PLAYER_ID
+                    ).first()
+                    
+                    if player:
+                        player_name = player.PLAYER_NAME
+            
+            # 결과 딕셔너리 구성 - 간소화된 버전
+            saving_dict = {
+                "DAILY_SAVING_ID": saving.DAILY_SAVING_ID,
+                "DATE": saving.DATE,
+                "COUNT": saving.COUNT,
+                "DAILY_SAVING_AMOUNT": saving.DAILY_SAVING_AMOUNT,
+                "RULE_TYPE_NAME": rule_type_name,
+                "RECORD_TYPE_NAME": record_type_name,
+                "PLAYER_NAME": player_name
+            }
+            
+            result.append(saving_dict)
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"적금 내역 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"적금 내역 조회 중 오류 발생: {str(e)}"
+        )
