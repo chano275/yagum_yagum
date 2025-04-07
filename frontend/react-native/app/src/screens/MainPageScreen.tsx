@@ -6,6 +6,7 @@ import {
   Platform,
   TouchableOpacity,
   View,
+  Text,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
@@ -17,6 +18,16 @@ import { useNavigation } from "@react-navigation/native";
 import Carousel from "react-native-reanimated-carousel";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../api/axios";
+
+// 경기 일정 데이터 타입 정의
+interface GameSchedule {
+  DATE: string;
+  HOME_TEAM_ID: number;
+  AWAY_TEAM_ID: number;
+  GAME_SCHEDULE_KEY: number;
+  home_team_name: string;
+  away_team_name: string;
+}
 
 type MainPageNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type TabNavigationProp = BottomTabNavigationProp<{
@@ -323,6 +334,45 @@ const MainPage = () => {
   const [error, setError] = useState(null);
   const [activeSlide, setActiveSlide] = useState(0);
 
+  // 경기 일정 관련 상태 추가
+  const [gameSchedules, setGameSchedules] = useState<GameSchedule[]>([]);
+  const [isScheduleLoading, setIsScheduleLoading] = useState<boolean>(true);
+  const [scheduleError, setScheduleError] = useState<Error | null>(null);
+
+  // 팀 ID 가져오기 함수
+  const getTeamIdByName = (name: string): number => {
+    const teamMapping: { [key: string]: number } = {
+      "KIA 타이거즈": 1,
+      "삼성 라이온즈": 2,
+      "LG 트윈스": 3,
+      "두산 베어스": 4,
+      "KT 위즈": 5,
+      "SSG 랜더스": 6,
+      "롯데 자이언츠": 7,
+      "한화 이글스": 8,
+      "NC 다이노스": 9,
+      "키움 히어로즈": 10,
+    };
+    return teamMapping[name] || 1;
+  };
+
+  // 팀 홈구장 도시 정보 함수
+  const getTeamHomeCity = (teamId: number): string => {
+    const cityMap: { [key: number]: string } = {
+      1: "광주", // KIA 타이거즈
+      2: "대구", // 삼성 라이온즈
+      3: "서울", // LG 트윈스
+      4: "서울", // 두산 베어스
+      5: "수원", // KT 위즈
+      6: "인천", // SSG 랜더스
+      7: "부산", // 롯데 자이언츠
+      8: "대전", // 한화 이글스
+      9: "창원", // NC 다이노스
+      10: "서울", // 키움 히어로즈
+    };
+    return cityMap[teamId] || "미정";
+  };
+
   // 계좌 정보 조회
   useEffect(() => {
     const fetchAccountData = async () => {
@@ -336,7 +386,8 @@ const MainPage = () => {
           const accountData = response.data;
 
           // API 응답에서 목표 금액과 현재 금액 설정
-          setTargetAmount(accountData.SAVING_GOAL || 0);
+          const targetAmt = accountData.SAVING_GOAL || 0;
+          setTargetAmount(targetAmt);
           setCurrentAmount(accountData.TOTAL_AMOUNT || 0);
 
           // 금리 정보 설정
@@ -348,8 +399,16 @@ const MainPage = () => {
           const additional = rate - baseRate;
           setAdditionalRate(additional);
 
-          // 목표 제목 설정
-          setSavingTitle("유니폼 구매(목표 금액에 따라 하드코딩)");
+          // 목표 금액에 따라 목표 제목 설정
+          if (targetAmt >= 3000000) {
+            setSavingTitle("스프링캠프");
+          } else if (targetAmt >= 1500000) {
+            setSavingTitle("시즌권");
+          } else if (targetAmt >= 1000000) {
+            setSavingTitle("다음 시즌 직관");
+          } else {
+            setSavingTitle("유니폼");
+          }
         }
       } catch (err) {
         console.error("계좌 정보 조회 실패:", err);
@@ -359,6 +418,7 @@ const MainPage = () => {
         setCurrentAmount(300000);
         setInterestRate(2.5);
         setAdditionalRate(0);
+        setSavingTitle("유니폼"); // 500,000원일 때는 유니폼으로 설정
       } finally {
         setIsLoading(false);
       }
@@ -366,6 +426,53 @@ const MainPage = () => {
 
     fetchAccountData();
   }, []);
+
+  // 경기 일정 조회
+  useEffect(() => {
+    const fetchGameSchedules = async () => {
+      try {
+        setIsScheduleLoading(true);
+
+        // 팀명으로 팀 ID 가져오기
+        const teamId = getTeamIdByName(teamName);
+
+        // API 호출
+        const response = await api.get(`/api/game/schedule/team/${teamId}`);
+
+        if (response.status === 200 && Array.isArray(response.data)) {
+          // 오늘 이후의 경기만 필터링
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const filteredGames = response.data
+            .filter((game: GameSchedule) => {
+              const gameDate = new Date(game.DATE);
+              return gameDate >= today;
+            })
+            .sort((a: GameSchedule, b: GameSchedule) => {
+              return new Date(a.DATE).getTime() - new Date(b.DATE).getTime();
+            })
+            .slice(0, 3); // 다음 3개 경기만 선택
+
+          setGameSchedules(filteredGames);
+        } else {
+          throw new Error("API 응답 형식이 올바르지 않습니다");
+        }
+      } catch (err) {
+        console.error("경기 일정 조회 실패:", err);
+        setScheduleError(
+          err instanceof Error ? err : new Error("알 수 없는 오류")
+        );
+        setGameSchedules([]);
+      } finally {
+        setIsScheduleLoading(false);
+      }
+    };
+
+    if (teamName) {
+      fetchGameSchedules();
+    }
+  }, [teamName]);
 
   const percentage = Math.min(
     100,
@@ -591,9 +698,7 @@ const MainPage = () => {
 
               <Card width={width}>
                 <CardHeader width={width}>
-                  <CardTitle width={width}>
-                    다음 경기 일정 (API 연결 필요)
-                  </CardTitle>
+                  <CardTitle width={width}>다음 경기 일정</CardTitle>
                   <TouchableOpacity
                     onPress={() => {
                       navigation.navigate("Main", {
@@ -608,21 +713,57 @@ const MainPage = () => {
                   </TouchableOpacity>
                 </CardHeader>
                 <CardContent width={width}>
-                  <ScheduleItem width={width}>
-                    <ScheduleDate width={width}>3/22</ScheduleDate>
-                    <ScheduleTeam width={width}>vs NC 다이노스</ScheduleTeam>
-                    <ScheduleTime width={width}>14:00 광주</ScheduleTime>
-                  </ScheduleItem>
-                  <ScheduleItem width={width}>
-                    <ScheduleDate width={width}>3/23</ScheduleDate>
-                    <ScheduleTeam width={width}>vs NC 다이노스</ScheduleTeam>
-                    <ScheduleTime width={width}>14:00 광주</ScheduleTime>
-                  </ScheduleItem>
-                  <ScheduleItem width={width}>
-                    <ScheduleDate width={width}>3/25</ScheduleDate>
-                    <ScheduleTeam width={width}>vs LG 트윈스</ScheduleTeam>
-                    <ScheduleTime width={width}>18:30 광주</ScheduleTime>
-                  </ScheduleItem>
+                  {isScheduleLoading ? (
+                    <View style={{ padding: 10, alignItems: "center" }}>
+                      <Text>경기 일정 로딩 중...</Text>
+                    </View>
+                  ) : scheduleError ? (
+                    <View style={{ padding: 10, alignItems: "center" }}>
+                      <Text>경기 일정을 불러오는데 실패했습니다.</Text>
+                    </View>
+                  ) : gameSchedules.length > 0 ? (
+                    gameSchedules.map((game) => {
+                      const isHomeGame =
+                        game.HOME_TEAM_ID === getTeamIdByName(teamName);
+                      const opponentTeam = isHomeGame
+                        ? game.away_team_name
+                        : game.home_team_name;
+                      const gameDate = new Date(game.DATE);
+                      const month = gameDate.getMonth() + 1;
+                      const day = gameDate.getDate();
+                      const location = getTeamHomeCity(
+                        isHomeGame ? game.HOME_TEAM_ID : game.AWAY_TEAM_ID
+                      );
+
+                      return (
+                        <ScheduleItem
+                          key={game.GAME_SCHEDULE_KEY}
+                          width={width}
+                        >
+                          <ScheduleDate
+                            width={width}
+                          >{`${month}/${day}`}</ScheduleDate>
+                          <ScheduleTeam
+                            width={width}
+                          >{`vs ${opponentTeam}`}</ScheduleTeam>
+                          <ScheduleTime width={width}>
+                            {location}{" "}
+                            <Text
+                              style={{
+                                color: isHomeGame ? teamColor.primary : "#666",
+                              }}
+                            >
+                              ({isHomeGame ? "홈" : "원정"})
+                            </Text>
+                          </ScheduleTime>
+                        </ScheduleItem>
+                      );
+                    })
+                  ) : (
+                    <View style={{ padding: 10, alignItems: "center" }}>
+                      <Text>표시할 경기 일정이 없습니다.</Text>
+                    </View>
+                  )}
                 </CardContent>
               </Card>
             </View>
