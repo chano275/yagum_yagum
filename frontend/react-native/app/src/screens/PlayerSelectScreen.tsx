@@ -18,6 +18,8 @@ import { useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
 import { useJoin } from '../context/JoinContext';
 import { api } from '../api/axios';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
@@ -296,7 +298,7 @@ interface PlayerType {
 }
 
 const PlayerSelectScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width: windowWidth } = useWindowDimensions();
   const [selectedTab, setSelectedTab] = useState('투수');
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
@@ -566,7 +568,7 @@ const PlayerSelectScreen = () => {
                     position: player.player_type_name,
                     teamId: teamId
                   });
-                  navigation.navigate('AccountSelect');
+                  navigation.navigate('SavingsGoal');
                 }
               }
             }}

@@ -46,6 +46,7 @@ const LoginScreen = () => {
     id: "",
     password: "",
   });
+  const [loginError, setLoginError] = useState("");
   const { setTeamData } = useTeam();
 
   const navigation = useNavigation<NavigationProp>();
@@ -65,6 +66,15 @@ const LoginScreen = () => {
     if (!password.trim()) newErrors.password = "비밀번호를 입력해주세요";
 
     setErrors(newErrors);
+    // 에러 메시지 중 하나만 보여주기 위한 처리
+    if (newErrors.id) {
+      setLoginError(newErrors.id);
+    } else if (newErrors.password) {
+      setLoginError(newErrors.password);
+    } else {
+      setLoginError("");
+    }
+
     return !newErrors.id && !newErrors.password;
   };
 
@@ -72,6 +82,7 @@ const LoginScreen = () => {
     if (!validateInputs()) return;
 
     setIsLoading(true);
+    setLoginError(""); // 로그인 시도 시 이전 에러 메시지 초기화
 
     try {
       const formData = new FormData();
@@ -99,7 +110,8 @@ const LoginScreen = () => {
     } catch (error) {
       if (error instanceof Error) {
         console.error('Login failed:', error);
-        Alert.alert('로그인 실패', '아이디 또는 비밀번호를 확인해주세요.');
+        // Alert 대신 상태에 에러 메시지 저장
+        setLoginError("아이디 또는 비밀번호가 올바르지 않습니다.");
       }
     } finally {
       setIsLoading(false);
@@ -206,7 +218,7 @@ const LoginScreen = () => {
       padding: width * 0.04,
       borderRadius: width * 0.015,
       alignItems: "center",
-      marginTop: width * 0.04,
+      marginTop: width * 0.03,
     },
     errorText: {
       color: "#ff4444",
@@ -226,6 +238,18 @@ const LoginScreen = () => {
       color: "white",
       fontSize: width * 0.042,
       fontWeight: "bold",
+      textAlign: "center",
+    },
+    loginErrorContainer: {
+      height: width * 0.005, 
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: width * 0.005,
+      marginBottom: width * 0.005,
+    },
+    loginErrorText: {
+      color: "#ff4444",
+      fontSize: width * 0.03,
       textAlign: "center",
     },
   });
@@ -276,6 +300,10 @@ const LoginScreen = () => {
                   onChangeText={(text) => {
                     setId(text);
                     setErrors((prev) => ({ ...prev, id: "" }));
+                    // 아이디를 입력하면 해당 에러 메시지는 지우지만, 다른 에러는 유지
+                    if (loginError === "아이디를 입력해주세요") {
+                      setLoginError("");
+                    }
                   }}
                   onFocus={() => setIdFocused(true)}
                   onBlur={() => setIdFocused(false)}
@@ -285,9 +313,6 @@ const LoginScreen = () => {
                   placeholderTextColor="#999"
                 />
               </View>
-              {errors.id ? (
-                <Text style={styles.errorText}>{errors.id}</Text>
-              ) : null}
               <View
                 style={[
                   styles.inputContainer,
@@ -309,6 +334,10 @@ const LoginScreen = () => {
                   onChangeText={(text) => {
                     setPassword(text);
                     setErrors((prev) => ({ ...prev, password: "" }));
+                    // 비밀번호를 입력하면 해당 에러 메시지는 지우지만, 다른 에러는 유지
+                    if (loginError === "비밀번호를 입력해주세요") {
+                      setLoginError("");
+                    }
                   }}
                   onFocus={() => setPasswordFocused(true)}
                   onBlur={() => setPasswordFocused(false)}
@@ -328,9 +357,13 @@ const LoginScreen = () => {
                   />
                 </TouchableOpacity>
               </View>
-              {errors.password ? (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              ) : null}
+              {/* 통합 에러 메시지 공간 */}
+              <View style={styles.loginErrorContainer}>
+                {loginError ? (
+                  <Text style={styles.loginErrorText}>{loginError}</Text>
+                ) : null}
+              </View>
+              
               <TouchableOpacity
                 style={styles.loginButton}
                 onPress={handleLogin}

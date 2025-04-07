@@ -14,6 +14,8 @@ import Primerate from "../screens/Benefits/PrimerateScreen";
 import Verifyticket from "../screens/Benefits/VerifyticketScreen";
 import AccountSelectScreen from "../screens/AccountSelectScreen";
 import CompletionScreen from "../screens/CompletionScreen";
+import SavingsGoalScreen from "../screens/SavingsGoalScreen";
+import RuleSettingScreen from "../screens/RuleSettingScreen";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -22,8 +24,14 @@ export type RootStackParamList = {
   Service: undefined;
   Main: undefined;
   PlayerSelect: undefined;
+  SavingsGoal: undefined;
+  RuleSetting: undefined;
   AccountSelect: undefined;
   Completion: undefined;
+  Matchrank: undefined;
+  Merchdiscount: undefined;
+  Primerate: undefined;
+  Verifyticket: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -45,6 +53,8 @@ const AppNavigator = () => {
         <Stack.Screen name="Service" component={ServiceScreen} />
         <Stack.Screen name="Main" component={TabNavigator} />
         <Stack.Screen name="PlayerSelect" component={PlayerSelectScreen} />
+        <Stack.Screen name="SavingsGoal" component={SavingsGoalScreen} />
+        <Stack.Screen name="RuleSetting" component={RuleSettingScreen} />
         <Stack.Screen name="AccountSelect" component={AccountSelectScreen} />
         <Stack.Screen name="Completion" component={CompletionScreen} />
         <Stack.Screen name="Matchrank" component={Matchrank} />

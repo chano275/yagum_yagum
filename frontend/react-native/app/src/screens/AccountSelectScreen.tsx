@@ -16,11 +16,13 @@ import { useNavigation } from "@react-navigation/native";
 import { useTeam } from "../context/TeamContext";
 import { useAccountStore } from "../store/useStore";
 import { useStore } from "../store/useStore";
+import { useJoin } from "../context/JoinContext";
 import { UserAccountsResponse, SourceAccount } from "../types/account";
 import Header from "../components/Header";
 import { MaterialIcons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";
+import axios from "axios";
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
@@ -335,6 +337,7 @@ const AccountSelectScreen = () => {
   const { teamColor } = useTeam();
   const { accountInfo, isLoading, error, fetchAccountInfo } = useAccountStore();
   const { isLoggedIn, token } = useStore();
+  const { updateSourceAccount, joinData, getDBData, applyRuleIdMapping } = useJoin();
   const [agreements, setAgreements] = useState({
     all: false,
     terms: false,
@@ -345,6 +348,8 @@ const AccountSelectScreen = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isRequiredAgreedPrev, setIsRequiredAgreedPrev] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const expandAnimation = useRef(new Animated.Value(0)).current;
   const opacityAnimation = useRef(new Animated.Value(0)).current;
@@ -475,6 +480,69 @@ const AccountSelectScreen = () => {
           animated: true,
         });
       }, 50);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (canProceed && selectedAccount) {
+      try {
+        setIsSubmitting(true);
+        setSubmitError(null);
+        
+        // 선택된 계좌 정보를 JoinContext에 저장
+        updateSourceAccount(selectedAccount);
+        
+        // 규칙 ID 매핑을 적용
+        applyRuleIdMapping();
+        
+        // API 호출용 데이터 가져오기 (setTimeout 제거)
+        const requestData = getDBData();
+        
+        if (!requestData) {
+          setSubmitError('가입 정보가 완전하지 않습니다. 처음부터 다시 시도해주세요.');
+          return;
+        }
+        
+        // API 호출을 위한 헤더 설정
+        const headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        };
+        
+        // API 호출 - 타임아웃 값 추가
+        console.log("API 기본 URL: http://localhost:8000");
+        console.log("API 요청 데이터:", JSON.stringify(requestData, null, 2));
+        
+        const response = await axios.post(
+          // `http://localhost:8000/api/account/create`
+          `http://3.38.183.156:8000/api/account/create`
+          , 
+          requestData,
+          { 
+            headers,
+            timeout: 10000 // 타임아웃 값을 10초로 설정
+          }
+        );
+        
+        console.log("API 응답:", response.data);
+        
+        // 성공적으로 처리됐다면 Completion 화면으로 이동
+        navigation.navigate("Completion");
+      } catch (error) {
+        console.error("적금 가입 중 오류:", error);
+        // axios 에러 처리
+        if (axios.isAxiosError(error)) {
+          console.error('에러 응답:', error.response?.data);
+          console.error('에러 상태:', error.response?.status);
+          console.error('에러 헤더:', error.response?.headers);
+          const errorMessage = error.response?.data?.detail || '서버 오류가 발생했습니다.';
+          setSubmitError(`오류(${error.response?.status || '알 수 없음'}): ${errorMessage}`);
+        } else {
+          setSubmitError('알 수 없는 오류가 발생했습니다.');
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -645,6 +713,27 @@ const AccountSelectScreen = () => {
     );
   };
 
+  const renderSubmitStatus = () => {
+    if (isSubmitting) {
+      return (
+        <LoadingContainer>
+          <ActivityIndicator size="large" color={teamColor.primary} />
+          <LoadingText>적금 가입 처리 중입니다...</LoadingText>
+        </LoadingContainer>
+      );
+    }
+    
+    if (submitError) {
+      return (
+        <ErrorContainer>
+          <ErrorText>{submitError}</ErrorText>
+        </ErrorContainer>
+      );
+    }
+    
+    return null;
+  };
+
   return (
     <AppWrapper>
       <MobileContainer>
@@ -742,20 +831,20 @@ const AccountSelectScreen = () => {
                 {renderAccountContent()}
               </Section>
             </AnimatedSection>
+
+            {renderSubmitStatus()}
           </Content>
         </ScrollView>
 
         <BottomSection>
           <SelectButton
             color={teamColor.primary}
-            disabled={!canProceed}
-            onPress={() => {
-              if (canProceed) {
-                navigation.navigate("Completion");
-              }
-            }}
+            disabled={!canProceed || isSubmitting}
+            onPress={handleSubmit}
           >
-            <SelectButtonText disabled={!canProceed}>선택</SelectButtonText>
+            <SelectButtonText disabled={!canProceed || isSubmitting}>
+              {isSubmitting ? "처리 중..." : "선택"}
+            </SelectButtonText>
           </SelectButton>
         </BottomSection>
       </MobileContainer>
