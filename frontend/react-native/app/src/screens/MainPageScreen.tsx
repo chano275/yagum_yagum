@@ -12,7 +12,10 @@ import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
 import { useTeam } from "../context/TeamContext";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { BottomTabNavigationProp, BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import {
+  BottomTabNavigationProp,
+  BottomTabScreenProps,
+} from "@react-navigation/bottom-tabs";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { useNavigation } from "@react-navigation/native";
 import Carousel from "react-native-reanimated-carousel";
@@ -21,6 +24,16 @@ import { api } from "../api/axios";
 import { useAccountStore } from "../store/useStore";
 import { SavingsAccount } from "../types/account";
 import { teamColors, teamIdToCode } from "../styles/teamColors";
+
+// 경기 일정 데이터 타입 정의
+interface GameSchedule {
+  DATE: string;
+  HOME_TEAM_ID: number;
+  AWAY_TEAM_ID: number;
+  GAME_SCHEDULE_KEY: number;
+  home_team_name: string;
+  away_team_name: string;
+}
 
 // SavingsAccount를 확장하여 필요한 필드 추가
 interface ExtendedSavingsAccount extends SavingsAccount {
@@ -83,13 +96,35 @@ const Header = styled.View<StyledProps & { teamColor: string }>`
   background-color: ${(props) => props.teamColor};
   padding: ${({ width }) => width * 0.04}px;
   padding-top: ${({ width }) => width * 0.1}px;
+  position: relative;
 `;
 
 const HeaderTitle = styled.Text<StyledProps>`
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: ${({ width }) => width * 0.1}px;
   color: white;
   font-size: ${({ width }) => width * 0.046}px;
   font-weight: bold;
   font-family: ${({ theme }) => theme.fonts.bold};
+  text-align: center;
+`;
+
+const BackButton = styled.TouchableOpacity`
+  padding: 8px;
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+  align-items: flex-start;
+`;
+
+const IconContainer = styled.TouchableOpacity`
+  padding: 8px;
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+  align-items: flex-end;
 `;
 
 const BellIcon = styled.Image`
@@ -334,7 +369,12 @@ const MainPage = () => {
   const stackNavigation = useNavigation<MainPageNavigationProp>();
   const { teamColor, teamName, setTeamData } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
-  const { accountInfo, isLoading: accountLoading, error: accountError, fetchAccountInfo } = useAccountStore();
+  const {
+    accountInfo,
+    isLoading: accountLoading,
+    error: accountError,
+    fetchAccountInfo,
+  } = useAccountStore();
   const width =
     Platform.OS === "web"
       ? BASE_MOBILE_WIDTH
@@ -351,30 +391,116 @@ const MainPage = () => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [savingRules, setSavingRules] = useState<RuleItem[]>([]);
 
+  // 경기 일정 관련 상태 추가
+  const [gameSchedules, setGameSchedules] = useState<GameSchedule[]>([]);
+  const [isScheduleLoading, setIsScheduleLoading] = useState<boolean>(true);
+  const [scheduleError, setScheduleError] = useState<Error | null>(null);
+
   // 계좌 정보 조회 - useAccountStore 사용
   useEffect(() => {
     fetchAccountInfo();
   }, []);
 
+  // 팀 ID 가져오기 함수
+  const getTeamIdByName = (name: string): number => {
+    const teamMapping: { [key: string]: number } = {
+      "KIA 타이거즈": 1,
+      "삼성 라이온즈": 2,
+      "LG 트윈스": 3,
+      "두산 베어스": 4,
+      "KT 위즈": 5,
+      "SSG 랜더스": 6,
+      "롯데 자이언츠": 7,
+      "한화 이글스": 8,
+      "NC 다이노스": 9,
+      "키움 히어로즈": 10,
+    };
+    return teamMapping[name] || 1;
+  };
+
+  // 팀 홈구장 도시 정보 함수
+  const getTeamHomeCity = (teamId: number): string => {
+    const cityMap: { [key: number]: string } = {
+      1: "광주", // KIA 타이거즈
+      2: "대구", // 삼성 라이온즈
+      3: "서울", // LG 트윈스
+      4: "서울", // 두산 베어스
+      5: "수원", // KT 위즈
+      6: "인천", // SSG 랜더스
+      7: "부산", // 롯데 자이언츠
+      8: "대전", // 한화 이글스
+      9: "창원", // NC 다이노스
+      10: "서울", // 키움 히어로즈
+    };
+    return cityMap[teamId] || "미정";
+  };
+
   // 팀 정보 설정 함수 (무효화)
   const setupTeamInfo = (account: ExtendedSavingsAccount) => {
     // 팀 정보를 변경하지 않고 현재 값만 로그로 출력
     console.log("[MainPageScreen] 현재 팀 정보:", {
-      teamId: account.team_id, 
-      teamName: account.team_name, 
-      teamColor: teamColor.primary
+      teamId: account.team_id,
+      teamName: account.team_name,
+      teamColor: teamColor.primary,
     });
-    
+
     if (account) {
       console.log("[MainPageScreen] 계좌 정보:", {
         accountTeamId: account.team_id,
-        accountTeamName: account.team_name
+        accountTeamName: account.team_name,
       });
     }
-    
+
     // 값을 변경하지 않음
     return null;
   };
+
+  // 경기 일정 조회
+  useEffect(() => {
+    const fetchGameSchedules = async () => {
+      try {
+        setIsScheduleLoading(true);
+
+        // 팀명으로 팀 ID 가져오기
+        const teamId = getTeamIdByName(teamName);
+
+        // API 호출
+        const response = await api.get(`/api/game/schedule/team/${teamId}`);
+
+        if (response.status === 200 && Array.isArray(response.data)) {
+          // 오늘 이후의 경기만 필터링
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const filteredGames = response.data
+            .filter((game: GameSchedule) => {
+              const gameDate = new Date(game.DATE);
+              return gameDate >= today;
+            })
+            .sort((a: GameSchedule, b: GameSchedule) => {
+              return new Date(a.DATE).getTime() - new Date(b.DATE).getTime();
+            })
+            .slice(0, 3); // 다음 3개 경기만 선택
+
+          setGameSchedules(filteredGames);
+        } else {
+          throw new Error("API 응답 형식이 올바르지 않습니다");
+        }
+      } catch (err) {
+        console.error("경기 일정 조회 실패:", err);
+        setScheduleError(
+          err instanceof Error ? err : new Error("알 수 없는 오류")
+        );
+        setGameSchedules([]);
+      } finally {
+        setIsScheduleLoading(false);
+      }
+    };
+
+    if (teamName) {
+      fetchGameSchedules();
+    }
+  }, [teamName]);
 
   // 규칙 데이터 가져오기 (실제 API로 대체 필요)
   const fetchRules = async (accountId: string) => {
@@ -382,21 +508,93 @@ const MainPage = () => {
       // 실제 API 호출로 대체 필요
       // const response = await api.get(`/api/account/${accountId}/rules`);
       // return response.data;
-      
+
       // 임시 데이터
       return [
-        { rule_id: 1, rule_type: "basic", rule_name: "팀이 승리하는 경우", rule_amount: 3000, is_active: true },
-        { rule_id: 2, rule_type: "basic", rule_name: "팀이 안타를 친 경우", rule_amount: 1000, is_active: true },
-        { rule_id: 3, rule_type: "basic", rule_name: "팀이 홈런을 친 경우", rule_amount: 5000, is_active: true },
-        { rule_id: 4, rule_type: "pitcher", rule_name: "투수 삼진을 잡는 경우", rule_amount: 1000, is_active: true },
-        { rule_id: 5, rule_type: "pitcher", rule_name: "투수 볼넷을 던진 경우", rule_amount: -500, is_active: true },
-        { rule_id: 6, rule_type: "pitcher", rule_name: "투수 자책점", rule_amount: -1000, is_active: true },
-        { rule_id: 7, rule_type: "batter", rule_name: "타자 안타를 친 경우", rule_amount: 1000, is_active: true },
-        { rule_id: 8, rule_type: "batter", rule_name: "타자 홈런을 친 경우", rule_amount: 5000, is_active: true },
-        { rule_id: 9, rule_type: "batter", rule_name: "타자 도루하는 경우", rule_amount: 2000, is_active: true },
-        { rule_id: 10, rule_type: "opponent", rule_name: "상대팀 삼진", rule_amount: 500, is_active: true },
-        { rule_id: 11, rule_type: "opponent", rule_name: "상대팀 병살타", rule_amount: 1000, is_active: true },
-        { rule_id: 12, rule_type: "opponent", rule_name: "상대팀 실책", rule_amount: 1000, is_active: true },
+        {
+          rule_id: 1,
+          rule_type: "basic",
+          rule_name: "팀이 승리하는 경우",
+          rule_amount: 3000,
+          is_active: true,
+        },
+        {
+          rule_id: 2,
+          rule_type: "basic",
+          rule_name: "팀이 안타를 친 경우",
+          rule_amount: 1000,
+          is_active: true,
+        },
+        {
+          rule_id: 3,
+          rule_type: "basic",
+          rule_name: "팀이 홈런을 친 경우",
+          rule_amount: 5000,
+          is_active: true,
+        },
+        {
+          rule_id: 4,
+          rule_type: "pitcher",
+          rule_name: "투수 삼진을 잡는 경우",
+          rule_amount: 1000,
+          is_active: true,
+        },
+        {
+          rule_id: 5,
+          rule_type: "pitcher",
+          rule_name: "투수 볼넷을 던진 경우",
+          rule_amount: -500,
+          is_active: true,
+        },
+        {
+          rule_id: 6,
+          rule_type: "pitcher",
+          rule_name: "투수 자책점",
+          rule_amount: -1000,
+          is_active: true,
+        },
+        {
+          rule_id: 7,
+          rule_type: "batter",
+          rule_name: "타자 안타를 친 경우",
+          rule_amount: 1000,
+          is_active: true,
+        },
+        {
+          rule_id: 8,
+          rule_type: "batter",
+          rule_name: "타자 홈런을 친 경우",
+          rule_amount: 5000,
+          is_active: true,
+        },
+        {
+          rule_id: 9,
+          rule_type: "batter",
+          rule_name: "타자 도루하는 경우",
+          rule_amount: 2000,
+          is_active: true,
+        },
+        {
+          rule_id: 10,
+          rule_type: "opponent",
+          rule_name: "상대팀 삼진",
+          rule_amount: 500,
+          is_active: true,
+        },
+        {
+          rule_id: 11,
+          rule_type: "opponent",
+          rule_name: "상대팀 병살타",
+          rule_amount: 1000,
+          is_active: true,
+        },
+        {
+          rule_id: 12,
+          rule_type: "opponent",
+          rule_name: "상대팀 실책",
+          rule_amount: 1000,
+          is_active: true,
+        },
       ];
     } catch (err) {
       console.error("규칙 조회 실패:", err);
@@ -412,66 +610,78 @@ const MainPage = () => {
       batter: [],
       opponent: [],
     };
-    
-    rules.forEach(rule => {
+
+    rules.forEach((rule) => {
       if (rule.rule_type in rulesByType) {
         rulesByType[rule.rule_type].push(rule);
       }
     });
-    
+
     const organizedRules: RuleItem[] = [
       {
         id: 1,
         title: "기본 규칙",
-        rules: rulesByType.basic.map(r => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`),
+        rules: rulesByType.basic.map(
+          (r) => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`
+        ),
       },
       {
         id: 2,
         title: "투수 규칙",
-        rules: rulesByType.pitcher.map(r => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`),
+        rules: rulesByType.pitcher.map(
+          (r) => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`
+        ),
       },
       {
         id: 3,
         title: "타자 규칙",
-        rules: rulesByType.batter.map(r => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`),
+        rules: rulesByType.batter.map(
+          (r) => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`
+        ),
       },
       {
         id: 4,
         title: "상대팀 규칙",
-        rules: rulesByType.opponent.map(r => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`),
-      }
+        rules: rulesByType.opponent.map(
+          (r) => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`
+        ),
+      },
     ];
-    
+
     return organizedRules;
   };
 
   // accountInfo가 변경될 때 실행
   useEffect(() => {
     const updateAccountData = async () => {
-      if (accountInfo?.savings_accounts && accountInfo.savings_accounts.length > 0) {
-        const account = accountInfo.savings_accounts[0] as ExtendedSavingsAccount;
-        
+      if (
+        accountInfo?.savings_accounts &&
+        accountInfo.savings_accounts.length > 0
+      ) {
+        const account = accountInfo
+          .savings_accounts[0] as ExtendedSavingsAccount;
+
         // 팀 정보 설정
         setupTeamInfo(account);
-        
+
         // 계좌 데이터 설정
         setTargetAmount(account.saving_goal || 0);
         setCurrentAmount(account.total_amount || 0);
         setInterestRate(account.interest_rate || 2.5);
-        
+
         // 추가 금리 계산 (기본 금리 기준)
         const baseRate = 2.5; // 기본 금리
         const additional = account.interest_rate - baseRate;
         setAdditionalRate(additional > 0 ? additional : 0);
-        
+
         // 목표 제목 설정 (간단한 예시)
         setSavingTitle(`${account.team_name || teamName} 적금`);
-        
+
         // 규칙 데이터 가져오기
         const rulesData = await fetchRules(account.account_id);
         const organizedRules = organizeRulesByType(rulesData);
         setSavingRules(organizedRules);
-        
+
         setIsLoading(false);
       } else {
         // 계좌 정보가 없는 경우 기본값 설정
@@ -513,11 +723,11 @@ const MainPage = () => {
               "상대팀 병살타: 1,000원",
               "상대팀 실책: 1,000원",
             ],
-          }
+          },
         ]);
       }
     };
-    
+
     updateAccountData();
   }, [accountInfo]);
 
@@ -585,12 +795,18 @@ const MainPage = () => {
       <MobileContainer width={width}>
         <StatusBar style="light" />
         <Header width={width} teamColor={teamColor.primary}>
-          <HeaderTitle width={width}>
-            야금야금 - {accountInfo?.savings_accounts?.[0]?.team_name || teamName || "팀 정보가 불러와지지 않았습니다."}
+          <BackButton onPress={() => stackNavigation.navigate("Home")}>
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </BackButton>
+          <HeaderTitle width={width} pointerEvents="none">
+            야금야금 -{" "}
+            {accountInfo?.savings_accounts?.[0]?.team_name ||
+              teamName ||
+              "팀 정보가 불러와지지 않았습니다."}
           </HeaderTitle>
-          <TouchableOpacity>
+          <IconContainer>
             <BellIcon source={require("../../assets/icon.png")} />
-          </TouchableOpacity>
+          </IconContainer>
         </Header>
 
         <SafeAreaView style={{ flex: 1, paddingBottom: 60 }}>
@@ -600,11 +816,25 @@ const MainPage = () => {
             contentContainerStyle={{ paddingBottom: 20 }}
           >
             {isLoading || accountLoading ? (
-              <View style={{ padding: 20, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ fontSize: 16, color: "#666" }}>데이터를 불러오는 중입니다...</Text>
+              <View
+                style={{
+                  padding: 20,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ fontSize: 16, color: "#666" }}>
+                  데이터를 불러오는 중입니다...
+                </Text>
               </View>
             ) : error || accountError ? (
-              <View style={{ padding: 20, alignItems: "center", justifyContent: "center" }}>
+              <View
+                style={{
+                  padding: 20,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <Text style={{ fontSize: 16, color: "#ff4444" }}>
                   데이터를 불러오는데 실패했습니다.
                 </Text>
@@ -614,7 +844,8 @@ const MainPage = () => {
                 <ProgressSection width={width} teamColor={teamColor.primary}>
                   <ProgressTitle width={width}>{savingTitle}</ProgressTitle>
                   <ProgressAmount width={width}>
-                    {formatAmount(currentAmount)}원 / {formatAmount(targetAmount)}원
+                    {formatAmount(currentAmount)}원 /{" "}
+                    {formatAmount(targetAmount)}원
                   </ProgressAmount>
                   <ProgressBarContainer width={width}>
                     <ProgressFill percentage={percentage} />
@@ -628,7 +859,10 @@ const MainPage = () => {
                   <StatText width={width}>
                     현재 금리: {interestRate.toFixed(1)}%
                     {additionalRate > 0 && (
-                      <StatHighlight> +{additionalRate.toFixed(1)}%</StatHighlight>
+                      <StatHighlight>
+                        {" "}
+                        +{additionalRate.toFixed(1)}%
+                      </StatHighlight>
                     )}
                   </StatText>
                   <StatText width={width}>
@@ -645,8 +879,8 @@ const MainPage = () => {
                     </CardHeader>
                     <CardContent width={width}>
                       <CardText width={width}>
-                        <RedText teamColor={teamColor.primary}>↗</RedText> 두산이
-                        승리했지만, 우리팀의 적금이 2배 더 많네요!
+                        <RedText teamColor={teamColor.primary}>↗</RedText>{" "}
+                        두산이 승리했지만, 우리팀의 적금이 2배 더 많네요!
                       </CardText>
                     </CardContent>
                   </Card>
@@ -654,7 +888,9 @@ const MainPage = () => {
                   {/* 적금 규칙 캐러셀 카드 */}
                   <Card width={width}>
                     <CardHeader width={width}>
-                      <CardTitle width={width}>적금 규칙 (API 연결 필요)</CardTitle>
+                      <CardTitle width={width}>
+                        적금 규칙 (API 연결 필요)
+                      </CardTitle>
                     </CardHeader>
                     <CardContent width={width}>
                       <RulesCarousel />
@@ -668,10 +904,15 @@ const MainPage = () => {
                       </CardTitle>
                       <TouchableOpacity
                         onPress={() => {
-                          tabNavigation.navigate('적금내역', { viewMode: "list" });
+                          tabNavigation.navigate("적금내역", {
+                            viewMode: "list",
+                          });
                         }}
                       >
-                        <ViewAllLink width={width} teamColor={teamColor.primary}>
+                        <ViewAllLink
+                          width={width}
+                          teamColor={teamColor.primary}
+                        >
                           전체 내역 &gt;
                         </ViewAllLink>
                       </TouchableOpacity>
@@ -683,7 +924,10 @@ const MainPage = () => {
                           source={require("../../assets/icon.png")}
                         />
                         <HistoryText width={width}>3/11 승리</HistoryText>
-                        <HistoryAmount width={width} teamColor={teamColor.primary}>
+                        <HistoryAmount
+                          width={width}
+                          teamColor={teamColor.primary}
+                        >
                           +15,000원
                         </HistoryAmount>
                       </HistoryItem>
@@ -693,7 +937,10 @@ const MainPage = () => {
                           source={require("../../assets/icon.png")}
                         />
                         <HistoryText width={width}>3/9 안타 7개</HistoryText>
-                        <HistoryAmount width={width} teamColor={teamColor.primary}>
+                        <HistoryAmount
+                          width={width}
+                          teamColor={teamColor.primary}
+                        >
                           +7,000원
                         </HistoryAmount>
                       </HistoryItem>
@@ -705,7 +952,10 @@ const MainPage = () => {
                         <HistoryText width={width}>
                           3/8 승리, 안타 9개, 홈런 1개
                         </HistoryText>
-                        <HistoryAmount width={width} teamColor={teamColor.primary}>
+                        <HistoryAmount
+                          width={width}
+                          teamColor={teamColor.primary}
+                        >
                           +12,000원
                         </HistoryAmount>
                       </HistoryItem>
@@ -714,35 +964,68 @@ const MainPage = () => {
 
                   <Card width={width}>
                     <CardHeader width={width}>
-                      <CardTitle width={width}>
-                        다음 경기 일정 (API 연결 필요)
-                      </CardTitle>
+                      <CardTitle width={width}>다음 경기 일정</CardTitle>
                       <TouchableOpacity
                         onPress={() => {
-                          tabNavigation.navigate('적금내역', { viewMode: "calendar" });
+                          tabNavigation.navigate("적금내역", {
+                            viewMode: "calendar",
+                          });
                         }}
                       >
-                        <ViewAllLink width={width} teamColor={teamColor.primary}>
+                        <ViewAllLink
+                          width={width}
+                          teamColor={teamColor.primary}
+                        >
                           전체 일정 &gt;
                         </ViewAllLink>
                       </TouchableOpacity>
                     </CardHeader>
                     <CardContent width={width}>
-                      <ScheduleItem width={width}>
-                        <ScheduleDate width={width}>3/22</ScheduleDate>
-                        <ScheduleTeam width={width}>vs NC 다이노스</ScheduleTeam>
-                        <ScheduleTime width={width}>14:00 광주</ScheduleTime>
-                      </ScheduleItem>
-                      <ScheduleItem width={width}>
-                        <ScheduleDate width={width}>3/23</ScheduleDate>
-                        <ScheduleTeam width={width}>vs NC 다이노스</ScheduleTeam>
-                        <ScheduleTime width={width}>14:00 광주</ScheduleTime>
-                      </ScheduleItem>
-                      <ScheduleItem width={width}>
-                        <ScheduleDate width={width}>3/25</ScheduleDate>
-                        <ScheduleTeam width={width}>vs LG 트윈스</ScheduleTeam>
-                        <ScheduleTime width={width}>18:30 광주</ScheduleTime>
-                      </ScheduleItem>
+                      {isScheduleLoading ? (
+                        <View style={{ padding: 10, alignItems: "center" }}>
+                          <Text>경기 일정 로딩 중...</Text>
+                        </View>
+                      ) : scheduleError ? (
+                        <View style={{ padding: 10, alignItems: "center" }}>
+                          <Text>경기 일정을 불러오는데 실패했습니다.</Text>
+                        </View>
+                      ) : gameSchedules.length > 0 ? (
+                        gameSchedules.map((game) => {
+                          const isHomeGame =
+                            game.HOME_TEAM_ID === getTeamIdByName(teamName);
+                          const opponentTeam = isHomeGame
+                            ? game.away_team_name
+                            : game.home_team_name;
+                          const gameDate = new Date(game.DATE);
+                          const month = gameDate.getMonth() + 1;
+                          const day = gameDate.getDate();
+                          const location = getTeamHomeCity(
+                            isHomeGame ? game.HOME_TEAM_ID : game.AWAY_TEAM_ID
+                          );
+
+                          return (
+                            <ScheduleItem
+                              key={game.GAME_SCHEDULE_KEY}
+                              width={width}
+                            >
+                              <ScheduleDate
+                                width={width}
+                              >{`${month}/${day}`}</ScheduleDate>
+                              <ScheduleTeam
+                                width={width}
+                              >{`vs ${opponentTeam}`}</ScheduleTeam>
+                              <ScheduleTime width={width}>
+                                {location}{" "}
+                                <Text>({isHomeGame ? "홈" : "원정"})</Text>
+                              </ScheduleTime>
+                            </ScheduleItem>
+                          );
+                        })
+                      ) : (
+                        <View style={{ padding: 10, alignItems: "center" }}>
+                          <Text>표시할 경기 일정이 없습니다.</Text>
+                        </View>
+                      )}
                     </CardContent>
                   </Card>
                 </View>
