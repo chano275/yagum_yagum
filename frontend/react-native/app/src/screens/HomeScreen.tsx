@@ -18,6 +18,8 @@ import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-root-toast';
 import { useAccountStore } from '../store/useStore';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { useTeam } from '../context/TeamContext';
+import { teamColors, teamIdToCode, teamNameToCode } from '../styles/teamColors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -340,6 +342,7 @@ const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const { isLoggedIn } = useStore();
   const { accountInfo, isLoading, error, fetchAccountInfo } = useAccountStore();
+  const { setTeamData } = useTeam();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideUpAnim = useRef(new Animated.Value(50)).current;
@@ -367,6 +370,44 @@ const HomeScreen = () => {
       })
     ]).start();
   }, [fadeAnim, slideUpAnim]);
+
+  // 계좌 정보를 받아온 후 팀 정보 설정
+  useEffect(() => {
+    if (isLoggedIn && accountInfo?.savings_accounts && accountInfo.savings_accounts.length > 0) {
+      // 적금 계좌가 있는 경우 팀 정보 설정
+      const account = accountInfo.savings_accounts[0];
+      
+      // SSG 랜더스 팀 인식 (팀 이름에서 확인)
+      if (account.team_name && (account.team_name.includes('SSG') || account.team_name.includes('랜더스'))) {
+        console.log("[HomeScreen] SSG 랜더스 팀 감지:", account.team_name);
+        
+        // SSG 랜더스 팀 데이터 설정
+        setTeamData({
+          team_id: 6, // SSG 랜더스 ID
+          team_name: account.team_name,
+          team_color: "#E10600", // 빨간색
+          team_color_secondary: "#FFFFFF",
+          team_color_background: "#FFB81C",
+        });
+      } 
+      // 다른 팀인 경우
+      else if (account.team_name) {
+        const teamCode = teamNameToCode[account.team_name] || 'KIA';
+        console.log("[HomeScreen] 팀 감지:", account.team_name, "코드:", teamCode);
+        
+        // 팀 데이터 설정
+        setTeamData({
+          team_id: Object.keys(teamIdToCode).find(key => teamIdToCode[Number(key)] === teamCode) 
+            ? Number(Object.keys(teamIdToCode).find(key => teamIdToCode[Number(key)] === teamCode))
+            : 1,
+          team_name: account.team_name,
+          team_color: teamColors[teamCode]?.primary || "#2D5BFF",
+          team_color_secondary: teamColors[teamCode]?.secondary || "#FFFFFF",
+          team_color_background: teamColors[teamCode]?.background || "#FFFFFF",
+        });
+      }
+    }
+  }, [isLoggedIn, accountInfo]);
 
   const onFirstCardPress = () => {
     // 카드 애니메이션 먼저 실행

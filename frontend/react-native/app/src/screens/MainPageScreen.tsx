@@ -20,7 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "../api/axios";
 import { useAccountStore } from "../store/useStore";
 import { SavingsAccount } from "../types/account";
-import { teamColors, teamIdToCode, teamNameToCode } from "../styles/teamColors";
+import { teamColors, teamIdToCode } from "../styles/teamColors";
 
 // SavingsAccount를 확장하여 필요한 필드 추가
 interface ExtendedSavingsAccount extends SavingsAccount {
@@ -332,7 +332,7 @@ interface RuleItem {
 const MainPage = () => {
   const tabNavigation = useNavigation<TabNavigationProp>();
   const stackNavigation = useNavigation<MainPageNavigationProp>();
-  const { teamColor, teamName, teamId, setTeamData } = useTeam();
+  const { teamColor, teamName, setTeamData } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
   const { accountInfo, isLoading: accountLoading, error: accountError, fetchAccountInfo } = useAccountStore();
   const width =
@@ -356,73 +356,24 @@ const MainPage = () => {
     fetchAccountInfo();
   }, []);
 
-  // 팀 정보 설정 함수
+  // 팀 정보 설정 함수 (무효화)
   const setupTeamInfo = (account: ExtendedSavingsAccount) => {
-    // 이미 TeamContext에 유효한 팀 정보가 있는지 확인
-    // teamId가 0이 아니면 이미 팀 정보가 설정된 것으로 간주
-    if (teamId !== 0) {
-      console.log("이미 TeamContext에 팀 정보가 설정되어 있습니다:", { teamId, teamName });
-      return;
+    // 팀 정보를 변경하지 않고 현재 값만 로그로 출력
+    console.log("[MainPageScreen] 현재 팀 정보:", {
+      teamId: account.team_id, 
+      teamName: account.team_name, 
+      teamColor: teamColor.primary
+    });
+    
+    if (account) {
+      console.log("[MainPageScreen] 계좌 정보:", {
+        accountTeamId: account.team_id,
+        accountTeamName: account.team_name
+      });
     }
     
-    // 기존 팀 정보가 없는 경우에만 계좌 정보를 기반으로 설정
-    console.log("팀 정보 설정 시작", account);
-    
-    try {
-      // 한화 이글스를 기본 팀으로 설정
-      let teamCodeKey: keyof typeof teamColors = 'Hanwha';
-      
-      // 팀 이름으로 팀 코드 찾기
-      if (account.team_name && account.team_name in teamNameToCode) {
-        const foundCode = teamNameToCode[account.team_name];
-        if (foundCode) {
-          teamCodeKey = foundCode;
-        }
-      }
-      
-      // 팀 ID로 팀 코드 찾기
-      if (teamCodeKey === 'Hanwha' && account.team_id && account.team_id in teamIdToCode) {
-        const foundCode = teamIdToCode[account.team_id];
-        if (foundCode) {
-          teamCodeKey = foundCode;
-        }
-      }
-      
-      console.log("찾은 팀 코드:", teamCodeKey);
-      console.log("팀 색상:", teamColors[teamCodeKey]);
-      
-      // 팀 데이터 구성
-      const teamData = {
-        team_id: account.team_id || 8, // 한화 이글스의 ID는 8
-        team_name: account.team_name || '한화 이글스',
-        team_color: teamColors[teamCodeKey].primary,
-        team_color_secondary: teamColors[teamCodeKey].secondary,
-        team_color_background: teamColors[teamCodeKey].background,
-      };
-      
-      console.log("설정할 팀 데이터:", teamData);
-      
-      // TeamContext 업데이트
-      setTeamData(teamData);
-      
-      return teamColors[teamCodeKey];
-    } catch (error) {
-      console.error("팀 정보 설정 중 오류 발생:", error);
-      
-      // 오류 발생 시 기본값 사용 (TeamContext에 설정이 없는 경우에만)
-      if (teamId === 0) {
-        const defaultTeamData = {
-          team_id: 8,
-          team_name: '한화 이글스',
-          team_color: '#FF6600',
-          team_color_secondary: '#003057',
-          team_color_background: '#ffffff',
-        };
-        
-        setTeamData(defaultTeamData);
-      }
-      return null;
-    }
+    // 값을 변경하지 않음
+    return null;
   };
 
   // 규칙 데이터 가져오기 (실제 API로 대체 필요)
