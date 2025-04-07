@@ -586,7 +586,14 @@ const HomeScreen = () => {
 
   const handleComponentPress = (index: number) => {
     if ((index === 0 || index === 2) && isLoggedIn) {
-      navigation.navigate('SavingsJoin');
+      // 적금 계좌가 있는지 확인
+      if (accountInfo?.savings_accounts && accountInfo.savings_accounts.length > 0) {
+        // 적금 계좌가 있으면 Main으로 이동
+        navigation.navigate('Main');
+      } else {
+        // 적금 계좌가 없으면 가입 화면으로 이동
+        navigation.navigate('SavingsJoin');
+      }
     } else if ((index === 0 || index === 2) && !isLoggedIn) {
       navigation.navigate('Login');
     }
