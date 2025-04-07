@@ -213,13 +213,33 @@ def get_team_record(db: Session, team_id: int):
     return result
 
 def get_all_team_records(db: Session, skip: int = 0, limit: int = 100):
-    """모든 팀 성적 조회"""
+    """모든 팀 성적 조회 (team_rating 테이블 기준 순위 포함)"""
     teams = db.query(models.Team).offset(skip).limit(limit).all()
     
+    # 현재 날짜 가져오기
+    current_date = datetime.now().date()
+    
+    # 가장 최근 날짜의 팀 순위 정보 조회
+    latest_ratings = db.query(models.TeamRating).filter(
+        models.TeamRating.DATE <= current_date
+    ).order_by(models.TeamRating.DATE.desc()).all()
+    
+    # 팀별 최신 순위 정보 저장용 딕셔너리
+    team_rankings = {}
+    
+    # 각 팀의 가장 최근 순위 정보 찾기
+    for rating in latest_ratings:
+        if rating.TEAM_ID not in team_rankings:
+            team_rankings[rating.TEAM_ID] = rating.DAILY_RANKING
+    
+    # 팀 정보와 통계 구성
     results = []
     for team in teams:
         total_games = team.TOTAL_WIN + team.TOTAL_LOSE + team.TOTAL_DRAW
         win_rate = team.TOTAL_WIN / total_games * 100 if total_games > 0 else 0
+        
+        # 팀 순위 가져오기 (없을 경우 기본값 0으로 설정)
+        rank = team_rankings.get(team.TEAM_ID, 0)
         
         results.append({
             "TEAM_ID": team.TEAM_ID,
@@ -227,14 +247,11 @@ def get_all_team_records(db: Session, skip: int = 0, limit: int = 100):
             "TOTAL_WIN": team.TOTAL_WIN,
             "TOTAL_LOSE": team.TOTAL_LOSE,
             "TOTAL_DRAW": team.TOTAL_DRAW,
-            "WIN_RATE": round(win_rate, 2)
+            "WIN_RATE": round(win_rate, 2),
+            "RANK": rank
         })
     
-    # 승률 기준으로 정렬
-    results.sort(key=lambda x: x["WIN_RATE"], reverse=True)
-    
-    # 정렬 후 순위 추가
-    for rank, team_data in enumerate(results, 1):
-        team_data["RANK"] = rank
+    # team_rating 테이블 기준 순위로 정렬
+    results.sort(key=lambda x: x["RANK"])
     
     return results
