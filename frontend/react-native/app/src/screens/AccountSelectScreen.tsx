@@ -514,8 +514,8 @@ const AccountSelectScreen = () => {
         console.log("API 요청 데이터:", JSON.stringify(requestData, null, 2));
         
         const response = await axios.post(
-          // `http://localhost:8000/api/account/create`
-          `http://3.38.183.156:8000/api/account/create`
+          `http://localhost:8000/api/account/create`
+          // `http://3.38.183.156:8000/api/account/create`
           , 
           requestData,
           { 
