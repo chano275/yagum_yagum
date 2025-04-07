@@ -150,7 +150,7 @@ const SelectButtonText = styled.Text`
 
 const TeamSelectModal: React.FC<TeamSelectModalProps> = ({ visible, onClose, onSelectTeam, width }) => {
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
-  const { setCurrentTeam } = useTeam();
+  const { setTeamData } = useTeam();
   const { updateTeam } = useJoin();
   const navigation = useNavigation();
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -194,7 +194,13 @@ const TeamSelectModal: React.FC<TeamSelectModalProps> = ({ visible, onClose, onS
       if (selectedTeamData) {
         const teamCode = teamNameToCode[selectedTeamData.name];
         if (teamCode) {
-          setCurrentTeam(teamCode);
+          setTeamData({
+            team_id: selectedTeamId,
+            team_name: selectedTeamData.name,
+            team_color: teamColors[teamCode].primary,
+            team_color_secondary: teamColors[teamCode].secondary,
+            team_color_background: teamColors[teamCode].background
+          });
           updateTeam({
             id: selectedTeamId,
             name: selectedTeamData.name,

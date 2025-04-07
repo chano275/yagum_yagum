@@ -9,12 +9,17 @@ import {
   Image,
   Animated,
   Easing,
+  ActivityIndicator,
 } from 'react-native';
 import { useTeam } from '../context/TeamContext';
 import styled from 'styled-components/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
+import { useJoin } from '../context/JoinContext';
+import { api } from '../api/axios';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/AppNavigator';
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
@@ -283,14 +288,26 @@ const ScrollIndicator = styled(Animated.View)`
   top: 0;
 `;
 
+interface PlayerType {
+  PLAYER_ID: number;
+  PLAYER_NAME: string;
+  PLAYER_NUM: string;
+  PLAYER_TYPE_ID: number;
+  player_type_name: string;
+  PLAYER_IMAGE_URL: string;
+}
+
 const PlayerSelectScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width: windowWidth } = useWindowDimensions();
   const [selectedTab, setSelectedTab] = useState('투수');
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   const [searchText, setSearchText] = useState('');
-  const { teamColor } = useTeam();
+  const { teamColor, teamId } = useTeam();
+  const { updatePlayer } = useJoin();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [players, setPlayers] = useState<PlayerType[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const searchWidth = useRef(new Animated.Value(48)).current;
   const scrollIndicatorOpacity = useRef(new Animated.Value(0)).current;
   const scrollIndicatorPosition = useRef(new Animated.Value(0)).current;
@@ -300,25 +317,38 @@ const PlayerSelectScreen = () => {
   const [indicatorHeight, setIndicatorHeight] = useState(200);
 
   const tabs = ['투수', '타자'];
-  const players = [
-    { id: 1, number: '40', name: '네일', position: '투수', image: require('../../assets/kbo/players/default.png') },
-    { id: 2, number: '33', name: '올러', position: '투수', image: require('../../assets/kbo/players/default.png') },
-    { id: 3, number: '54', name: '양현종', position: '투수', image: require('../../assets/kbo/players/default.png') },
-    { id: 4, number: '13', name: '윤영철', position: '투수', image: require('../../assets/kbo/players/default.png') },
-    { id: 5, number: '48', name: '이의리', position: '투수', image: require('../../assets/kbo/players/default.png') },
-    { id: 6, number: '5', name: '김도영', position: '타자', image: require('../../assets/kbo/players/default.png') },
-    { id: 7, number: '45', name: '위즈덤', position: '타자', image: require('../../assets/kbo/players/default.png') },
-    { id: 8, number: '47', name: '나성범', position: '타자', image: require('../../assets/kbo/players/default.png') },
-    { id: 9, number: '3', name: '김선빈', position: '타자', image: require('../../assets/kbo/players/default.png') },
-    { id: 10, number: '34', name: '최형우', position: '타자', image: require('../../assets/kbo/players/default.png') },
-  ];
 
+  useEffect(() => {
+    const fetchPlayers = async () => {
+      if (!teamId) return; // teamId가 0이면 API 호출하지 않음
+      
+      try {
+        setIsLoading(true);
+        const response = await api.get(`/api/team/${teamId}/details`);
+        console.log('API 응답:', response.data);
+        
+        if (response.data.players && Array.isArray(response.data.players)) {
+          setPlayers(response.data.players);
+        } else {
+          console.error('선수 데이터 형식이 올바르지 않습니다:', response.data);
+        }
+      } catch (error) {
+        console.error('선수 데이터 로딩 실패:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPlayers();
+  }, [teamId]);
+
+  // 필터링된 선수 목록
   const filteredPlayers = players.filter(player => {
-    const matchesTab = player.position === selectedTab;
-    const matchesSearch = searchText === '' || 
-      player.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      player.number.includes(searchText);
-    return matchesTab && matchesSearch;
+    const isMatchingType = player.player_type_name === selectedTab;
+    const isMatchingSearch = searchText
+      ? player.PLAYER_NAME.toLowerCase().includes(searchText.toLowerCase())
+      : true;
+    return isMatchingType && isMatchingSearch;
   });
 
   const toggleSearch = () => {
@@ -478,27 +508,37 @@ const PlayerSelectScreen = () => {
             }}
           >
             <PlayerGrid>
-              {filteredPlayers.map(player => (
-                <PlayerCard
-                  key={player.id}
-                  onPress={() => setSelectedPlayer(player.id)}
-                  isSelected={selectedPlayer === player.id}
-                  teamColor={teamColor.primary}
-                >
-                  <PlayerImage source={player.image} />
-                  <PlayerInfoContainer>
-                    <PlayerNumber 
-                      textColor={teamColor.primary}
-                      isSelected={selectedPlayer === player.id}
-                    >
-                      NO.{player.number}
-                    </PlayerNumber>
-                    <PlayerName isSelected={selectedPlayer === player.id}>
-                      {player.name}
-                    </PlayerName>
-                  </PlayerInfoContainer>
-                </PlayerCard>
-              ))}
+              {isLoading ? (
+                <ActivityIndicator size="large" color={teamColor.primary} />
+              ) : (
+                filteredPlayers.map(player => (
+                  <PlayerCard
+                    key={player.PLAYER_ID}
+                    onPress={() => setSelectedPlayer(player.PLAYER_ID)}
+                    isSelected={selectedPlayer === player.PLAYER_ID}
+                    teamColor={teamColor.primary}
+                  >
+                    <PlayerImage 
+                      source={
+                        player.PLAYER_IMAGE_URL 
+                          ? { uri: player.PLAYER_IMAGE_URL }
+                          : require('../../assets/kbo/players/default.png')
+                      }
+                    />
+                    <PlayerInfoContainer>
+                      <PlayerNumber 
+                        textColor={teamColor.primary}
+                        isSelected={selectedPlayer === player.PLAYER_ID}
+                      >
+                        NO.{player.PLAYER_NUM}
+                      </PlayerNumber>
+                      <PlayerName isSelected={selectedPlayer === player.PLAYER_ID}>
+                        {player.PLAYER_NAME}
+                      </PlayerName>
+                    </PlayerInfoContainer>
+                  </PlayerCard>
+                ))
+              )}
             </PlayerGrid>
           </CustomScrollView>
 
@@ -519,8 +559,17 @@ const PlayerSelectScreen = () => {
             disabled={!selectedPlayer}
             onPress={() => {
               if (selectedPlayer) {
-                // TODO: 선택된 선수 처리
-                console.log('Selected player:', selectedPlayer);
+                const player = players.find(p => p.PLAYER_ID === selectedPlayer);
+                if (player) {
+                  updatePlayer({
+                    id: player.PLAYER_ID,
+                    name: player.PLAYER_NAME,
+                    number: player.PLAYER_NUM,
+                    position: player.player_type_name,
+                    teamId: teamId
+                  });
+                  navigation.navigate('SavingsGoal');
+                }
               }
             }}
           >
