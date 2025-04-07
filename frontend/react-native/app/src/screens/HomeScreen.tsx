@@ -655,28 +655,73 @@ const HomeScreen = () => {
                     activeOpacity={1}
                   >
                     <SectionTitle width={width} style={{ marginBottom: width * 0.005 }}>추천</SectionTitle>
-                    <ServiceTitleContainer>
-                      <ServiceTextContainer width={width}>
-                        <ServiceTitle width={width} style={{ marginBottom: 4 }}>
-                          <ColoredText style={{ fontWeight: '700' }}>야금야금</ColoredText>
-                        </ServiceTitle>
-                        <ServiceDescription width={width}>
-                          지루했던 금융에
-                          {'\n'}
-                          야구의 재미를 더하다!
-                        </ServiceDescription>
-                      </ServiceTextContainer>
-                      <ServiceIcon
-                        source={require('../../assets/recommend.png')}
-                        resizeMode="contain"
-                        style={{
-                          width: 170,
-                          height: 170,
-                          marginLeft: 'auto',
-                          marginRight: -10
-                        }}
-                      />
-                    </ServiceTitleContainer>
+                    {isLoggedIn && accountInfo?.savings_accounts && accountInfo.savings_accounts.length > 0 ? (
+                      <View style={{ padding: 10 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                          <Text style={{ fontSize: width * 0.045, fontWeight: 'bold', color: '#333' }}>
+                            {accountInfo.savings_accounts[0].team_name} 적금
+                          </Text>
+                          <Text style={{ fontSize: width * 0.04, color: '#666' }}>
+                            {accountInfo.savings_accounts[0].account_num}
+                          </Text>
+                        </View>
+                        
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                          <Text style={{ fontSize: width * 0.04, color: '#666' }}>현재 적립액</Text>
+                          <Text style={{ fontSize: width * 0.04, fontWeight: 'bold', color: '#333' }}>
+                            {accountInfo.savings_accounts[0].total_amount.toLocaleString()}원
+                          </Text>
+                        </View>
+                        
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                          <Text style={{ fontSize: width * 0.04, color: '#666' }}>목표 금액</Text>
+                          <Text style={{ fontSize: width * 0.04, fontWeight: 'bold', color: '#333' }}>
+                            {accountInfo.savings_accounts[0].saving_goal.toLocaleString()}원
+                          </Text>
+                        </View>
+                        
+                        <View style={{ marginBottom: 5 }}>
+                          <Text style={{ fontSize: width * 0.035, color: '#666', marginBottom: 5 }}>
+                            목표 달성률: {accountInfo.savings_accounts[0].progress_percentage}%
+                          </Text>
+                          <View style={{ 
+                            height: 10, 
+                            backgroundColor: '#EEEEEE', 
+                            borderRadius: 5, 
+                            overflow: 'hidden' 
+                          }}>
+                            <View style={{ 
+                              width: `${accountInfo.savings_accounts[0].progress_percentage}%`, 
+                              height: '100%', 
+                              backgroundColor: '#2D5BFF' 
+                            }} />
+                          </View>
+                        </View>
+                      </View>
+                    ) : (
+                      <ServiceTitleContainer>
+                        <ServiceTextContainer width={width}>
+                          <ServiceTitle width={width} style={{ marginBottom: 4 }}>
+                            <ColoredText style={{ fontWeight: '700' }}>야금야금</ColoredText>
+                          </ServiceTitle>
+                          <ServiceDescription width={width}>
+                            지루했던 금융에
+                            {'\n'}
+                            야구의 재미를 더하다!
+                          </ServiceDescription>
+                        </ServiceTextContainer>
+                        <ServiceIcon
+                          source={require('../../assets/recommend.png')}
+                          resizeMode="contain"
+                          style={{
+                            width: 170,
+                            height: 170,
+                            marginLeft: 'auto',
+                            marginRight: -10
+                          }}
+                        />
+                      </ServiceTitleContainer>
+                    )}
                   </AnimatedServiceCard>
                 </RecommendSection>
                 {isLoggedIn && (
