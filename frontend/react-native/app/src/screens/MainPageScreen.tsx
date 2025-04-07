@@ -390,6 +390,8 @@ const MainPage = () => {
   const [error, setError] = useState(null);
   const [activeSlide, setActiveSlide] = useState(0);
   const [savingRules, setSavingRules] = useState<RuleItem[]>([]);
+  const [teamRank, setTeamRank] = useState<number | null>(null);
+  const [isRankLoading, setIsRankLoading] = useState<boolean>(true);
 
   // 경기 일정 관련 상태 추가
   const [gameSchedules, setGameSchedules] = useState<GameSchedule[]>([]);
@@ -499,6 +501,37 @@ const MainPage = () => {
 
     if (teamName) {
       fetchGameSchedules();
+    }
+  }, [teamName]);
+
+  // 팀 순위 정보를 가져오는 useEffect 추가
+  useEffect(() => {
+    const fetchTeamRank = async () => {
+      try {
+        setIsRankLoading(true);
+        const response = await api.get("/api/game/team/ranking");
+
+        if (response.status === 200 && Array.isArray(response.data)) {
+          // 현재 사용자의 팀을 찾습니다
+          const currentTeam = response.data.find(
+            (team) => team.TEAM_NAME === teamName
+          );
+
+          if (currentTeam) {
+            setTeamRank(currentTeam.RANK);
+          }
+        } else {
+          console.error("팀 순위 API 응답 형식이, 예상과 다릅니다.");
+        }
+      } catch (err) {
+        console.error("팀 순위 조회 실패:", err);
+      } finally {
+        setIsRankLoading(false);
+      }
+    };
+
+    if (teamName) {
+      fetchTeamRank();
     }
   }, [teamName]);
 
@@ -865,8 +898,15 @@ const MainPage = () => {
                       </StatHighlight>
                     )}
                   </StatText>
+
                   <StatText width={width}>
-                    팀 순위: 3위(API) <StatHighlight>+2</StatHighlight>
+                    팀 순위:{" "}
+                    {isRankLoading
+                      ? "로딩 중..."
+                      : teamRank
+                      ? `${teamRank}위`
+                      : "순위 없음"}{" "}
+                    <StatHighlight>+2</StatHighlight>
                   </StatText>
                 </StatsRow>
 
