@@ -223,6 +223,7 @@ const CalendarCard = styled(Card)`
 const CalendarContainer = styled.View`
   background-color: white;
   padding-bottom: 10px;
+  padding-horizontal: 6px;
 `;
 
 const CalendarHeaderContainer = styled.View`
@@ -254,7 +255,7 @@ const MonthTitle = styled.Text`
 const WeekdayRow = styled.View`
   flex-direction: row;
   margin-bottom: 8px;
-  padding-horizontal: 12px;
+  padding-horizontal: 8px;
 `;
 
 const WeekdayText = styled.Text`
@@ -267,6 +268,7 @@ const WeekdayText = styled.Text`
 const DaysContainer = styled.View`
   flex-wrap: wrap;
   flex-direction: row;
+  padding-left: 2px;
 `;
 
 const DayCell = styled.TouchableOpacity<{
@@ -277,10 +279,10 @@ const DayCell = styled.TouchableOpacity<{
   teamColor: string;
 }>`
   width: ${100 / 7}%;
-  aspect-ratio: 1;
+  height: 68px; // 고정 높이로 변경
   align-items: center;
-  justify-content: flex-start;
-  padding-top: 5px;
+  justify-content: space-between; // 내용을 균등하게 분배
+  padding: 4px 2px 3px 2px; // 상하좌우 패딩 추가
   opacity: ${(props) => (props.isCurrentMonth ? 1 : 0.4)};
   background-color: ${(props) => props.backgroundColor};
   border-width: ${(props) => (props.isToday || props.isSelected ? 1 : 0)}px;
@@ -494,14 +496,16 @@ const SavingsScreen = () => {
 
   // 팀 로고 임포트
   const teamLogos = {
-    NC: require("../../assets/icon.png"),
-    DOOSAN: require("../../assets/icon.png"),
-    SAMSUNG: require("../../assets/icon.png"),
-    LOTTE: require("../../assets/icon.png"),
-    KIA: require("../../assets/icon.png"),
-    LG: require("../../assets/icon.png"),
-    BEARS: require("../../assets/icon.png"),
-    TWINS: require("../../assets/icon.png"),
+    KIA: require("../../assets/kbo/tigers.png"),
+    SAMSUNG: require("../../assets/kbo/lions.png"),
+    LG: require("../../assets/kbo/twins.png"),
+    DOOSAN: require("../../assets/kbo/bears.png"),
+    KT: require("../../assets/kbo/wiz.png"),
+    SSG: require("../../assets/kbo/landers.png"),
+    LOTTE: require("../../assets/kbo/giants.png"),
+    HANWHA: require("../../assets/kbo/eagles.png"),
+    NC: require("../../assets/kbo/dinos.png"),
+    KIWOOM: require("../../assets/kbo/heroes.png"),
   };
 
   // 캘린더 권한 요청
@@ -536,21 +540,46 @@ const SavingsScreen = () => {
 
   // 팀명으로 팀 로고 가져오기
   const getTeamLogo = (teamName: string) => {
+    // 전체 팀명과 약칭 모두 매핑
     const logoMap: { [key: string]: any } = {
+      // 전체 팀명 매핑
       "KIA 타이거즈": teamLogos.KIA,
       "삼성 라이온즈": teamLogos.SAMSUNG,
-      "LG 트윈스": teamLogos.TWINS,
-      "두산 베어스": teamLogos.BEARS,
-      "KT 위즈": teamLogos.NC, // 실제 로고로 교체 필요
-      "SSG 랜더스": teamLogos.NC, // 실제 로고로 교체 필요
+      "LG 트윈스": teamLogos.LG,
+      "두산 베어스": teamLogos.DOOSAN,
+      "KT 위즈": teamLogos.KT,
+      "SSG 랜더스": teamLogos.SSG,
       "롯데 자이언츠": teamLogos.LOTTE,
-      "한화 이글스": teamLogos.NC, // 실제 로고로 교체 필요
+      "한화 이글스": teamLogos.HANWHA,
       "NC 다이노스": teamLogos.NC,
-      "키움 히어로즈": teamLogos.NC, // 실제 로고로 교체 필요
-      TWINS: teamLogos.TWINS,
-      BEARS: teamLogos.BEARS,
+      "키움 히어로즈": teamLogos.KIWOOM,
+
+      // 약칭 매핑
+      KIA: teamLogos.KIA,
+      삼성: teamLogos.SAMSUNG,
+      LG: teamLogos.LG,
+      두산: teamLogos.DOOSAN,
+      KT: teamLogos.KT,
+      SSG: teamLogos.SSG,
+      롯데: teamLogos.LOTTE,
+      한화: teamLogos.HANWHA,
+      NC: teamLogos.NC,
+      키움: teamLogos.KIWOOM,
+
+      // 영문 약칭 매핑
+      TIGERS: teamLogos.KIA,
+      LIONS: teamLogos.SAMSUNG,
+      TWINS: teamLogos.LG,
+      BEARS: teamLogos.DOOSAN,
+      WIZ: teamLogos.KT,
+      LANDERS: teamLogos.SSG,
+      GIANTS: teamLogos.LOTTE,
+      EAGLES: teamLogos.HANWHA,
+      DINOS: teamLogos.NC,
+      HEROES: teamLogos.KIWOOM,
     };
-    return logoMap[teamName] || teamLogos.NC;
+
+    return logoMap[teamName] || teamLogos.NC; // 매칭 실패 시 NC 로고를 기본값으로 사용
   };
 
   // 거래 상세 내역 페이지로 이동하는 함수
@@ -601,9 +630,11 @@ const SavingsScreen = () => {
 
           // 시리즈의 첫 경기 날짜와 마지막 경기 날짜
           const firstGameDate = new Date(potentialSeries[0].DATE);
+          firstGameDate.setHours(0, 0, 0, 0); // 시간 초기화 추가
           const lastGameDate = new Date(
             potentialSeries[potentialSeries.length - 1].DATE
           );
+          lastGameDate.setHours(0, 0, 0, 0); // 시간 초기화 추가
 
           // 시리즈 상태 결정 (진행 중/과거/미래)
           let seriesStatus = "upcoming";
@@ -613,13 +644,13 @@ const SavingsScreen = () => {
             seriesStatus = "current"; // 3연전이 진행 중인 경우
           }
 
-          // 모든 경기를 "upcoming"으로 설정 (무작위 값 제거)
+          // 모든 경기를 "upcoming"으로 설정
           const gameStatuses: GameStatus[] = potentialSeries.map(
             () => "upcoming"
           );
           const result = "예정된 경기";
 
-          // 각 경기별 상세 정보 (무작위 금액 생성 제거)
+          // 각 경기별 상세 정보
           const days = potentialSeries.map((game) => ({
             date: formatShortDate(game.DATE),
             amount: null,
@@ -636,6 +667,12 @@ const SavingsScreen = () => {
             logo: getTeamLogo(potentialSeries[0].away_team_name),
           };
 
+          // 오늘 시작하는지 확인 (시간을 0으로 초기화하여 정확히 비교)
+          const isStartingToday =
+            firstGameDate.getFullYear() === today.getFullYear() &&
+            firstGameDate.getMonth() === today.getMonth() &&
+            firstGameDate.getDate() === today.getDate();
+
           // 시리즈 정보 추가
           allSeries.push({
             id: `series-${allSeries.length + 1}`,
@@ -645,8 +682,9 @@ const SavingsScreen = () => {
             result,
             days,
             totalAmount: 0,
-            status: seriesStatus, // 상태 정보 추가
-            startTime: firstGameDate.getTime(), // 정렬을 위한 시작 시간 추가
+            status: seriesStatus,
+            startTime: firstGameDate.getTime(),
+            isStartingToday: isStartingToday, // 오늘 시작하는지 여부 추가
           });
         }
       }
@@ -656,20 +694,35 @@ const SavingsScreen = () => {
     // 1. 현재 진행 중인 시리즈
     const currentSeries = allSeries
       .filter((series) => series.status === "current")
-      .sort((a, b) => b.startTime - a.startTime);
+      .sort((a, b) => {
+        // 정렬 기준 1: 오늘 시작하는 시리즈가 최우선
+        if (a.isStartingToday && !b.isStartingToday) return -1;
+        if (!a.isStartingToday && b.isStartingToday) return 1;
+
+        // 정렬 기준 2: 시작 시간이 최신인 것 (역순)
+        return b.startTime - a.startTime;
+      });
 
     // 2. 과거 시리즈 (최신순)
     const pastSeries = allSeries
       .filter((series) => series.status === "past")
       .sort((a, b) => b.startTime - a.startTime);
 
-    // 3. 결과 구성: 현재 진행 중 시리즈 + 과거 시리즈 (최대 2개)
-    const result = [
-      ...currentSeries.slice(0, 1), // 현재 진행 중인 시리즈 (최대 1개)
-      ...pastSeries.slice(0, 2), // 과거 시리즈 (최대 2개)
-    ];
+    // 3. 결과 구성: 항상 총 3개의 시리즈가 출력되도록 수정
+    const maxDisplayCount = 3; // 총 표시할 시리즈 수
+    const result = [];
 
-    return result;
+    // 현재 진행 중인 시리즈 모두 추가
+    result.push(...currentSeries);
+
+    // 남은 자리를 과거 시리즈로 채우기
+    const remainingSlots = Math.max(0, maxDisplayCount - result.length);
+    if (remainingSlots > 0) {
+      result.push(...pastSeries.slice(0, remainingSlots));
+    }
+
+    // 최종적으로 최대 3개까지만 표시
+    return result.slice(0, maxDisplayCount);
   };
 
   // 월별 거래 내역 데이터 가져오기 (임시 더미 데이터)
@@ -872,52 +925,46 @@ const SavingsScreen = () => {
 
   // 날짜 셀 렌더링 함수
   const renderDayCell = (day: CalendarDay) => {
-    // 경기 결과에 따른 배경색과 라벨 설정
-    let bgColor = "transparent";
+    // 경기 결과에 따른 라벨 설정 (배경색은 제거)
+    let bgColor = "transparent"; // 캘린더 셀 배경색을 투명하게 설정
     let statusLabel = "";
     let statusColor = "#333";
     let badgeBgColor = "transparent";
 
     if (day.marking) {
       const { gameResult } = day.marking;
-
       switch (gameResult) {
         case "win":
-          bgColor = "#ffebee";
           statusLabel = "승";
           statusColor = "#f44336";
           badgeBgColor = "rgba(244, 67, 54, 0.2)";
           break;
         case "lose":
-          bgColor = "#e3f2fd";
           statusLabel = "패";
           statusColor = "#2196f3";
           badgeBgColor = "rgba(33, 150, 243, 0.2)";
           break;
         case "draw":
-          bgColor = "#e8f5e9";
           statusLabel = "무";
           statusColor = "#4caf50";
           badgeBgColor = "rgba(76, 175, 80, 0.2)";
           break;
         case "cancelled":
-          bgColor = "#f5f5f5";
-          statusLabel = "취";
+          statusLabel = "취소";
           statusColor = "#9e9e9e";
           badgeBgColor = "rgba(158, 158, 158, 0.2)";
           break;
         case "upcoming":
-          bgColor = "#f3e5f5";
-          statusLabel = "예";
+          statusLabel = "예정";
           statusColor = "#9c27b0";
           badgeBgColor = "rgba(156, 39, 176, 0.2)";
           break;
       }
     }
 
-    // 선택된 날짜 또는 오늘 날짜는 배경색 변경
+    // 선택된 날짜 또는 오늘 날짜의 배경색 변경
     if (day.isSelected) {
-      bgColor = day.marking ? bgColor : "#f0f0f0";
+      bgColor = day.marking ? "transparent" : "#f0f0f0"; // 선택된 날짜도 투명하게 유지
     }
 
     return (
@@ -930,47 +977,57 @@ const SavingsScreen = () => {
         backgroundColor={bgColor}
         teamColor={teamColor.primary}
       >
-        {/* 날짜 표시 */}
-        <Text
-          style={{
-            fontSize: 14,
-            color: day.isCurrentMonth ? "#333" : "#ccc",
-            fontWeight: day.isToday || day.isSelected ? "bold" : "normal",
-          }}
-        >
-          {day.day}
-        </Text>
-
-        {/* 경기 결과 */}
-        {statusLabel ? (
-          <View
-            style={{
-              paddingHorizontal: 6,
-              paddingVertical: 2,
-              borderRadius: 10,
-              backgroundColor: badgeBgColor,
-              marginTop: 2,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 10,
-                fontWeight: "bold",
-                color: statusColor,
-              }}
-            >
-              {statusLabel}
-            </Text>
-          </View>
-        ) : null}
-
-        {/* 하단 영역: 금액과 로고 */}
+        {/* 날짜와 상태 표시 - 가로 배치로 변경 */}
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
-            marginTop: 3,
+            justifyContent: "flex-start",
+            width: "100%",
+            marginTop: 2,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 14,
+              color: day.isCurrentMonth ? "#333" : "#ccc",
+              fontWeight: day.isToday || day.isSelected ? "bold" : "normal",
+            }}
+          >
+            {day.day}
+          </Text>
+
+          {statusLabel ? (
+            <View
+              style={{
+                paddingHorizontal: 4,
+                paddingVertical: 1,
+                borderRadius: 8,
+                backgroundColor: badgeBgColor,
+                marginLeft: 2,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: "bold",
+                  color: statusColor,
+                }}
+              >
+                {statusLabel}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* 하단 영역: 금액과 로고 */}
+        <View
+          style={{
+            alignItems: "center",
+            justifyContent: "flex-end", // center에서 flex-end로 변경하여 하단 정렬
+            marginTop: 0, // 2px에서 0px로 줄임
+            marginBottom: 2, // 3px에서 2px로 줄임
+            height: 32, // 고정 높이 설정으로 공간 효율화
           }}
         >
           {/* 적금 금액 */}
@@ -981,6 +1038,7 @@ const SavingsScreen = () => {
                   fontSize: 10,
                   fontWeight: "bold",
                   color: teamColor.primary,
+                  marginBottom: 1,
                 }}
               >
                 {day.marking.amount.toLocaleString()}원
@@ -992,11 +1050,10 @@ const SavingsScreen = () => {
             <Image
               source={day.marking.teamLogo}
               style={{
-                width: 15,
-                height: 15,
-                marginLeft: 2,
-                borderRadius: 8,
+                width: 28, // 로고 크기 약간 증가
+                height: 28,
               }}
+              resizeMode="contain"
             />
           )}
         </View>
