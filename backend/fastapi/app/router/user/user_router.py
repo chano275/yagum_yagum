@@ -441,7 +441,7 @@ async def get_user_accounts(
             detail=f"사용자 계좌 정보 조회 중 오류 발생: {str(e)}"
         )
     
-@router.get("check-account-num", response_model=CheckNum)
+@router.get("/check-account-num", response_model=CheckNum)
 async def check_account_num(
     account_num: str,
     db: Session = Depends(get_db),
