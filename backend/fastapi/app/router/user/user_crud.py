@@ -5,7 +5,7 @@ from passlib.context import CryptContext
 from typing import Optional
 
 import models
-from router.user.user_schema import UserCreate, UserUpdate
+from router.user.user_schema import UserCreate
 
 # 비밀번호 해싱 설정
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

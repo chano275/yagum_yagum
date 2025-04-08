@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from database import get_db
 import models
-from router.user.user_schema import UserCreate, UserUpdate, UserResponse, UserLogin, TokenResponse, TokenData
+from router.user.user_schema import UserCreate, UserResponse, TokenResponse, TokenData
 import router.user.user_crud as user_crud
 from router.account import account_schema, account_crud
 from router.user.user_ssafy_api_utils import get_or_create_user_key
