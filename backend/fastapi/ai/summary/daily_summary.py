@@ -75,7 +75,7 @@ def generate_daily_message(team_data, report_date):
     return {
         "team_id": team_id,
         "date": report_date,
-        "daily_text": daily_text
+        "llm_context": daily_text
     }
 
 # ------------------------------------------------------------------
