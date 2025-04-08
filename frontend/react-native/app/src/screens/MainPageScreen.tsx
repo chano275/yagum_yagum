@@ -181,8 +181,19 @@ const StatText = styled.Text<StyledProps>`
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
-const StatHighlight = styled.Text`
-  color: #4caf50;
+const StatHighlight = styled.Text<{ status?: "up" | "down" | "same" }>`
+  color: ${(props) => {
+    switch (props.status) {
+      case "up":
+        return "#4caf50"; // 초록색 (상승)
+      case "down":
+        return "#f44336"; // 빨간색 (하락)
+      case "same":
+        return "#9e9e9e"; // 회색 (유지)
+      default:
+        return "#4caf50"; // 기본값 (초록색)
+    }
+  }};
   font-weight: bold;
   font-family: ${({ theme }) => theme.fonts.bold};
 `;
@@ -371,6 +382,7 @@ const MainPage = () => {
   const [activeSlide, setActiveSlide] = useState(0);
   const [savingRules, setSavingRules] = useState<RuleItem[]>([]);
   const [teamRank, setTeamRank] = useState<number | null>(null);
+  const [rankChange, setRankChange] = useState<number | null>(null);
   const [isRankLoading, setIsRankLoading] = useState<boolean>(true);
   // 경기 일정 관련 상태 추가
   const [gameSchedules, setGameSchedules] = useState<GameSchedule[]>([]);
@@ -493,6 +505,9 @@ const MainPage = () => {
           if (currentTeam) {
             setTeamRank(currentTeam.RANK);
           }
+
+          const change = currentTeam.BEFORE_RANK - currentTeam.RANK;
+          setRankChange(change);
         } else {
           console.error("팀 순위 API 응답 형식이, 예상과 다릅니다.");
         }
@@ -866,7 +881,23 @@ const MainPage = () => {
                       : teamRank
                       ? `${teamRank}위`
                       : "순위 없음"}{" "}
-                    <StatHighlight>+2(등수 변경 API)</StatHighlight>
+                    {!isRankLoading && rankChange !== null && (
+                      <StatHighlight
+                        status={
+                          rankChange > 0
+                            ? "up"
+                            : rankChange < 0
+                            ? "down"
+                            : "same"
+                        }
+                      >
+                        {rankChange > 0
+                          ? `+${rankChange}`
+                          : rankChange < 0
+                          ? rankChange
+                          : "±0"}
+                      </StatHighlight>
+                    )}
                   </StatText>
                 </StatsRow>
 
