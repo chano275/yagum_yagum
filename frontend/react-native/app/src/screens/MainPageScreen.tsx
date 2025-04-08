@@ -63,14 +63,12 @@ interface StyledProps {
 
 const BASE_MOBILE_WIDTH = 390;
 const MAX_MOBILE_WIDTH = 430;
-
 const AppWrapper = styled.View`
   flex: 1;
   align-items: center;
   background-color: ${({ theme }) => theme.colors.background};
   width: 100%;
 `;
-
 const MobileContainer = styled.View<StyledProps>`
   width: ${({ width }) => {
     const isWeb = Platform.OS === "web";
@@ -131,13 +129,11 @@ const BellIcon = styled.Image`
   width: 24px;
   height: 24px;
 `;
-
 const ProgressSection = styled.View<StyledProps & { teamColor: string }>`
   background-color: ${(props) => props.teamColor};
   padding: ${({ width }) => width * 0.04}px;
   padding-top: ${({ width }) => width * 0.02}px;
 `;
-
 const ProgressTitle = styled.Text<StyledProps>`
   color: white;
   font-size: ${({ width }) => width * 0.04}px;
@@ -157,14 +153,12 @@ const ProgressBarContainer = styled.View<StyledProps>`
   border-radius: ${({ width }) => width * 0.01}px;
   overflow: hidden;
 `;
-
 const ProgressFill = styled.View<{ percentage: number }>`
   height: 100%;
   width: ${(props) => `${props.percentage}%`};
   background-color: #ffffff;
   border-radius: 4px;
 `;
-
 const ProgressPercent = styled.Text<StyledProps>`
   color: white;
   font-size: ${({ width }) => width * 0.03}px;
@@ -172,7 +166,6 @@ const ProgressPercent = styled.Text<StyledProps>`
   margin-top: ${({ width }) => width * 0.01}px;
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
-
 const StatsRow = styled.View<StyledProps>`
   flex-direction: row;
   justify-content: space-between;
@@ -211,7 +204,6 @@ const Card = styled.View<StyledProps>`
     box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
   `}
 `;
-
 const CardHeader = styled.View<StyledProps>`
   flex-direction: row;
   justify-content: space-between;
@@ -233,42 +225,35 @@ const ViewAllLink = styled.Text<StyledProps & { teamColor: string }>`
   color: ${(props) => props.teamColor};
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
-
 const CardContent = styled.View<StyledProps>`
   padding: ${({ width }) => width * 0.03}px;
 `;
-
 const CardText = styled.Text<StyledProps>`
   font-size: ${({ width }) => width * 0.035}px;
   color: #333;
   line-height: ${({ width }) => width * 0.05}px;
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
-
 const RedText = styled.Text<{ teamColor: string }>`
   color: ${(props) => props.teamColor};
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
-
 const RuleText = styled.Text<StyledProps>`
   font-size: ${({ width }) => width * 0.035}px;
   color: #333;
   margin-bottom: ${({ width }) => width * 0.01}px;
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
-
 const HistoryItem = styled.View<StyledProps>`
   flex-direction: row;
   align-items: center;
   margin-bottom: ${({ width }) => width * 0.02}px;
 `;
-
 const TeamLogo = styled.Image<StyledProps>`
   width: ${({ width }) => width * 0.06}px;
   height: ${({ width }) => width * 0.06}px;
   margin-right: ${({ width }) => width * 0.02}px;
 `;
-
 const HistoryText = styled.Text<StyledProps>`
   flex: 1;
   font-size: ${({ width }) => width * 0.035}px;
@@ -288,14 +273,12 @@ const ScheduleItem = styled.View<StyledProps>`
   align-items: center;
   margin-bottom: ${({ width }) => width * 0.02}px;
 `;
-
 const ScheduleDate = styled.Text<StyledProps>`
   width: ${({ width }) => width * 0.1}px;
   font-size: ${({ width }) => width * 0.035}px;
   color: #333;
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
-
 const ScheduleTeam = styled.Text<StyledProps>`
   flex: 1;
   font-size: ${({ width }) => width * 0.035}px;
@@ -319,7 +302,6 @@ const RuleCarouselCard = styled.View<StyledProps>`
   border-width: 1px;
   border-color: #eeeeee;
 `;
-
 const RuleCardHeader = styled.View<StyledProps & { teamColor: string }>`
   flex-direction: row;
   justify-content: space-between;
@@ -329,7 +311,6 @@ const RuleCardHeader = styled.View<StyledProps & { teamColor: string }>`
   border-bottom-color: #eeeeee;
   background-color: ${(props) => props.teamColor};
 `;
-
 const RuleCardTitle = styled.Text<StyledProps>`
   font-size: ${({ width }) => width * 0.04}px;
   font-weight: bold;
@@ -348,7 +329,6 @@ const PaginationContainer = styled.View`
   align-items: center;
   margin-top: 10px;
 `;
-
 const PaginationDot = styled.View<{ active: boolean; teamColor: string }>`
   width: 8px;
   height: 8px;
@@ -392,7 +372,6 @@ const MainPage = () => {
   const [savingRules, setSavingRules] = useState<RuleItem[]>([]);
   const [teamRank, setTeamRank] = useState<number | null>(null);
   const [isRankLoading, setIsRankLoading] = useState<boolean>(true);
-
   // 경기 일정 관련 상태 추가
   const [gameSchedules, setGameSchedules] = useState<GameSchedule[]>([]);
   const [isScheduleLoading, setIsScheduleLoading] = useState<boolean>(true);
@@ -402,7 +381,6 @@ const MainPage = () => {
   useEffect(() => {
     fetchAccountInfo();
   }, []);
-
   // 팀 ID 가져오기 함수
   const getTeamIdByName = (name: string): number => {
     const teamMapping: { [key: string]: number } = {
@@ -419,7 +397,6 @@ const MainPage = () => {
     };
     return teamMapping[name] || 1;
   };
-
   // 팀 홈구장 도시 정보 함수
   const getTeamHomeCity = (teamId: number): string => {
     const cityMap: { [key: number]: string } = {
@@ -445,7 +422,6 @@ const MainPage = () => {
       teamName: account.team_name,
       teamColor: teamColor.primary,
     });
-
     if (account) {
       console.log("[MainPageScreen] 계좌 정보:", {
         accountTeamId: account.team_id,
@@ -456,7 +432,6 @@ const MainPage = () => {
     // 값을 변경하지 않음
     return null;
   };
-
   // 경기 일정 조회
   useEffect(() => {
     const fetchGameSchedules = async () => {
@@ -498,12 +473,10 @@ const MainPage = () => {
         setIsScheduleLoading(false);
       }
     };
-
     if (teamName) {
       fetchGameSchedules();
     }
   }, [teamName]);
-
   // 팀 순위 정보를 가져오는 useEffect 추가
   useEffect(() => {
     const fetchTeamRank = async () => {
@@ -534,152 +507,106 @@ const MainPage = () => {
       fetchTeamRank();
     }
   }, [teamName]);
+  // 적금 규칙 인터페이스 정의 (API 응답 구조에 맞춤)
+  interface SavingRule {
+    USER_SAVING_RULED_ID: number;
+    ACCOUNT_ID: number;
+    SAVING_RULE_TYPE_ID: number;
+    SAVING_RULE_TYPE_NAME: string;
+    SAVING_RULE_DETAIL_ID: number;
+    PLAYER_TYPE_ID: number | null;
+    PLAYER_TYPE_NAME: string | null;
+    USER_SAVING_RULED_AMOUNT: number;
+    PLAYER_ID: number | null;
+    PLAYER_NAME: string | null;
+    RECORD_NAME: string;
+  }
 
-  // 규칙 데이터 가져오기 (실제 API로 대체 필요)
-  const fetchRules = async (accountId: string) => {
+  // 기존 함수를 대체할 실제 API 호출 함수
+  const fetchRules = async () => {
     try {
-      // 실제 API 호출로 대체 필요
-      // const response = await api.get(`/api/account/${accountId}/rules`);
-      // return response.data;
-
-      // 임시 데이터
-      return [
-        {
-          rule_id: 1,
-          rule_type: "basic",
-          rule_name: "팀이 승리하는 경우",
-          rule_amount: 3000,
-          is_active: true,
-        },
-        {
-          rule_id: 2,
-          rule_type: "basic",
-          rule_name: "팀이 안타를 친 경우",
-          rule_amount: 1000,
-          is_active: true,
-        },
-        {
-          rule_id: 3,
-          rule_type: "basic",
-          rule_name: "팀이 홈런을 친 경우",
-          rule_amount: 5000,
-          is_active: true,
-        },
-        {
-          rule_id: 4,
-          rule_type: "pitcher",
-          rule_name: "투수 삼진을 잡는 경우",
-          rule_amount: 1000,
-          is_active: true,
-        },
-        {
-          rule_id: 5,
-          rule_type: "pitcher",
-          rule_name: "투수 볼넷을 던진 경우",
-          rule_amount: -500,
-          is_active: true,
-        },
-        {
-          rule_id: 6,
-          rule_type: "pitcher",
-          rule_name: "투수 자책점",
-          rule_amount: -1000,
-          is_active: true,
-        },
-        {
-          rule_id: 7,
-          rule_type: "batter",
-          rule_name: "타자 안타를 친 경우",
-          rule_amount: 1000,
-          is_active: true,
-        },
-        {
-          rule_id: 8,
-          rule_type: "batter",
-          rule_name: "타자 홈런을 친 경우",
-          rule_amount: 5000,
-          is_active: true,
-        },
-        {
-          rule_id: 9,
-          rule_type: "batter",
-          rule_name: "타자 도루하는 경우",
-          rule_amount: 2000,
-          is_active: true,
-        },
-        {
-          rule_id: 10,
-          rule_type: "opponent",
-          rule_name: "상대팀 삼진",
-          rule_amount: 500,
-          is_active: true,
-        },
-        {
-          rule_id: 11,
-          rule_type: "opponent",
-          rule_name: "상대팀 병살타",
-          rule_amount: 1000,
-          is_active: true,
-        },
-        {
-          rule_id: 12,
-          rule_type: "opponent",
-          rule_name: "상대팀 실책",
-          rule_amount: 1000,
-          is_active: true,
-        },
-      ];
+      const response = await api.get("/api/account/saving-rules");
+      console.log("적금 규칙 API 응답:", response.data);
+      return response.data;
     } catch (err) {
       console.error("규칙 조회 실패:", err);
       return [];
     }
   };
 
-  // 규칙을 타입별로 분류하는 함수
-  const organizeRulesByType = (rules: Rule[]) => {
-    const rulesByType: Record<string, Rule[]> = {
-      basic: [],
-      pitcher: [],
-      batter: [],
-      opponent: [],
-    };
-
+  // 규칙을 SAVING_RULE_TYPE_ID 기준으로 분류하는 함수
+  const organizeRulesByType = (
+    rules: SavingRule[],
+    userPreferredPlayerType?: number
+  ) => {
+    // SAVING_RULE_TYPE_ID 기반 그룹화
+    const rulesByTypeId: { [key: number]: SavingRule[] } = {};
     rules.forEach((rule) => {
-      if (rule.rule_type in rulesByType) {
-        rulesByType[rule.rule_type].push(rule);
+      const typeId = rule.SAVING_RULE_TYPE_ID;
+      if (!rulesByTypeId[typeId]) {
+        rulesByTypeId[typeId] = [];
       }
+      rulesByTypeId[typeId].push(rule);
     });
+    const organizedRules: RuleItem[] = [];
 
-    const organizedRules: RuleItem[] = [
-      {
+    // 기본 규칙 (ID: 1) 항상 포함
+    if (rulesByTypeId[1]?.length > 0) {
+      organizedRules.push({
         id: 1,
         title: "기본 규칙",
-        rules: rulesByType.basic.map(
-          (r) => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`
+        rules: rulesByTypeId[1].map(
+          (r) =>
+            `${r.RECORD_NAME}: ${r.USER_SAVING_RULED_AMOUNT.toLocaleString()}원`
         ),
-      },
-      {
+      });
+    }
+
+    // 투수 규칙 (ID: 2) - 최애 선수가 투수인 경우 또는 필터링 없을 때만 포함
+    if (
+      rulesByTypeId[2]?.length > 0 &&
+      (userPreferredPlayerType === 1 || !userPreferredPlayerType)
+    ) {
+      organizedRules.push({
         id: 2,
         title: "투수 규칙",
-        rules: rulesByType.pitcher.map(
-          (r) => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`
+        rules: rulesByTypeId[2].map(
+          (r) =>
+            `${r.PLAYER_NAME ? r.PLAYER_NAME + ": " : ""}${
+              r.RECORD_NAME
+            }: ${r.USER_SAVING_RULED_AMOUNT.toLocaleString()}원`
         ),
-      },
-      {
+      });
+    }
+
+    // 타자 규칙 (ID: 3) - 최애 선수가 타자인 경우 또는 필터링 없을 때만 포함
+    if (
+      rulesByTypeId[3]?.length > 0 &&
+      (userPreferredPlayerType === 2 || !userPreferredPlayerType)
+    ) {
+      organizedRules.push({
         id: 3,
         title: "타자 규칙",
-        rules: rulesByType.batter.map(
-          (r) => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`
+        rules: rulesByTypeId[3].map(
+          (r) =>
+            `${r.PLAYER_NAME ? r.PLAYER_NAME + ": " : ""}${
+              r.RECORD_NAME
+            }: ${r.USER_SAVING_RULED_AMOUNT.toLocaleString()}원`
         ),
-      },
-      {
+      });
+    }
+
+    // 상대팀 규칙 (ID: 4) 항상 포함
+    if (rulesByTypeId[4]?.length > 0) {
+      organizedRules.push({
         id: 4,
         title: "상대팀 규칙",
-        rules: rulesByType.opponent.map(
-          (r) => `${r.rule_name}: ${r.rule_amount.toLocaleString()}원`
+        rules: rulesByTypeId[4].map(
+          (r) =>
+            `${r.RECORD_NAME}: ${r.USER_SAVING_RULED_AMOUNT.toLocaleString()}원`
         ),
-      },
-    ];
+      });
+    }
 
     return organizedRules;
   };
@@ -710,9 +637,18 @@ const MainPage = () => {
         // 목표 제목 설정 (간단한 예시)
         setSavingTitle(`${account.team_name || teamName} 적금`);
 
-        // 규칙 데이터 가져오기
-        const rulesData = await fetchRules(account.account_id);
-        const organizedRules = organizeRulesByType(rulesData);
+        // 규칙 데이터 가져오기 - API 호출
+        const rulesData = await fetchRules();
+
+        // 사용자의 선호 선수 타입 (1: 투수, 2: 타자)
+        // 계정 정보에서 가져오거나 기본값 사용
+        const preferredPlayerType = account.preferred_player_type || null;
+
+        // API 응답 구조에 맞게 규칙 데이터 정리 및 필터링
+        const organizedRules = organizeRulesByType(
+          rulesData,
+          preferredPlayerType
+        );
         setSavingRules(organizedRules);
 
         setIsLoading(false);
@@ -760,7 +696,6 @@ const MainPage = () => {
         ]);
       }
     };
-
     updateAccountData();
   }, [accountInfo]);
 
@@ -768,57 +703,82 @@ const MainPage = () => {
     100,
     Math.round((currentAmount / (targetAmount || 1)) * 100) // 0으로 나누기 방지
   );
-
   const formatAmount = (amount: number) => {
     return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
-
   // 캐러셀 아이템 렌더링 함수
-  const renderRuleItem = ({ item }: { item: RuleItem }) => {
-    return (
-      <RuleCarouselCard width={width}>
-        <RuleCardHeader width={width} teamColor={teamColor.primary}>
-          <RuleCardTitle width={width}>{item.title}</RuleCardTitle>
-          <Ionicons name="information-circle-outline" size={20} color="white" />
-        </RuleCardHeader>
-        <RuleCardContent width={width}>
-          {item.rules.map((rule: string, index: number) => (
-            <RuleText key={index} width={width}>
-              • {rule}
-            </RuleText>
-          ))}
-        </RuleCardContent>
-      </RuleCarouselCard>
-    );
-  };
+  const renderRuleItem = React.useCallback(
+    ({ item }: { item: RuleItem }) => {
+      return (
+        <RuleCarouselCard width={width}>
+          <RuleCardHeader width={width} teamColor={teamColor.primary}>
+            <RuleCardTitle width={width}>{item.title}</RuleCardTitle>
+            <Ionicons
+              name="information-circle-outline"
+              size={20}
+              color="white"
+            />
+          </RuleCardHeader>
+          <RuleCardContent width={width}>
+            {item.rules.length > 0 ? (
+              item.rules.map((rule: string, index: number) => (
+                <RuleText key={index} width={width}>
+                  • {rule}
+                </RuleText>
+              ))
+            ) : (
+              <RuleText width={width}>• 설정된 규칙이 없습니다</RuleText>
+            )}
+          </RuleCardContent>
+        </RuleCarouselCard>
+      );
+    },
+    [width, teamColor.primary] // 의존성 배열에 width와 teamColor.primary 추가
+  );
 
   // 캐러셀 컴포넌트
   const RulesCarousel = () => {
+    const carouselRef = useRef(null);
     return (
       <View>
         <Carousel
-          loop
+          ref={carouselRef}
+          loop={false} // loop 비활성화로 자동 리셋 방지
           width={width - width * 0.12}
           height={width * 0.4}
           data={savingRules}
-          scrollAnimationDuration={1000}
-          onSnapToItem={(index) => setActiveSlide(index)}
-          renderItem={renderRuleItem}
-          mode="parallax"
-          modeConfig={{
-            parallaxScrollingScale: 0.95,
-            parallaxScrollingOffset: 30,
+          scrollAnimationDuration={500} // 더 짧은 애니메이션 시간
+          onSnapToItem={(index) => {
+            console.log("캐러셀 스냅:", index); // 디버깅용
+            // setActiveSlide(index);
           }}
+          renderItem={renderRuleItem} // 테스트용 renderItem 사용
+          panGestureHandlerProps={{
+            activeOffsetX: [-10, 10], // 더 민감한 스와이프
+          }}
+          snapEnabled={true} // 스냅 기능 활성화
+          defaultIndex={activeSlide} // 초기 인덱스 설정
+          enabled={true} // 사용자 상호작용 활성화
+          mode="default" // parallax 모드는 문제를 일으킬 수 있음
         />
-        <PaginationContainer>
+        {/* <PaginationContainer>
           {savingRules.map((_, index) => (
-            <PaginationDot
+            <TouchableOpacity
               key={index}
-              active={activeSlide === index}
-              teamColor={teamColor.primary}
-            />
+              onPress={() => {
+                // 직접 캐러셀 위치 제어
+                if (carouselRef.current) {
+                  carouselRef.current.scrollTo({ index, animated: true });
+                }
+              }}
+            >
+              <PaginationDot
+                active={activeSlide === index} // 테스트 중에는 스와이프 시 시각적 업데이트 안됨
+                teamColor={teamColor.primary}
+              />
+            </TouchableOpacity>
           ))}
-        </PaginationContainer>
+        </PaginationContainer> */}
       </View>
     );
   };
@@ -928,12 +888,18 @@ const MainPage = () => {
                   {/* 적금 규칙 캐러셀 카드 */}
                   <Card width={width}>
                     <CardHeader width={width}>
-                      <CardTitle width={width}>
-                        적금 규칙 (API 연결 필요)
-                      </CardTitle>
+                      <CardTitle width={width}>적금 규칙</CardTitle>
                     </CardHeader>
                     <CardContent width={width}>
-                      <RulesCarousel />
+                      {/* savingRules 데이터가 있을 때만 RulesCarousel 렌더링 */}
+                      {savingRules && savingRules.length > 0 ? (
+                        <RulesCarousel />
+                      ) : (
+                        // 데이터 로딩 중이거나 없을 때 표시할 내용 (선택 사항)
+                        <View style={{ padding: 10, alignItems: "center" }}>
+                          <Text>규칙 로딩 중...</Text>
+                        </View>
+                      )}
                     </CardContent>
                   </Card>
 
