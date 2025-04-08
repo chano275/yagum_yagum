@@ -250,3 +250,33 @@ class ErrorReport(BaseModel):
 class DailyBatchReportResult(BaseModel):
     success: List[DailyReportResponse]
     errors: List[ErrorReport]
+
+
+# report_schema.py에 추가해야 할 코드
+
+# 팀 승패 기록 모델
+class TeamRecordInfo(BaseModel):
+    WIN: int
+    LOSE: int
+    DRAW: int
+
+# 적금액 비교 모델
+# class SavingsComparisonInfo(BaseModel):
+#     previous_week: int
+#     change_percentage: float
+
+# 확장된 주간 개인 보고서 응답 모델
+class WeeklyReportPersonalResponseExtended(BaseModel):
+    DATE: date
+    WEEKLY_AMOUNT: int
+    LLM_CONTEXT: str
+    TEAM_RECORD: TeamRecordInfo
+    # savings_comparison: SavingsComparisonInfo
+    PREVIOUS_WEEK: int
+    CHANGE_PERCENTAGE: float
+    DAILY_SAVINGS: Dict[str, int]  # 날짜(ISO 형식) -> 적금액 
+    NEWS_SUMMATION: str
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True
