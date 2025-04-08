@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -17,7 +17,6 @@ import { useTeam } from "@/context/TeamContext";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/AppNavigator";
-// 수정된 expo-image-picker import
 import {
   launchImageLibraryAsync,
   requestCameraPermissionsAsync,
@@ -34,6 +33,22 @@ type TicketVerificationScreenNavigationProp =
 // 동적 스타일링을 위한 인터페이스
 interface StyledProps {
   width: number;
+}
+
+// 우대금리 정보 인터페이스 추가
+interface InterestDetails {
+  base_interest_rate: number;
+  mission_interest_rate: number;
+  total_interest_rate: number;
+  total_mission_rate: number;
+  mission_details: {
+    mission_id: number;
+    mission_name: string;
+    mission_rate: number;
+    current_count: number;
+    max_count: number;
+    is_completed: boolean;
+  }[];
 }
 
 // 모바일 기준 너비 설정
@@ -188,16 +203,14 @@ const UploadTitle = styled.Text`
   font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
-// === UploadArea 스타일 원복 ===
 const UploadArea = styled.TouchableOpacity<{ teamColor: string }>`
   height: 200px;
-  border: 2px dashed ${(props) => props.teamColor || "#007AFF"}; // 축약형 사용
+  border: 2px dashed ${(props) => props.teamColor || "#007AFF"};
   border-radius: 12px;
   justify-content: center;
   align-items: center;
   margin-bottom: 15px;
 `;
-// ===========================
 
 const UploadPlaceholderText = styled.Text`
   font-size: 14px;
@@ -288,7 +301,6 @@ const SubmitButtonText = styled.Text`
   font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
-// 모달 컴포넌트 (이전과 동일)
 const ModalOverlay = styled.View`
   position: absolute;
   top: 0;
@@ -302,6 +314,7 @@ const ModalOverlay = styled.View`
   ${Platform.OS === "web" &&
   `position: absolute; width: 100%; height: 100%; align-self: center; background-color: rgba(0, 0, 0, 0.5); left: 0; top: 0;`}
 `;
+
 const ModalContainer = styled.View`
   width: 80%;
   background-color: white;
@@ -316,6 +329,7 @@ const ModalContainer = styled.View`
   max-width: ${BASE_MOBILE_WIDTH * 0.8}px;
   margin: 0 auto;
 `;
+
 const ModalTitle = styled.Text`
   font-size: 18px;
   font-weight: bold;
@@ -323,6 +337,7 @@ const ModalTitle = styled.Text`
   color: #333;
   font-family: ${({ theme }) => theme.fonts.bold};
 `;
+
 const ModalMessage = styled.Text`
   font-size: 16px;
   text-align: center;
@@ -330,12 +345,14 @@ const ModalMessage = styled.Text`
   color: #666;
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
+
 const ModalButton = styled.TouchableOpacity<{ teamColor: string }>`
   background-color: ${(props) => props.teamColor || "#007AFF"};
   border-radius: 8px;
   padding: 12px 25px;
   align-items: center;
 `;
+
 const ModalButtonText = styled.Text`
   color: white;
   font-size: 16px;
@@ -355,13 +372,17 @@ const TicketVerificationScreen = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedAssetInfo, setSelectedAssetInfo] =
     useState<ImagePickerAsset | null>(null);
-  const [verificationCount, setVerificationCount] = useState(1);
   const [modalVisible, setModalVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<
     "idle" | "checking" | "success" | "failed"
   >("idle");
   const [failedReason, setFailedReason] = useState<string | null>(null);
+
+  // 우대금리 정보 상태 추가
+  const [interestDetails, setInterestDetails] =
+    useState<InterestDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const verificationHistory = [
     {
@@ -372,6 +393,34 @@ const TicketVerificationScreen = () => {
       status: "인증 완료",
     },
   ];
+
+  // 현재 티켓 인증 횟수와 최대 인증 횟수
+  const ticketMission = interestDetails?.mission_details.find(
+    (mission) => mission.mission_name === "직관 인증시 우대금리"
+  );
+
+  const currentCount = ticketMission?.current_count || 0;
+  const maxCount = ticketMission?.max_count || 5;
+  const missionRate = ticketMission?.mission_rate || 0.1;
+
+  // 우대금리 정보 가져오기
+  const fetchInterestDetails = async () => {
+    try {
+      setIsLoading(true);
+      const response = await api.get("/api/account/interest-details");
+      setInterestDetails(response.data);
+      console.log("우대금리 정보:", response.data);
+    } catch (error) {
+      console.error("우대금리 정보 가져오기 오류:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 우대금리 정보 가져오기
+  useEffect(() => {
+    fetchInterestDetails();
+  }, []);
 
   const handleSelectImage = async () => {
     try {
@@ -441,9 +490,11 @@ const TicketVerificationScreen = () => {
       }
       const response = await api.post("/api/mission/ocr", formData);
       console.log("OCR API 응답:", response.data);
+
       if (response.data.success) {
         setVerificationStatus("success");
-        setVerificationCount((prev) => prev + 1);
+        // 인증 성공 후 우대금리 정보 다시 가져오기
+        await fetchInterestDetails();
       } else {
         setVerificationStatus("failed");
         setFailedReason(
@@ -505,7 +556,10 @@ const TicketVerificationScreen = () => {
     }
   };
 
-  const progressPercentage = `${Math.min((verificationCount / 3) * 100, 100)}%`;
+  const progressPercentage = `${Math.min(
+    (currentCount / maxCount) * 100,
+    100
+  )}%`;
 
   return (
     <AppWrapper>
@@ -521,35 +575,44 @@ const TicketVerificationScreen = () => {
           <ScrollView showsVerticalScrollIndicator={false}>
             <SectionTitle>티켓 인증으로 우대금리 받기</SectionTitle>
             <SectionSubtitle>
-              {" "}
-              홈경기 티켓 사진을 업로드하여 인증하고 우대금리 혜택을 받으세요.{" "}
+              경기 티켓 사진을 업로드하여 인증하고 우대금리 혜택을 받으세요.
             </SectionSubtitle>
+
             <ProgressContainer>
               <ProgressTitle>인증 진행 상태</ProgressTitle>
               <ProgressBarContainer>
-                {" "}
                 <ProgressFill
                   width={progressPercentage}
                   teamColor={teamColor.primary}
-                />{" "}
+                />
               </ProgressBarContainer>
-              <ProgressText>{verificationCount}/3회 인증 완료</ProgressText>
+              <ProgressText>
+                {currentCount}/{maxCount}회 인증 완료
+                {currentCount > 0 &&
+                  ` (현재 +${(currentCount * missionRate).toFixed(
+                    1
+                  )}%p 적용중)`}
+              </ProgressText>
             </ProgressContainer>
+
             <InfoCard>
               <InfoTitle>혜택 안내</InfoTitle>
               <InfoContent>
-                {" "}
-                • 우대금리 혜택{"\n"}- 3회 인증 완료 시:{" "}
+                • 우대금리 혜택{"\n"}- 1회 인증마다:{" "}
                 <HighlightText teamColor={teamColor.primary}>
-                  {" "}
-                  0.1%p 추가 우대금리{" "}
-                </HighlightText>{" "}
-                {"\n\n"}• 인증 가능 티켓:{"\n"}- {teamName || "선택된 팀"}{" "}
-                홈경기 티켓 {"\n"}- 경기 일자, 팀명, 좌석번호가 표시된 실물 티켓{" "}
-                {"\n"}- 전자티켓 캡처 화면 {"\n\n"}• 인증 기간: 2025 KBO
-                정규시즌 기간{" "}
+                  {missionRate.toFixed(1)}%p 추가 우대금리
+                </HighlightText>
+                {"\n"}- 최대 {maxCount}회까지 인증 가능:{" "}
+                <HighlightText teamColor={teamColor.primary}>
+                  최대 {(maxCount * missionRate).toFixed(1)}%p 추가 우대금리
+                </HighlightText>
+                {"\n\n"}• 인증 가능 티켓:{"\n"}- 경기 일자, 팀명, 좌석번호가
+                표시된 실물 티켓
+                {"\n"}- 전자티켓 캡처 화면{"\n\n"}• 인증 기간: 2025 KBO 정규시즌
+                기간
               </InfoContent>
             </InfoCard>
+
             <UploadCard>
               <UploadTitle>티켓 사진 업로드</UploadTitle>
               {selectedImage ? (
@@ -564,9 +627,8 @@ const TicketVerificationScreen = () => {
                 >
                   <Ionicons name="camera" size={40} color={teamColor.primary} />
                   <UploadPlaceholderText>
-                    {" "}
                     티켓 사진을 선택해주세요.{"\n"} 경기 정보와 좌석 번호가
-                    명확히 보이도록 촬영해주세요.{" "}
+                    명확히 보이도록 촬영해주세요.
                   </UploadPlaceholderText>
                 </UploadArea>
               )}
@@ -576,59 +638,51 @@ const TicketVerificationScreen = () => {
                 style={{ marginTop: 10, marginBottom: 0 }}
               >
                 <SubmitButtonText>
-                  {" "}
-                  {selectedImage
-                    ? "다른 사진 선택하기"
-                    : "티켓 사진 선택하기"}{" "}
+                  {selectedImage ? "다른 사진 선택하기" : "티켓 사진 선택하기"}
                 </SubmitButtonText>
               </SubmitButton>
               {selectedImage && verificationStatus === "idle" && (
                 <InfoContent style={{ marginTop: 10, textAlign: "center" }}>
-                  {" "}
-                  티켓의 경기 정보와 좌석 번호가 명확히 보이는지 확인 후{
-                    "\n"
-                  }{" "}
-                  아래 '티켓 인증하기' 버튼을 눌러주세요.{" "}
+                  티켓의 경기 정보와 좌석 번호가 명확히 보이는지 확인 후{"\n"}
+                  아래 '티켓 인증하기' 버튼을 눌러주세요.
                 </InfoContent>
               )}
             </UploadCard>
+
             <HistoryCard>
-              <HistoryTitle>인증 내역</HistoryTitle>
+              <HistoryTitle>인증 내역 (API 연결)</HistoryTitle>
               {verificationHistory.length > 0 ? (
                 verificationHistory.map((item) => (
                   <HistoryItem key={item.id}>
-                    {" "}
-                    <HistoryImage source={item.image} />{" "}
+                    <HistoryImage source={item.image} />
                     <HistoryInfo>
-                      {" "}
-                      <HistoryTeam>{item.team}</HistoryTeam>{" "}
-                      <HistoryDate>{item.date}</HistoryDate>{" "}
-                    </HistoryInfo>{" "}
+                      <HistoryTeam>{item.team}</HistoryTeam>
+                      <HistoryDate>{item.date}</HistoryDate>
+                    </HistoryInfo>
                     <HistoryStatus teamColor={teamColor.primary}>
-                      {" "}
-                      {item.status}{" "}
-                    </HistoryStatus>{" "}
+                      {item.status}
+                    </HistoryStatus>
                   </HistoryItem>
                 ))
               ) : (
                 <UploadPlaceholderText>
-                  {" "}
-                  인증 내역이 없습니다.{" "}
+                  인증 내역이 없습니다.
                 </UploadPlaceholderText>
               )}
             </HistoryCard>
+
             <SubmitButton
               teamColor={teamColor.primary}
               disabled={!selectedImage || isProcessing}
               onPress={handleVerify}
             >
               <SubmitButtonText>
-                {" "}
-                {isProcessing ? "티켓 정보 분석 중..." : "티켓 인증하기"}{" "}
+                {isProcessing ? "티켓 정보 분석 중..." : "티켓 인증하기"}
               </SubmitButtonText>
             </SubmitButton>
           </ScrollView>
         </ContentContainer>
+
         <Modal
           animationType="fade"
           transparent={true}
@@ -640,38 +694,40 @@ const TicketVerificationScreen = () => {
           <ModalOverlay>
             <ModalContainer>
               <ModalTitle>
-                {" "}
                 {verificationStatus === "success"
                   ? "티켓 인증 완료"
-                  : "티켓 인증 실패"}{" "}
+                  : "티켓 인증 실패"}
               </ModalTitle>
               <ModalMessage>
-                {" "}
                 {verificationStatus === "success" ? (
                   <>
-                    {" "}
-                    {teamName || "선택된 팀"} 경기 티켓 인증이 완료되었습니다.{" "}
-                    {"\n\n"} 현재 {verificationCount}/3회 인증 완료{" "}
-                    {verificationCount === 3
-                      ? "\n\n축하합니다! 0.1%p 우대금리가 적용되었습니다."
-                      : `\n\n${
-                          3 - verificationCount
-                        }회 더 인증하면 우대금리가 적용됩니다.`}{" "}
+                    {teamName || "선택된 팀"} 경기 티켓 인증이 완료되었습니다.
+                    {"\n\n"}
+                    현재 {currentCount}/{maxCount}회 인증 완료{"\n\n"}
+                    {currentCount === maxCount
+                      ? `축하합니다! 최대 ${(maxCount * missionRate).toFixed(
+                          1
+                        )}%p 우대금리가 적용되었습니다.`
+                      : `${(currentCount * missionRate).toFixed(
+                          1
+                        )}%p 우대금리가 적용되었습니다.${"\n"}${
+                          maxCount - currentCount
+                        }회 더 인증하면 최대 우대금리가 적용됩니다.`}
                   </>
                 ) : (
                   <>
-                    {" "}
-                    티켓 인증에 실패했습니다. {"\n\n"} {failedReason} {"\n\n"}{" "}
-                    다른 이미지로 다시 시도해주세요.{" "}
+                    티켓 인증에 실패했습니다.{"\n\n"}
+                    {failedReason}
+                    {"\n\n"}
+                    다른 이미지로 다시 시도해주세요.
                   </>
-                )}{" "}
+                )}
               </ModalMessage>
               <ModalButton
                 teamColor={teamColor.primary}
                 onPress={handleConfirm}
               >
-                {" "}
-                <ModalButtonText>확인</ModalButtonText>{" "}
+                <ModalButtonText>확인</ModalButtonText>
               </ModalButton>
             </ModalContainer>
           </ModalOverlay>
