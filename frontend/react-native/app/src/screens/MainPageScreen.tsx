@@ -388,6 +388,17 @@ const MainPage = () => {
   const [gameSchedules, setGameSchedules] = useState<GameSchedule[]>([]);
   const [isScheduleLoading, setIsScheduleLoading] = useState<boolean>(true);
   const [scheduleError, setScheduleError] = useState<Error | null>(null);
+  // 일일 리포트 관련 상태 추가
+  const [dailyReport, setDailyReport] = useState<{
+    TEAM_ID: number;
+    DATE: string;
+    LLM_CONTEXT: string;
+    TEAM_AVG_AMOUNT: number | null;
+    DAILY_REPORT_ID: number;
+  } | null>(null);
+  const [isDailyReportLoading, setIsDailyReportLoading] =
+    useState<boolean>(true);
+  const [dailyReportError, setDailyReportError] = useState<Error | null>(null);
 
   // 계좌 정보 조회 - useAccountStore 사용
   useEffect(() => {
@@ -444,6 +455,43 @@ const MainPage = () => {
     // 값을 변경하지 않음
     return null;
   };
+
+  // 일일 리포트 조회
+  useEffect(() => {
+    const fetchDailyReport = async () => {
+      try {
+        setIsDailyReportLoading(true);
+
+        // 팀명으로 팀 ID 가져오기
+        const teamId = getTeamIdByName(teamName);
+
+        // API 호출
+        const response = await api.get(`/api/report/daily/team/${teamId}`);
+
+        if (
+          response.status === 200 &&
+          Array.isArray(response.data) &&
+          response.data.length > 0
+        ) {
+          setDailyReport(response.data[0]); // 첫 번째 리포트 사용
+        } else {
+          throw new Error("API 응답 형식이 올바르지 않습니다");
+        }
+      } catch (err) {
+        console.error("일일 리포트 조회 실패:", err);
+        setDailyReportError(
+          err instanceof Error ? err : new Error("알 수 없는 오류")
+        );
+      } finally {
+        setIsDailyReportLoading(false);
+      }
+    };
+
+    if (teamName) {
+      fetchDailyReport();
+    }
+  }, [teamName]); // teamName이 변경될 때마다 실행
+
   // 경기 일정 조회
   useEffect(() => {
     const fetchGameSchedules = async () => {
@@ -904,15 +952,28 @@ const MainPage = () => {
                 <View style={{ padding: width * 0.04 }}>
                   <Card width={width}>
                     <CardHeader width={width}>
-                      <CardTitle width={width}>
-                        오늘의 적금 비교 (API 연결 필요)
-                      </CardTitle>
+                      <CardTitle width={width}>오늘의 적금 비교</CardTitle>
                     </CardHeader>
                     <CardContent width={width}>
-                      <CardText width={width}>
-                        <RedText teamColor={teamColor.primary}>↗</RedText>{" "}
-                        두산이 승리했지만, 우리팀의 적금이 2배 더 많네요!
-                      </CardText>
+                      {isDailyReportLoading ? (
+                        <View style={{ padding: 10, alignItems: "center" }}>
+                          <Text>일일 리포트 로딩 중...</Text>
+                        </View>
+                      ) : dailyReportError ? (
+                        <View style={{ padding: 10, alignItems: "center" }}>
+                          <Text>일일 리포트를 불러오는데 실패했습니다.</Text>
+                        </View>
+                      ) : dailyReport && dailyReport.LLM_CONTEXT ? (
+                        <CardText width={width}>
+                          <RedText teamColor={teamColor.primary}>↗</RedText>{" "}
+                          {dailyReport.LLM_CONTEXT}
+                        </CardText>
+                      ) : (
+                        <CardText width={width}>
+                          <RedText teamColor={teamColor.primary}>↗</RedText>{" "}
+                          두산이 승리했지만, 우리팀의 적금이 2배 더 많네요!
+                        </CardText>
+                      )}
                     </CardContent>
                   </Card>
 
