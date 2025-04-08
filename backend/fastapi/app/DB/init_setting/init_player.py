@@ -85,9 +85,10 @@ try:
         
         # 기존 팀 선수 데이터 확인 (중복 방지)
         existing_players = session.query(models.Player).filter(models.Player.TEAM_ID == team_id).all()
-        existing_names = [player.PLAYER_NAME for player in existing_players]
+        # existing_names = [player.PLAYER_NAME for player in existing_players]
+        existing_player_num = [player.PLAYER_NUM for player in existing_players]
         
-        print(f"이미 DB에 존재하는 팀 ID {team_id}의 선수 수: {len(existing_names)}")
+        print(f"이미 DB에 존재하는 팀 ID {team_id}의 선수 수: {len(existing_player_num)}")
         
         # CSV 파일 읽기
         players = []
@@ -114,17 +115,19 @@ try:
                         player_type = 2
                     
                     # 이름이 비어있지 않은 경우만 추가
-                    if name and name not in existing_names:
+                    if name and number_str not in existing_player_num:
                         new_player = models.Player(
                             TEAM_ID=team_id,
                             PLAYER_NUM=number_str,
                             PLAYER_TYPE_ID=player_type,
                             PLAYER_NAME=name,
-                            PLAYER_IMAGE_URL=f"https://chano-s3-test.s3.us-east-2.amazonaws.com/{team_id}/{number_str}.jpg",  # 기본 이미지 URL
+                            PLAYER_IMAGE_URL=f"https://chano-s3-test.s3.us-east-2.amazonaws.com/{team_id}/{number_str}.png",  # 기본 이미지 URL
                             LIKE_COUNT=0
                         )
                         players.append(new_player)
-                        existing_names.append(name)  # 동일 이름 중복 방지를 위해 추가
+                        # existing_names.append(name)  # 동일 이름 중복 방지를 위해 추가
+                        # 등번호로 방지 추가 TODO
+                        existing_player_num.append(number_str)
                         new_player_count += 1
         
         # 데이터 삽입
