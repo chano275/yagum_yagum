@@ -10,7 +10,7 @@ import logging
 import traceback
 from datetime import datetime, time, timedelta
 from pytz import timezone
-
+from sqlalchemy.orm import sessionmaker
 # APScheduler 추가
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -389,6 +389,46 @@ def run_saving():
         logger.error(traceback.format_exc())
         return False
 
+async def run_transfer():
+    """
+        유저별 적금액 이체
+    """
+    try:
+        logger.info("유저별 일일 적금 이체")
+
+        try:
+            from utils.process_transfer import process_actual_transfers
+        except ImportError as e:
+            logger.error(f"process_actual_transfers 모듈 임포트 실패: {str(e)}")
+            return False
+
+        # 함수 실행 (예외 처리 추가) TODO
+        try:
+            # 데이터베이스 연결
+            Session = sessionmaker(bind=engine)
+            db = Session()
+
+            result = await process_actual_transfers(db)
+            logger.info(f"처리 결과: {result}")
+            return True
+        except Exception as e:
+            logger.error(f"process_savings_for_date 실행 중 오류: {str(e)}")
+            return False
+
+    except Exception as e:
+        logger.error(f"유저별 적금액 이체 작업 중 오류 발생: {str(e)}")
+        logger.error(traceback.format_exc())
+        return False
+
+def sync_run_trsnfer():
+    import asyncio
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(run_transfer())
+    finally:
+        loop.close()
+
 def run_game_data_pipeline(**kwargs):
     """전체 게임 데이터 파이프라인 실행
     
@@ -580,6 +620,20 @@ try:
     logger.info("경기 기록 및 사용자별 적금 금액 파이프라인 작업이 스케줄러에 추가되었습니다.")
 except Exception as e:
     logger.error(f"경기 기록 및 사용자별 적금 금액 파이프라인 작업 추가 중 오류 발생: {str(e)}")
+
+# # 적금 이체 스케줄러 필요시 주석처리리
+# try:
+#     scheduler.add_job(
+#         sync_run_trsnfer,
+#         trigger = CronTrigger(hour=20, minute=45, timezone=seoul_timezone),
+#         id='transfer',
+#         name="적금 이체",
+#         replace_existing=True,
+#         misfire_grace_time=3600
+#     )
+#     logger.info("적금 이체 작업이 스케줄러에 추가되었습니다.")
+# except Exception as e:
+#     logger.error
 
 @app.get("/")
 async def root():
