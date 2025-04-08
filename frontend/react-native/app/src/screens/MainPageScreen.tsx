@@ -906,7 +906,7 @@ const MainPage = () => {
                       : teamRank
                       ? `${teamRank}위`
                       : "순위 없음"}{" "}
-                    <StatHighlight>+2</StatHighlight>
+                    <StatHighlight>+2(등수 변경 API)</StatHighlight>
                   </StatText>
                 </StatsRow>
 
