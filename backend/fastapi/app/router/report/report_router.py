@@ -17,7 +17,37 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # 팀 일일 보고서 목록 조회
-@router.get("/daily/team/{team_id}", response_model=List[report_schema.DailyReportResponse])
+# @router.get("/daily/team/{team_id}", response_model=List[report_schema.DailyReportResponse])
+# async def read_daily_reports_by_team(
+#     team_id: int,
+#     skip: int = 0,
+#     limit: int = 30,
+#     db: Session = Depends(get_db)
+# ):
+#     try:
+#         logger.info(f"팀 일일 보고서 목록 조회: 팀 ID {team_id}")
+        
+#         # 팀 존재 여부 확인
+#         team = db.query(models.Team).filter(models.Team.TEAM_ID == team_id).first()
+#         if not team:
+#             logger.warning(f"존재하지 않는 팀: {team_id}")
+#             raise HTTPException(
+#                 status_code=status.HTTP_404_NOT_FOUND,
+#                 detail="존재하지 않는 팀입니다"
+#             )
+            
+#         reports = report_crud.get_daily_reports_by_team(db, team_id, skip, limit)
+#         return reports
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"팀 일일 보고서 목록 조회 중 오류: {str(e)}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"팀 일일 보고서 목록 조회 중 오류 발생: {str(e)}"
+#         )
+    
+@router.get("/daily/team/{team_id}", response_model=report_schema.DailyReportBase)
 async def read_daily_reports_by_team(
     team_id: int,
     skip: int = 0,
