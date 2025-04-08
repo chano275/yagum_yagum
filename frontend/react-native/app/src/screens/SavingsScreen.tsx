@@ -1,3 +1,4 @@
+// SavingsScreen.tsx
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   useWindowDimensions,
@@ -15,7 +16,7 @@ import styled from "styled-components/native";
 import * as Calendar from "expo-calendar";
 import { Ionicons } from "@expo/vector-icons";
 import { useTeam } from "@/context/TeamContext";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import { useFocusEffect } from "@react-navigation/native";
 import { api } from "@/api/axios";
 
@@ -83,6 +84,16 @@ interface CalendarDay {
   isToday: boolean;
   isSelected: boolean;
   marking?: MarkingData;
+}
+
+// 거래 내역 아이템 타입
+interface TransactionItem {
+  id: string;
+  opponent: string;
+  date: string;
+  description: string;
+  amount: number;
+  wins: number;
 }
 
 // 모바일 기준 너비 설정
@@ -374,9 +385,70 @@ const TotalAmount = styled.Text`
   color: #000;
 `;
 
+// 상세 내역 리스트 뷰 스타일 컴포넌트
+const ListMonthNavigator = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom-width: 1px;
+  border-bottom-color: #f0f0f0;
+`;
+
+const ListMonthTitle = styled.Text`
+  font-size: 16px;
+  font-weight: bold;
+  font-family: ${({ theme }) => theme.fonts.bold};
+  color: #333;
+`;
+
+const TransactionItem = styled.View`
+  border-bottom-width: 1px;
+  border-bottom-color: #f0f0f0;
+`;
+
+const TransactionHeader = styled.View`
+  flex-direction: row;
+  padding: 16px;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const TeamInfoContainer = styled.View`
+  flex-direction: row;
+  align-items: center;
+  flex: 1;
+`;
+
+const TransactionAmountText = styled.Text`
+  font-size: 16px;
+  font-weight: bold;
+  color: ${({ theme }) => theme.colors.primary};
+`;
+
+const TransactionDescription = styled.View`
+  padding: 12px;
+  padding-top: 0;
+  background-color: #f9f9f9;
+  border-bottom-width: 1px;
+  border-bottom-color: #f0f0f0;
+`;
+
+const DescriptionText = styled.Text`
+  font-size: 14px;
+  color: #333;
+`;
+
+const WinsText = styled.Text`
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+`;
+
 const SavingsScreen = () => {
   const { teamColor, teamName } = useTeam();
   const route = useRoute();
+  const navigation = useNavigation();
   const { width: windowWidth } = useWindowDimensions();
   const width =
     Platform.OS === "web"
@@ -396,6 +468,9 @@ const SavingsScreen = () => {
   const [isSeriesLoading, setIsSeriesLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [calendarPermission, setCalendarPermission] = useState<boolean>(false);
+  const [transactionItems, setTransactionItems] = useState<TransactionItem[]>(
+    []
+  );
 
   // 네비게이션 파라미터 처리
   useFocusEffect(
@@ -424,6 +499,9 @@ const SavingsScreen = () => {
     SAMSUNG: require("../../assets/icon.png"),
     LOTTE: require("../../assets/icon.png"),
     KIA: require("../../assets/icon.png"),
+    LG: require("../../assets/icon.png"),
+    BEARS: require("../../assets/icon.png"),
+    TWINS: require("../../assets/icon.png"),
   };
 
   // 캘린더 권한 요청
@@ -461,16 +539,23 @@ const SavingsScreen = () => {
     const logoMap: { [key: string]: any } = {
       "KIA 타이거즈": teamLogos.KIA,
       "삼성 라이온즈": teamLogos.SAMSUNG,
-      "LG 트윈스": teamLogos.NC, // 실제 로고로 교체 필요
-      "두산 베어스": teamLogos.DOOSAN,
+      "LG 트윈스": teamLogos.TWINS,
+      "두산 베어스": teamLogos.BEARS,
       "KT 위즈": teamLogos.NC, // 실제 로고로 교체 필요
       "SSG 랜더스": teamLogos.NC, // 실제 로고로 교체 필요
       "롯데 자이언츠": teamLogos.LOTTE,
       "한화 이글스": teamLogos.NC, // 실제 로고로 교체 필요
       "NC 다이노스": teamLogos.NC,
       "키움 히어로즈": teamLogos.NC, // 실제 로고로 교체 필요
+      TWINS: teamLogos.TWINS,
+      BEARS: teamLogos.BEARS,
     };
     return logoMap[teamName] || teamLogos.NC;
+  };
+
+  // 거래 상세 내역 페이지로 이동하는 함수
+  const handleTransactionPress = (id: string) => {
+    navigation.navigate("TransactionDetail", { id });
   };
 
   // 3연전 시리즈 식별 함수
@@ -587,6 +672,40 @@ const SavingsScreen = () => {
     return result;
   };
 
+  // 월별 거래 내역 데이터 가져오기 (임시 더미 데이터)
+  const fetchTransactionsForMonth = (month: Date) => {
+    // 추후 API 호출로 변경될 예정
+    // 현재는 더미 데이터 반환
+    const dummyTransactions: TransactionItem[] = [
+      {
+        id: "1",
+        opponent: "TWINS",
+        date: "3/12",
+        description: "최형우의 시원한 홈런포로 팀이 승리...",
+        amount: 15000,
+        wins: 3,
+      },
+      {
+        id: "2",
+        opponent: "TWINS",
+        date: "3/11",
+        description: "아쉽게도 경기를 내줬지만, 내일을 기약...",
+        amount: 2000,
+        wins: 1,
+      },
+      {
+        id: "3",
+        opponent: "BEARS",
+        date: "3/8",
+        description: "치열한 접전 끝에 아쉽게 패배했습니다...",
+        amount: 3000,
+        wins: 1,
+      },
+    ];
+
+    setTransactionItems(dummyTransactions);
+  };
+
   // API에서 경기 일정 가져오기
   useEffect(() => {
     const fetchGameSchedules = async () => {
@@ -630,6 +749,11 @@ const SavingsScreen = () => {
       fetchGameSchedules();
     }
   }, [teamName]); // 팀 변경시 다시 불러오기
+
+  // 거래 내역 초기 로드
+  useEffect(() => {
+    fetchTransactionsForMonth(currentMonth);
+  }, []);
 
   // 날짜별 경기 일정 및 마킹 데이터 생성
   const markedDates = useMemo(() => {
@@ -727,6 +851,11 @@ const SavingsScreen = () => {
     const newMonth = new Date(currentMonth);
     newMonth.setMonth(newMonth.getMonth() + addition);
     setCurrentMonth(newMonth);
+
+    // 리스트 뷰에서는 거래 내역 다시 불러오기
+    if (viewMode === "list") {
+      fetchTransactionsForMonth(newMonth);
+    }
   };
 
   // 요일 헤더 컴포넌트
@@ -1115,15 +1244,70 @@ const SavingsScreen = () => {
     </>
   );
 
-  // 리스트 뷰 렌더링
+  // 리스트 뷰 렌더링 (새로 구현한 부분)
   const renderListView = () => (
     <Card width={width}>
       <CardHeader width={width}>
         <CardTitle width={width}>적금 상세 내역</CardTitle>
       </CardHeader>
-      <CardContent width={width}>
-        <Text>적금 상세 내역을 준비 중입니다.</Text>
-      </CardContent>
+
+      {/* 월 이동 네비게이션 */}
+      <ListMonthNavigator>
+        <TouchableOpacity onPress={() => moveMonth(-1)}>
+          <Ionicons name="chevron-back" size={24} color="#666" />
+        </TouchableOpacity>
+
+        <ListMonthTitle>
+          {`${currentMonth.getFullYear()}년 ${currentMonth.getMonth() + 1}월`}
+        </ListMonthTitle>
+
+        <TouchableOpacity onPress={() => moveMonth(1)}>
+          <Ionicons name="chevron-forward" size={24} color="#666" />
+        </TouchableOpacity>
+      </ListMonthNavigator>
+
+      {/* 거래 내역 목록 */}
+      <FlatList
+        data={transactionItems}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => handleTransactionPress(item.id)}>
+            <View>
+              <TransactionHeader>
+                {/* 좌측: 팀 정보와 날짜 */}
+                <TeamInfoContainer>
+                  <Text style={{ fontWeight: "bold", marginRight: 5 }}>vs</Text>
+                  <Image
+                    source={getTeamLogo(item.opponent)}
+                    style={{ width: 28, height: 28, marginRight: 10 }}
+                  />
+                  <Text style={{ color: "#666", fontSize: 14 }}>
+                    {item.date}
+                  </Text>
+                </TeamInfoContainer>
+
+                {/* 우측: 금액 */}
+                <TransactionAmountText>
+                  +{item.amount.toLocaleString()}원
+                </TransactionAmountText>
+              </TransactionHeader>
+
+              {/* 설명 텍스트 */}
+              <TransactionDescription>
+                <DescriptionText>{item.description}</DescriptionText>
+                <WinsText>{item.wins}개 획득</WinsText>
+              </TransactionDescription>
+            </View>
+          </TouchableOpacity>
+        )}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <Text>해당 월의 거래 내역이 없습니다.</Text>
+          </View>
+        }
+      />
     </Card>
   );
 
