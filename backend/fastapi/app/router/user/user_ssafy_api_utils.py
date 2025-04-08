@@ -472,7 +472,7 @@ async def init_money(user_key, account_num,api_key=None):
             "Header": header,
             "accountNo": account_num,
             "transactionBalance": "30000000",
-            "transactionSummary": "초기 금액액"
+            "transactionSummary": "초기 금액"
         }
         
         logger.info(f"계좌 입금 요청 URL: {api_url}")
