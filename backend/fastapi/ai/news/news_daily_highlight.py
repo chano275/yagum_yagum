@@ -126,25 +126,23 @@ def generate_daily_summary_json(date):
 
     return result_json
 
+# 디렉토리 생성 함수
+def makedirs(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
 def main():
     # 일일 뉴스 하이라이트를 추출할 날짜 입력
     date = input("요약할 기준 날짜를 입력하세요 (YYYYMMDD 형식): ")
 
     # 모든 팀의 뉴스 요약 결과를 JSON 구조로 생성
     final_json = generate_daily_summary_json(date)
-
-    # 결과를 저장할 폴더 생성 (없으면 자동 생성)
-    output_folder = "news_daily_highlight"
-    os.makedirs(output_folder, exist_ok=True)
-
-    # 출력 파일 경로 생성: news_daily_highlight_날짜.json
-    output_file = os.path.join(output_folder, f"news_daily_highlight_{date}.json")
-
-    # 최종 JSON 파일 저장
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(final_json, f, ensure_ascii=False, indent=2)
-
-    print(f"최종 JSON 파일이 저장되었습니다: {output_file}")
+    json_path = os.path.join("news_daily_highlight", date)
+    makedirs(json_path)
+    file_path = os.path.join(json_path, f"news_daily_highlight_{date}.json")
+    
+    with open(file_path, "w", encoding="utf-8") as json_file:
+        json.dump(final_json, json_file, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
     main()

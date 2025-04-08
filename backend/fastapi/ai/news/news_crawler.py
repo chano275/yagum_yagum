@@ -139,20 +139,23 @@ def makedirs(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
+# json 파일로 저장하는 함수
+def save_to_json(date: str, team: str, data: list):
+    json_path = os.path.join("news_json", date)
+    makedirs(json_path)
+    file_path = os.path.join(json_path, f"news_{date}_{team}.json")
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    print(f"JSON 파일 저장 완료: {file_path}")
+
 def main():
     date = input("크롤링할 날짜를 입력하세요 (YYYYMMDD 형식): ")
-
-    # 디렉토리 없는 경우 생성
-    for path in [f"news_json/{date}", f"news_csv/{date}"]:
-        makedirs(path)
 
     # KIA 타이거즈: HT, 삼성 라이온즈: SS, 두산 베어스: OB, 롯데 자이언츠: LT, KT 위즈: KT, SSG 랜더스: SK, 한화 이글스: HH, NC 다이노스: NC, 키움 히어로즈: WO, LG 트윈스: LG
     for team in ["HT", "SS", "OB", "LT", "KT", "SK", "HH", "NC", "WO", "LG"]:
         results = crawl_news(date, team)
-        
-        with open(f"news_json/{date}/news_{date}_{team}.json", "w", encoding="utf-8") as f:
-            json.dump(results, f, ensure_ascii=False, indent=2)
-        
+        save_to_json(date, team, results)
         print(f"{date} {team} 크롤링 완료. 총 {len(results)}개의 기사를 저장했습니다.")
     
     driver.quit()    
