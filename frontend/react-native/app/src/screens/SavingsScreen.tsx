@@ -67,10 +67,12 @@ interface SeriesMatch {
   days: {
     date: string;
     amount: number | null;
+    status: GameStatus; // 상태 필드 추가
   }[];
   totalAmount: number;
-  status?: "current" | "past" | "upcoming"; // 상태 추가
-  startTime?: number; // 정렬용 시작 시간 추가
+  status?: "current" | "past" | "upcoming";
+  startTime?: number;
+  isStartingToday?: boolean;
 }
 
 // 커스텀 캘린더 날짜 타입
@@ -184,14 +186,14 @@ const IconButton = styled.TouchableOpacity<{ isActive?: boolean }>`
 
 const Card = styled.View<StyledProps>`
   background-color: white;
-  border-radius: ${({ width }) => width * 0.02}px;
+  border-radius: 16px;
   margin-bottom: ${({ width }) => width * 0.04}px;
   overflow: hidden;
   border-width: 1px;
   border-color: #eeeeee;
   ${Platform.OS === "web" &&
   `
-    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.08);
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.06);
   `}
 `;
 
@@ -199,13 +201,13 @@ const CardHeader = styled.View<StyledProps>`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  padding: ${({ width }) => width * 0.03}px;
+  padding: ${({ width }) => width * 0.035}px ${({ width }) => width * 0.04}px;
   border-bottom-width: 1px;
-  border-bottom-color: #eeeeee;
+  border-bottom-color: #f5f5f5;
 `;
 
 const CardTitle = styled.Text<StyledProps>`
-  font-size: ${({ width }) => width * 0.04}px;
+  font-size: ${({ width }) => width * 0.042}px;
   font-weight: bold;
   color: #333;
   font-family: ${({ theme }) => theme.fonts.bold};
@@ -630,11 +632,11 @@ const SavingsScreen = () => {
 
           // 시리즈의 첫 경기 날짜와 마지막 경기 날짜
           const firstGameDate = new Date(potentialSeries[0].DATE);
-          firstGameDate.setHours(0, 0, 0, 0); // 시간 초기화 추가
+          firstGameDate.setHours(0, 0, 0, 0);
           const lastGameDate = new Date(
             potentialSeries[potentialSeries.length - 1].DATE
           );
-          lastGameDate.setHours(0, 0, 0, 0); // 시간 초기화 추가
+          lastGameDate.setHours(0, 0, 0, 0);
 
           // 시리즈 상태 결정 (진행 중/과거/미래)
           let seriesStatus = "upcoming";
@@ -644,17 +646,21 @@ const SavingsScreen = () => {
             seriesStatus = "current"; // 3연전이 진행 중인 경우
           }
 
-          // 모든 경기를 "upcoming"으로 설정
-          const gameStatuses: GameStatus[] = potentialSeries.map(
-            () => "upcoming"
-          );
-          const result = "예정된 경기";
+          // 각 경기별 상세 정보 - 하드코딩 데이터 추가
+          const sampleStatuses: GameStatus[] = ["win", "lose", "upcoming"];
+          const sampleAmounts = [5000, 7500, 10000];
 
-          // 각 경기별 상세 정보
-          const days = potentialSeries.map((game) => ({
+          const days = potentialSeries.map((game, index) => ({
             date: formatShortDate(game.DATE),
-            amount: null,
+            amount: sampleAmounts[index % 3], // 인덱스가 3을 초과하지 않도록 modulo 연산
+            status: sampleStatuses[index % 3], // 인덱스가 3을 초과하지 않도록 modulo 연산
           }));
+
+          // 총 적립액 계산
+          const totalAmount = days.reduce(
+            (sum, day) => sum + (day.amount || 0),
+            0
+          );
 
           // 홈팀과 원정팀 결정
           const homeTeam = {
@@ -667,7 +673,7 @@ const SavingsScreen = () => {
             logo: getTeamLogo(potentialSeries[0].away_team_name),
           };
 
-          // 오늘 시작하는지 확인 (시간을 0으로 초기화하여 정확히 비교)
+          // 오늘 시작하는지 확인
           const isStartingToday =
             firstGameDate.getFullYear() === today.getFullYear() &&
             firstGameDate.getMonth() === today.getMonth() &&
@@ -679,12 +685,12 @@ const SavingsScreen = () => {
             homeTeam,
             awayTeam,
             dateRange: `${startDate} ~ ${endDate}`,
-            result,
+            result: seriesStatus === "past" ? "지난 경기" : "예정된 경기",
             days,
-            totalAmount: 0,
+            totalAmount: totalAmount, // 자동 계산된 총액
             status: seriesStatus,
             startTime: firstGameDate.getTime(),
-            isStartingToday: isStartingToday, // 오늘 시작하는지 여부 추가
+            isStartingToday,
           });
         }
       }
@@ -1104,10 +1110,15 @@ const SavingsScreen = () => {
   }) => {
     if (!fixture) return null;
 
+    // 상대팀 정보만 구하기
     const isHomeTeam = fixture.HOME_TEAM_ID === getTeamIdByName(teamName);
     const opponent = isHomeTeam
       ? fixture.away_team_name
       : fixture.home_team_name;
+    const opponentLogo = getTeamLogo(opponent);
+
+    // 경기 장소 정보 추가
+    const locationText = isHomeTeam ? "홈경기" : "원정경기";
 
     // 경기 상태 텍스트
     const getStatusText = (status?: GameStatus) => {
@@ -1128,51 +1139,94 @@ const SavingsScreen = () => {
     };
 
     return (
-      <Card width={width}>
-        <CardHeader width={width}>
+      <Card width={width} style={{ borderRadius: 16, overflow: "hidden" }}>
+        <CardHeader
+          width={width}
+          style={{
+            backgroundColor: "#f8f8f8",
+            borderBottomWidth: 0,
+          }}
+        >
           <CardTitle width={width}>경기 상세 정보</CardTitle>
         </CardHeader>
-        <CardContent width={width}>
+        <CardContent width={width} style={{ padding: 16 }}>
           <View
             style={{
               flexDirection: "row",
               alignItems: "center",
-              marginBottom: 10,
+              marginBottom: 16,
             }}
           >
             <Image
-              source={getTeamLogo(fixture.home_team_name)}
-              style={{ width: 30, height: 30, marginRight: 10 }}
+              source={opponentLogo}
+              style={{ width: 36, height: 36, marginRight: 12 }}
+              resizeMode="contain"
             />
-            <Text style={{ flex: 1, fontSize: 16, fontWeight: "bold" }}>
-              {fixture.home_team_name} VS {fixture.away_team_name}
-            </Text>
-            <Image
-              source={getTeamLogo(fixture.away_team_name)}
-              style={{ width: 30, height: 30 }}
-            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: "bold", color: "#333" }}>
+                vs {opponent}
+              </Text>
+              <Text style={{ fontSize: 14, color: "#666", marginTop: 4 }}>
+                {locationText}
+              </Text>
+            </View>
           </View>
 
-          <View style={{ marginBottom: 5 }}>
-            <Text style={{ fontSize: 14 }}>일시: {fixture.DATE}</Text>
-          </View>
-
-          <View style={{ marginBottom: 5 }}>
-            <Text style={{ fontSize: 14 }}>
-              상태: {getStatusText(fixture.status)}
-            </Text>
+          <View
+            style={{
+              flexDirection: "row",
+              backgroundColor: "#f8f8f8",
+              padding: 12,
+              borderRadius: 12,
+              marginBottom: 16,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, color: "#888" }}>일시</Text>
+              <Text style={{ fontSize: 15, fontWeight: "500", marginTop: 4 }}>
+                {fixture.DATE}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, color: "#888" }}>상태</Text>
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: "600",
+                  marginTop: 4,
+                  color:
+                    fixture.status === "win"
+                      ? "#ff5555"
+                      : fixture.status === "lose"
+                      ? "#2196f3"
+                      : "#333",
+                }}
+              >
+                {getStatusText(fixture.status)}
+              </Text>
+            </View>
           </View>
 
           {fixture.amount !== null && fixture.amount !== undefined && (
-            <View style={{ marginTop: 5 }}>
+            <View
+              style={{
+                backgroundColor: "#f0f8ff",
+                padding: 12,
+                borderRadius: 12,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Text style={{ fontSize: 15, color: "#333" }}>적립액</Text>
               <Text
                 style={{
-                  fontSize: 14,
+                  fontSize: 17,
                   fontWeight: "bold",
                   color: teamColor.primary,
                 }}
               >
-                적립액: {fixture.amount.toLocaleString()}원
+                {fixture.amount.toLocaleString()}원
               </Text>
             </View>
           )}
@@ -1189,47 +1243,187 @@ const SavingsScreen = () => {
       return `${amount.toLocaleString()}원`;
     };
 
+    // 상대팀 정보만 구하기
+    const isMyTeamHome = match.homeTeam.name.includes(teamName.split(" ")[0]);
+    const opponentTeam = isMyTeamHome ? match.awayTeam : match.homeTeam;
+    const locationText = isMyTeamHome ? "홈" : "원정";
+
     // 진행 중인 시리즈에 특별한 스타일 적용
     const isCurrentSeries = match.status === "current";
-    const badgeColor = isCurrentSeries ? "#FF5722" : "#e8f4ff";
+    const badgeColor = isCurrentSeries ? "#1588CF" : "#e8f4ff";
     const badgeTextColor = isCurrentSeries ? "white" : "#0066cc";
 
     return (
-      <SeriesCard>
-        <SeriesHeader>
-          <TeamVsContainer>
-            <TeamLogo source={match.homeTeam.logo} resizeMode="contain" />
-            <VsText>VS</VsText>
-            <TeamLogo source={match.awayTeam.logo} resizeMode="contain" />
-            <DateRangeText>{match.dateRange}</DateRangeText>
-          </TeamVsContainer>
-          <ResultBadge style={{ backgroundColor: badgeColor }}>
-            <ResultText style={{ color: badgeTextColor }}>
+      <SeriesCard
+        style={{
+          borderRadius: 16,
+          marginBottom: 16,
+          borderColor: "#eeeeee",
+        }}
+      >
+        <SeriesHeader
+          style={{
+            padding: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: "#f5f5f5",
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
+            <TeamLogo
+              source={opponentTeam.logo}
+              resizeMode="contain"
+              style={{ width: 32, height: 32 }}
+            />
+            <View style={{ marginLeft: 12 }}>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: "bold",
+                  color: "#333",
+                }}
+              >
+                vs {opponentTeam.name}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: "#666",
+                  marginTop: 2,
+                }}
+              >
+                {match.dateRange} ({locationText})
+              </Text>
+            </View>
+          </View>
+          <ResultBadge
+            style={{
+              backgroundColor: badgeColor,
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              borderRadius: 12,
+            }}
+          >
+            <ResultText
+              style={{
+                color: badgeTextColor,
+                fontSize: 13,
+                fontWeight: "600",
+              }}
+            >
               {isCurrentSeries ? "진행 중" : match.result}
             </ResultText>
           </ResultBadge>
         </SeriesHeader>
 
-        <DayRowContainer>
+        <DayRowContainer style={{ padding: 12 }}>
           {match.days.map((day, index) => {
-            // 금액 유무와 날짜 위치에 따른 색상 설정
-            const hasAmount = day.amount !== null;
-            const isFirstDay = index === 0;
-            const bgColor = hasAmount
-              ? isFirstDay
-                ? "#ffe8e8"
-                : "#e8f9ee"
-              : "#f5f5f5";
-            const textColor = hasAmount
-              ? isFirstDay
-                ? "#ff5555"
-                : "#00aa55"
-              : "#999";
+            // 경기 상태에 따른 색상 및 라벨 설정
+            let statusLabel = "";
+            let statusColor = "#333";
+            let badgeBgColor = "transparent";
+
+            switch (day.status) {
+              case "win":
+                statusLabel = "승";
+                statusColor = "#f44336";
+                badgeBgColor = "rgba(244, 67, 54, 0.2)";
+                break;
+              case "lose":
+                statusLabel = "패";
+                statusColor = "#2196f3";
+                badgeBgColor = "rgba(33, 150, 243, 0.2)";
+                break;
+              case "draw":
+                statusLabel = "무";
+                statusColor = "#4caf50";
+                badgeBgColor = "rgba(76, 175, 80, 0.2)";
+                break;
+              case "cancelled":
+                statusLabel = "취소";
+                statusColor = "#9e9e9e";
+                badgeBgColor = "rgba(158, 158, 158, 0.2)";
+                break;
+              case "upcoming":
+                statusLabel = "예정";
+                statusColor = "#9c27b0";
+                badgeBgColor = "rgba(156, 39, 176, 0.2)";
+                break;
+            }
+
+            // 배경색 설정
+            const bgColor =
+              day.status === "win"
+                ? "#f4f9ff"
+                : day.status === "lose"
+                ? "#fff0f0"
+                : "#f9f9f9";
+
+            // 텍스트 색상 설정
+            const textColor =
+              day.status === "win"
+                ? "#1588CF"
+                : day.status === "lose"
+                ? "#ff4444"
+                : "#666";
 
             return (
-              <DayBox key={index} backgroundColor={bgColor}>
-                <DayText>{day.date}</DayText>
-                <AmountText color={textColor}>
+              <DayBox
+                key={index}
+                backgroundColor={bgColor}
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  margin: 4,
+                  borderRadius: 12,
+                  alignItems: "center",
+                }}
+              >
+                <DayText
+                  style={{
+                    color: "#666",
+                    fontSize: 14,
+                    marginBottom: 6,
+                  }}
+                >
+                  {day.date}
+                </DayText>
+
+                {/* 경기 상태 라벨 */}
+                {statusLabel && (
+                  <View
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 10,
+                      backgroundColor: badgeBgColor,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        color: statusColor,
+                      }}
+                    >
+                      {statusLabel}
+                    </Text>
+                  </View>
+                )}
+
+                {/* 금액 */}
+                <AmountText
+                  color={textColor}
+                  style={{
+                    fontSize: 15,
+                    fontWeight: "600",
+                  }}
+                >
                   {formatAmount(day.amount)}
                 </AmountText>
               </DayBox>
@@ -1237,9 +1431,28 @@ const SavingsScreen = () => {
           })}
         </DayRowContainer>
 
-        <TotalContainer>
-          <TotalLabel>시리즈 총 적립액</TotalLabel>
-          <TotalAmount>{formatAmount(match.totalAmount)}</TotalAmount>
+        <TotalContainer
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            padding: 16,
+            borderTopWidth: 1,
+            borderTopColor: "#f0f0f0",
+            backgroundColor: "#fcfcfc",
+          }}
+        >
+          <TotalLabel style={{ fontSize: 14, color: "#666" }}>
+            총 적립액
+          </TotalLabel>
+          <TotalAmount
+            style={{
+              fontSize: 16,
+              fontWeight: "bold",
+              color: "#1588CF",
+            }}
+          >
+            {formatAmount(match.totalAmount)}
+          </TotalAmount>
         </TotalContainer>
       </SeriesCard>
     );
