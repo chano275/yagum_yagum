@@ -131,23 +131,8 @@ const BenefitsScreen = () => {
   // 네비게이션 추가
   const navigation = useNavigation<BenefitsScreenNavigationProp>();
 
-  // 혜택 데이터
+  // 혜택 데이터 - "우대금리 혜택"과 "팀 굿즈 할인" 항목 제거
   const benefits = [
-    {
-      id: "1",
-      title: "우대금리 혜택",
-      description:
-        "적금 목표 달성 시 기본금리에 추가로 최대 1.0%p의 우대금리가 제공됩니다.",
-      icon: "cash-outline",
-      bgColor: teamColor.primary,
-      onPress: () => {
-        // 금리 혜택 상세 페이지로 이동
-        navigation.navigate("Primerate", {
-          benefitType: "interest",
-          title: "우대금리 혜택",
-        });
-      },
-    },
     {
       id: "2",
       title: "경기 직관 인증",
@@ -160,21 +145,6 @@ const BenefitsScreen = () => {
         navigation.navigate("Verifyticket", {
           benefitType: "ticket",
           title: "경기 직관 인증",
-        });
-      },
-    },
-    {
-      id: "3",
-      title: "팀 굿즈 할인",
-      description:
-        "응원팀 공식 굿즈 구매 시 최대 20% 할인 혜택을 받을 수 있습니다.",
-      icon: "shirt-outline",
-      bgColor: "#4CAF50",
-      onPress: () => {
-        // 굿즈 쇼핑 페이지로 이동
-        navigation.navigate("Merchdiscount", {
-          benefitType: "goods",
-          title: "팀 굿즈 할인",
         });
       },
     },
