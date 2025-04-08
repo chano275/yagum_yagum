@@ -107,6 +107,7 @@ async def update_daily_balances(db, date_param=None):
 async def calculate_daily_interest(db, date_param=None):
     """
     모든 계정의 일일 이자를 계산하고 daily_balances 테이블에 기록합니다.
+    전날의 잔액을 기준으로 이자를 계산합니다.
     
     Args:
         db (Session): 데이터베이스 세션
@@ -119,7 +120,10 @@ async def calculate_daily_interest(db, date_param=None):
     if date_param is None:
         date_param = datetime.now().date()
     
-    logger.info(f"[{date_param}] 일일 이자 계산 시작...")
+    # 전날 날짜 계산
+    previous_date = date_param - timedelta(days=1)
+    
+    logger.info(f"[{date_param}] 일일 이자 계산 시작... (전날({previous_date}) 잔액 기준)")
     
     processed_accounts = 0
     total_interest = 0
@@ -140,12 +144,28 @@ async def calculate_daily_interest(db, date_param=None):
                 logger.warning(f"계정 ID {daily_balance.ACCOUNT_ID}를 찾을 수 없습니다.")
                 continue
             
-            # 이자율 조회 (실제 이자율은 계정 정보와 미션 달성에 따라 계산)
-            interest_rate = account.INTEREST_RATE
+            # 전날의 잔액 기록 조회
+            previous_balance = db.query(models.DailyBalances).filter(
+                models.DailyBalances.ACCOUNT_ID == daily_balance.ACCOUNT_ID,
+                models.DailyBalances.DATE == previous_date
+            ).first()
             
-            # 일일 이자 계산 (연이율 / 365 * 잔액)
-            daily_interest_rate = interest_rate / 100 / 365
-            daily_interest_amount = round(daily_balance.CLOSING_BALANCE * daily_interest_rate)
+            # 전날 기록이 없으면 이자는 0으로 설정
+            if not previous_balance:
+                logger.info(f"계정 ID {daily_balance.ACCOUNT_ID}: 전날({previous_date}) 잔액 기록이 없습니다. 이자는 0원으로 설정.")
+                daily_balance.DAILY_INTEREST = 0
+                processed_accounts += 1
+                continue
+            
+            # 이자율 조회 (실제 이자율은 계정 정보와 미션 달성에 따라 계산)
+            # 기본 이자율 + 우대 이자율 계산
+            from router.mission import mission_crud
+            interest_details = mission_crud.calculate_account_interest_details(db, account.ACCOUNT_ID)
+            total_interest_rate = interest_details['total_interest_rate']
+            
+            # 일일 이자 계산 (연이율 / 365 * 전날 잔액)
+            daily_interest_rate = total_interest_rate / 100 / 365
+            daily_interest_amount = round(previous_balance.CLOSING_BALANCE * daily_interest_rate)
             
             # daily_balances 테이블 업데이트
             daily_balance.DAILY_INTEREST = daily_interest_amount
@@ -153,18 +173,19 @@ async def calculate_daily_interest(db, date_param=None):
             processed_accounts += 1
             total_interest += daily_interest_amount
             
-            logger.info(f"계정 ID {daily_balance.ACCOUNT_ID}: 잔액 {daily_balance.CLOSING_BALANCE}원, 이자율 {interest_rate}%, 일일 이자 {daily_interest_amount}원")
+            logger.info(f"계정 ID {daily_balance.ACCOUNT_ID}: 전날 잔액 {previous_balance.CLOSING_BALANCE}원, 이자율 {daily_interest_rate}%, 일일 이자 {daily_interest_amount}원")
         
         # 변경사항 커밋
         db.commit()
         
         summary = {
             "date": date_param,
+            "previous_date": previous_date,
             "processed_accounts": processed_accounts,
             "total_interest": total_interest
         }
         
-        logger.info(f"[{date_param}] 일일 이자 계산 완료: {processed_accounts}개 계정, 총 {total_interest}원 이자 발생")
+        logger.info(f"[{date_param}] 일일 이자 계산 완료: {processed_accounts}개 계정, 총 {total_interest}원 이자 발생 (전날 잔액 기준)")
         return summary
         
     except Exception as e:
