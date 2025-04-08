@@ -13,6 +13,7 @@ import styled from "styled-components/native";
 import { useTeam } from "@/context/TeamContext";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/api/axios"; // API 클라이언트 임포트
+import { useNavigation } from "@react-navigation/native"; // useNavigation 임포트 추가
 
 // 동적 스타일링을 위한 인터페이스
 interface StyledProps {
@@ -23,6 +24,7 @@ interface StyledProps {
 const BASE_MOBILE_WIDTH = 390;
 const MAX_MOBILE_WIDTH = 430;
 
+// --- 스타일 컴포넌트 (기존과 동일) ---
 const AppWrapper = styled.View`
   flex: 1;
   align-items: center;
@@ -190,10 +192,12 @@ const NewsDate = styled.Text`
   font-size: 12px;
   color: #999;
 `;
+// -----------------------------
 
-// 막대 차트 컴포넌트
+// 막대 차트 컴포넌트 (기존과 동일)
 const BarChartFallback = ({ data, width, teamColor }) => {
-  const maxValue = Math.max(...data.datasets[0].data);
+  const maxValue =
+    data.datasets[0].data.length > 0 ? Math.max(...data.datasets[0].data) : 1; // 데이터 없을 경우 대비
 
   return (
     <View style={{ width: width * 0.85, height: 220 }}>
@@ -203,28 +207,34 @@ const BarChartFallback = ({ data, width, teamColor }) => {
           justifyContent: "space-between",
           height: 180,
           alignItems: "flex-end",
+          borderBottomWidth: 1,
+          borderBottomColor: "#ccc",
+          paddingBottom: 5,
         }}
       >
         {data.labels.map((label, index) => {
-          const value = data.datasets[0].data[index];
-          const barHeight = (value / maxValue) * 160;
+          const value = data.datasets[0].data[index] ?? 0; // 데이터 없을 경우 0
+          const barHeight = maxValue > 0 ? (value / maxValue) * 160 : 0; // 0으로 나누는 것 방지
 
           return (
-            <View key={index} style={{ alignItems: "center", flex: 1 }}>
+            <View
+              key={index}
+              style={{ alignItems: "center", flex: 1, marginHorizontal: 2 }}
+            >
+              <Text style={{ fontSize: 10, color: "#999", marginBottom: 2 }}>
+                {value.toLocaleString()}원
+              </Text>
               <View
                 style={{
-                  width: 30,
+                  width: "80%", // 막대 너비 조정
                   height: barHeight,
-                  backgroundColor: teamColor,
+                  backgroundColor: teamColor || "#007AFF", // 기본 색상 추가
                   borderTopLeftRadius: 4,
                   borderTopRightRadius: 4,
                 }}
               />
               <Text style={{ marginTop: 5, fontSize: 12, color: "#666" }}>
                 {label}
-              </Text>
-              <Text style={{ fontSize: 10, color: "#999" }}>
-                {value.toLocaleString()}원
               </Text>
             </View>
           );
@@ -234,21 +244,22 @@ const BarChartFallback = ({ data, width, teamColor }) => {
   );
 };
 
-// 커스텀 도넛 차트 (SVG 대신 React Native View 사용)
+// 커스텀 도넛 차트 (기존과 동일)
 const CustomDonutChart = ({ data, width }) => {
-  const totalAmount = 78500;
-  const total = data.reduce((sum, item) => sum + item.population, 0);
+  const totalAmount = data.reduce(
+    (sum, item) => sum + Math.round((item.population / 100) * 78500),
+    0
+  ); // 실제 금액 합계 계산
+  // const total = data.reduce((sum, item) => sum + item.population, 0); // 퍼센트 합계는 100이 아닐 수 있음
 
   return (
     <View style={{ width: width * 0.85, alignItems: "center" }}>
-      {/* 차트 상단 정보 */}
       <View style={{ marginBottom: 20, alignItems: "center" }}>
         <Text style={{ fontSize: 16, fontWeight: "bold", color: "#333" }}>
           적금 유형별 분석
         </Text>
       </View>
 
-      {/* 데이터 표시 */}
       <View
         style={{
           width: "100%",
@@ -259,7 +270,7 @@ const CustomDonutChart = ({ data, width }) => {
         }}
       >
         {data.map((item, index) => {
-          const amount = Math.round((item.population / 100) * totalAmount);
+          const amount = Math.round((item.population / 100) * 78500); // 금액 계산은 유지
 
           return (
             <View key={index} style={{ marginBottom: 12 }}>
@@ -281,15 +292,15 @@ const CustomDonutChart = ({ data, width }) => {
                     }}
                   />
                   <Text style={{ fontWeight: "bold", color: "#333" }}>
-                    {item.name}
+                    {" "}
+                    {item.name}{" "}
                   </Text>
                 </View>
                 <Text style={{ fontWeight: "bold", color: "#333" }}>
-                  {item.population}%
+                  {" "}
+                  {item.population}%{" "}
                 </Text>
               </View>
-
-              {/* 프로그레스 바 */}
               <View
                 style={{
                   height: 8,
@@ -307,7 +318,6 @@ const CustomDonutChart = ({ data, width }) => {
                   }}
                 />
               </View>
-
               <Text
                 style={{
                   fontSize: 12,
@@ -323,7 +333,6 @@ const CustomDonutChart = ({ data, width }) => {
         })}
       </View>
 
-      {/* 총 금액 표시 */}
       <View
         style={{
           flexDirection: "row",
@@ -344,19 +353,22 @@ const CustomDonutChart = ({ data, width }) => {
 };
 
 const WeeklyReportScreen = ({ navigation }) => {
-  const { teamColor, teamName, currentTeam } = useTeam();
+  // teamColor가 없을 경우 대비 기본값 설정
+  const {
+    teamColor = { primary: "#007AFF" },
+    teamName,
+    currentTeam,
+  } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
   const width =
     Platform.OS === "web"
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
 
-  // 뉴스 데이터 상태 추가
   const [newsData, setNewsData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 팀 이름으로 팀 ID 가져오기
   const getTeamIdByName = (name) => {
     const teamMapping = {
       "KIA 타이거즈": 1,
@@ -370,122 +382,111 @@ const WeeklyReportScreen = ({ navigation }) => {
       "NC 다이노스": 9,
       "키움 히어로즈": 10,
     };
-    return teamMapping[name] || 1; // 기본값 1
+    return teamMapping[name] || 9; // 기본값 NC 다이노스 ID
   };
 
-  // API에서 뉴스 데이터 가져오기
   useEffect(() => {
     const fetchWeeklyReport = async () => {
       try {
         setIsLoading(true);
-        // teamName을 기준으로 teamId 결정
-        const teamId = getTeamIdByName(teamName);
+        const teamId = getTeamIdByName(teamName); // 현재 컨텍스트의 teamName 사용
+        console.log(`Workspaceing report for team: ${teamName}, ID: ${teamId}`); // 디버깅 로그 추가
+
+        // API 호출 시 teamId가 유효한지 확인
+        if (!teamId) {
+          throw new Error("팀 ID를 찾을 수 없습니다.");
+        }
 
         const response = await api.get(`/api/report/weekly/team/${teamId}`);
+        console.log("API Response Status:", response.status); // 응답 상태 로그
 
-        if (response.status === 200) {
+        if (response.status === 200 && response.data) {
+          console.log("API Response Data:", response.data); // 응답 데이터 로그
           setNewsData(response.data);
+        } else {
+          console.warn(
+            "API 응답 성공했으나 데이터 없음 또는 상태 코드 이상:",
+            response.status
+          );
+          setNewsData([]); // 데이터 없는 경우 빈 배열 처리
         }
       } catch (err) {
         console.error("Weekly report fetch failed:", err);
         setError(err);
-        // 에러 발생 시 빈 데이터 설정
         setNewsData([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchWeeklyReport();
-  }, [teamName]); // teamName이 변경될 때마다 다시 가져오기
+    if (teamName) {
+      // teamName이 있을 때만 fetch
+      fetchWeeklyReport();
+    } else {
+      console.warn("Team name is not available yet."); // teamName 없을 경우 로그
+      setIsLoading(false); // 로딩 종료
+    }
+  }, [teamName]); // teamName 의존성 유지
 
-  // API 응답에서 뉴스 데이터 처리
   const processNewsData = () => {
-    if (newsData.length === 0 || !newsData[0]?.NEWS_SUMMATION) {
-      // API 호출 실패 시 기본 뉴스 데이터 반환
+    // newsData가 배열이 아니거나 비어있거나, 첫 항목에 NEWS_SUMMATION 없으면 기본값 반환
+    if (
+      !Array.isArray(newsData) ||
+      newsData.length === 0 ||
+      !newsData[0]?.NEWS_SUMMATION
+    ) {
+      return [
+        { id: 1, title: "이번 주 뉴스 요약을 불러오지 못했습니다.", date: "" },
+      ];
+    }
+    const newsItem = newsData[0];
+    // NEWS_SUMMATION이 문자열인지 확인
+    if (typeof newsItem.NEWS_SUMMATION !== "string") {
       return [
         {
           id: 1,
-          title: "뉴스 데이터가 불러와 지지 않았습니다.",
-          date: "2025.01.01",
+          title: "뉴스 요약 데이터 형식이 올바르지 않습니다.",
+          date: newsItem.DATE || "",
         },
       ];
     }
-
-    const newsItem = newsData[0];
-
-    // 문자열을 줄바꿈으로 분리하고 뉴스 아이템 생성
-    return newsItem.NEWS_SUMMATION.split("\n").map((news, index) => {
-      // 앞에 "- "가 있으면 제거
-      const title = news.startsWith("- ") ? news.substring(2) : news;
-
-      return {
-        id: index + 1,
-        title,
-        date: newsItem.DATE || "2025.04.03",
-      };
-    });
+    return newsItem.NEWS_SUMMATION.split("\n")
+      .map((news, index) => {
+        const title = news.startsWith("- ")
+          ? news.substring(2).trim()
+          : news.trim();
+        // 빈 줄은 제외
+        if (!title) return null;
+        return { id: index + 1, title, date: newsItem.DATE || "" }; // DATE가 없을 경우 빈 문자열
+      })
+      .filter((item) => item !== null); // null 항목 제거
   };
 
-  // 가공된 뉴스 데이터 가져오기
   const newsHighlights = processNewsData();
 
-  // 주간 요약 데이터
+  // --- 가짜 데이터 (기존과 동일) ---
   const weekSummary = {
     period: "3.1 - 3.7",
     totalAmount: "50,000원",
     games: "4승 2패",
   };
-
-  // 주간 적금 현황 데이터 (막대 그래프)
   const barData = {
     labels: ["월", "화", "수", "목", "금", "토", "일"],
-    datasets: [
-      {
-        data: [5000, 15000, 7500, 12000, 10000, 18000, 13000],
-      },
-    ],
+    datasets: [{ data: [5000, 15000, 7500, 12000, 10000, 18000, 13000] }],
   };
-
-  // 적금 유형별 분석 데이터 (파이 차트)
   const pieData = [
-    {
-      name: "승리",
-      population: 35,
-      color: "#1E3A8A",
-      legendFontColor: "#7F7F7F",
-      legendFontSize: 12,
-    },
-    {
-      name: "안타",
-      population: 28,
-      color: "#93C5FD",
-      legendFontColor: "#7F7F7F",
-      legendFontSize: 12,
-    },
-    {
-      name: "홈런",
-      population: 22,
-      color: "#BFDBFE",
-      legendFontColor: "#7F7F7F",
-      legendFontSize: 12,
-    },
-    {
-      name: "3연전 승리",
-      population: 15,
-      color: "#DBEAFE",
-      legendFontColor: "#7F7F7F",
-      legendFontSize: 12,
-    },
+    { name: "승리", population: 35, color: "#1E3A8A" },
+    { name: "안타", population: 28, color: "#93C5FD" },
+    { name: "홈런", population: 22, color: "#BFDBFE" },
+    { name: "3연전 승리", population: 15, color: "#DBEAFE" },
   ];
-
-  // 팀 성적 요약 데이터
   const teamStats = {
     record: "4승 2패",
     teamBatting: "0.289",
     teamHomeRuns: "8개",
     rankChange: "+2",
   };
+  // -----------------------------
 
   return (
     <AppWrapper>
@@ -509,14 +510,16 @@ const WeeklyReportScreen = ({ navigation }) => {
             <Card width={width}>
               <CardHeader width={width}>
                 <CardTitle width={width}>
-                  주간 요약 ({weekSummary.period})
+                  {" "}
+                  주간 요약 ({weekSummary.period}){" "}
                 </CardTitle>
               </CardHeader>
               <CardContent width={width}>
                 <SummaryItem>
                   <SummaryLabel>주간 적립액</SummaryLabel>
                   <SummaryValue teamColor={teamColor.primary}>
-                    {weekSummary.totalAmount}
+                    {" "}
+                    {weekSummary.totalAmount}{" "}
                   </SummaryValue>
                 </SummaryItem>
                 <SummaryItem>
@@ -545,52 +548,55 @@ const WeeklyReportScreen = ({ navigation }) => {
                 </ChartContainer>
                 <View style={{ alignItems: "flex-end", marginTop: 10 }}>
                   <SummaryValue teamColor={teamColor.primary}>
-                    주간 총 적금액: 78,500원
+                    {" "}
+                    주간 총 적금액: 78,500원{" "}
                   </SummaryValue>
                 </View>
               </CardContent>
             </Card>
 
-            {/* 적금 유형별 분석 (파이 차트) */}
-            <Card width={width}>
-              <CardHeader width={width}>
-                <CardTitle width={width}>적금 유형별 분석</CardTitle>
-              </CardHeader>
-              <CardContent width={width}>
-                <ChartContainer>
-                  <CustomDonutChart data={pieData} width={width} />
-                </ChartContainer>
-              </CardContent>
-            </Card>
+            {/* === 주석 처리 시작 === */}
+            {/*
+              {/* 적금 유형별 분석 (파이 차트) *}
+              <Card width={width}>
+                <CardHeader width={width}>
+                  <CardTitle width={width}>적금 유형별 분석</CardTitle>
+                </CardHeader>
+                <CardContent width={width}>
+                  <ChartContainer>
+                    <CustomDonutChart data={pieData} width={width} />
+                  </ChartContainer>
+                </CardContent>
+              </Card>
 
-            {/* 팀 성적 요약 */}
-            <Card width={width}>
-              <CardHeader width={width}>
-                <CardTitle width={width}>팀 성적 요약</CardTitle>
-              </CardHeader>
-              <CardContent width={width}>
-                <TeamStatItem>
-                  <TeamStatLabel>주간 성적</TeamStatLabel>
-                  <TeamStatValue>{teamStats.record}</TeamStatValue>
-                </TeamStatItem>
-                <TeamStatItem>
-                  <TeamStatLabel>팀 타율</TeamStatLabel>
-                  <TeamStatValue>{teamStats.teamBatting}</TeamStatValue>
-                </TeamStatItem>
-                <TeamStatItem>
-                  <TeamStatLabel>팀 홈런</TeamStatLabel>
-                  <TeamStatValue>{teamStats.teamHomeRuns}</TeamStatValue>
-                </TeamStatItem>
-                <TeamStatItem style={{ borderBottomWidth: 0 }}>
-                  <TeamStatLabel>순위 변동</TeamStatLabel>
-                  <TeamStatValue highlight>
-                    {teamStats.rankChange}
-                  </TeamStatValue>
-                </TeamStatItem>
-              </CardContent>
-            </Card>
+              {/* 팀 성적 요약 *}
+              <Card width={width}>
+                <CardHeader width={width}>
+                  <CardTitle width={width}>팀 성적 요약</CardTitle>
+                </CardHeader>
+                <CardContent width={width}>
+                  <TeamStatItem>
+                    <TeamStatLabel>주간 성적</TeamStatLabel>
+                    <TeamStatValue>{teamStats.record}</TeamStatValue>
+                  </TeamStatItem>
+                  <TeamStatItem>
+                    <TeamStatLabel>팀 타율</TeamStatLabel>
+                    <TeamStatValue>{teamStats.teamBatting}</TeamStatValue>
+                  </TeamStatItem>
+                  <TeamStatItem>
+                    <TeamStatLabel>팀 홈런</TeamStatLabel>
+                    <TeamStatValue>{teamStats.teamHomeRuns}</TeamStatValue>
+                  </TeamStatItem>
+                  <TeamStatItem style={{ borderBottomWidth: 0 }}>
+                    <TeamStatLabel>순위 변동</TeamStatLabel>
+                    <TeamStatValue highlight> {teamStats.rankChange} </TeamStatValue>
+                  </TeamStatItem>
+                </CardContent>
+              </Card>
+            */}
+            {/* === 주석 처리 끝 === */}
 
-            {/* 주간 뉴스 하이라이트 - 변경된 부분 */}
+            {/* 주간 뉴스 하이라이트 */}
             <Card width={width}>
               <CardHeader width={width}>
                 <CardTitle width={width}>주간 뉴스 하이라이트</CardTitle>
@@ -604,13 +610,17 @@ const WeeklyReportScreen = ({ navigation }) => {
                   <View style={{ padding: 20, alignItems: "center" }}>
                     <Text>뉴스 데이터 로딩 실패</Text>
                   </View>
-                ) : (
+                ) : newsHighlights.length > 0 ? (
                   newsHighlights.map((news) => (
                     <NewsItem key={news.id}>
                       <NewsTitle>• {news.title}</NewsTitle>
-                      <NewsDate>{news.date}</NewsDate>
+                      {news.date && <NewsDate>{news.date}</NewsDate>}
                     </NewsItem>
                   ))
+                ) : (
+                  <View style={{ padding: 20, alignItems: "center" }}>
+                    <Text>이번 주 뉴스 요약이 없습니다.</Text>
+                  </View>
                 )}
               </CardContent>
             </Card>
