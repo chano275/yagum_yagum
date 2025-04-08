@@ -460,7 +460,7 @@ def process_savings_for_date(game_date=None, session=None):
                 processed_accounts += 1
                 savings_count += account_savings_count
                 print(f"계정 {account.ACCOUNT_ID} 총 적립액: {account_total_saved}원 ({account_savings_count}건)")
-        
+
         # 4. 계정별 일일 총액을 DailyTransfer에 한 번씩만 저장
         for account_id, total_amount in account_daily_totals.items():
             # DailyTransfer에 하루에 한 번만 총액 저장
@@ -469,7 +469,7 @@ def process_savings_for_date(game_date=None, session=None):
                 DATE=game_date,
                 AMOUNT=total_amount,
                 created_at=datetime.now(),
-                TEXT="일일 적립금 총합"
+                TEXT="야금야금!"
             )
             session.add(daily_transfer)
         
