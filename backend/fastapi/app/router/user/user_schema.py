@@ -52,3 +52,8 @@ class TokenResponse(BaseModel):
 # 토큰 데이터 모델
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+class CheckNum(BaseModel):
+    NAME: str
+    ACCOUNT_NUM: str
+    BOOL: bool
