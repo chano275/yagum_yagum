@@ -334,8 +334,9 @@ async def check_ocr(
             # 변경사항 커밋
             db.commit()
             
-            # 이자율 업데이트
-            mission_crud.update_account_interest_rate(db, account.ACCOUNT_ID)
+            # 이전에 호출하던 이자율 업데이트 함수 대신, 이자 재계산 함수 호출
+            from utils.interest_utils import recalculate_interest_history
+            await recalculate_interest_history(db,account.ACCOUNT_ID)
             
             # 성공 응답
             logger.info(f"티켓 인증 및 미션 적용 성공: 계정 ID {account.ACCOUNT_ID}, 티켓 번호 {ticket_number}")
