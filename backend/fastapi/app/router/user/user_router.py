@@ -443,7 +443,7 @@ async def get_user_accounts(
     
 @router.get("check-account-num", response_model=CheckNum)
 async def check_account_num(
-    account_num: str,  # 타입 힌트 수정
+    account_num: str,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -457,33 +457,43 @@ async def check_account_num(
                 detail="사용자 인증 정보가 없습니다"
             )
 
-        from router.user.user_ssafy_api_utils import check_account_num
-        user_name = await check_account_num(
-            user_key=user_key,
-            account_no=account_num
-        )
+        try:
+            from router.user.user_ssafy_api_utils import check_account_num
+            user_name = await check_account_num(
+                user_key=user_key,
+                account_no=account_num
+            )
 
-        result = {
-            "NAME": user_name,
-            "ACCOUNT_NUM": account_num,
-            "BOOL": True
-        }
-        return result
+            # 성공 응답
+            result = {
+                "NAME": user_name,
+                "ACCOUNT_NUM": account_num,
+                "BOOL": True
+            }
+            return result
+            
+        except Exception as api_error:
+            error_message = str(api_error)
+            # 계좌번호 유효성 오류 확인
+            if "계좌번호가 유효하지 않습니다" in error_message:
+                # 유효하지 않은 계좌번호일 경우도 200 응답, 하지만 BOOL은 False
+                result = {
+                    "NAME": "",
+                    "ACCOUNT_NUM": account_num,
+                    "BOOL": False
+                }
+                return result
+            else:
+                # 그 외의 API 오류는 다시 예외로 발생시켜 외부 catch로 전달
+                raise api_error
+
     except Exception as e:
         logger.error(f"계좌번호 조회 중 오류: {str(e)}")
-        error_message = str(e)
-        
-        # 특정 에러 메시지에 따라 다른 상태 코드 반환
-        if "계좌번호가 유효하지 않습니다" in error_message:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="유효하지 않은 계좌번호입니다"
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"계좌번호 조회 중 오류가 발생했습니다: {error_message}"
-            )
+        # 다른 모든 오류에 대해서는 500 에러 응답
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"계좌번호 조회 중 오류가 발생했습니다: {str(e)}"
+        )
 
 # 사용자 삭제
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
