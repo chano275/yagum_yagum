@@ -50,6 +50,7 @@ const Container = styled.View<BaseStyledProps>`
     const baseWidth = Platform.OS === "web" ? BASE_MOBILE_WIDTH : width;
     return baseWidth * 0.045;
   }}px;
+  padding-top: 0;
 `;
 
 const Header = styled.View<BaseStyledProps>`
@@ -57,6 +58,7 @@ const Header = styled.View<BaseStyledProps>`
   justify-content: space-between;
   align-items: center;
   margin-bottom: ${(props) => props.width * 0.04}px;
+  margin-top: ${Platform.OS === "web" ? "16px" : "0px"};
 `;
 
 const HeaderTitle = styled.Text<BaseStyledProps>`
@@ -153,8 +155,8 @@ const ServiceIcon = styled.Image`
 `;
 
 const ServiceTitle = styled.Text<BaseStyledProps>`
-  font-size: ${(props: BaseStyledProps) => props.width * 0.045}px;
-  line-height: ${(props: BaseStyledProps) => props.width * 0.062}px;
+  font-size: ${(props: BaseStyledProps) => Math.min(props.width * 0.045, 24)}px;
+  line-height: ${(props: BaseStyledProps) => Math.min(props.width * 0.062, 32)}px;
   font-weight: bold;
   letter-spacing: -0.3px;
   color: #333;
@@ -176,8 +178,8 @@ const LightText = styled.Text`
 `;
 
 const ServiceDescription = styled.Text<BaseStyledProps>`
-  font-size: ${({ width }) => width * 0.038}px;
-  line-height: ${({ width }) => width * 0.052}px;
+  font-size: ${({ width }) => Math.min(width * 0.038, 16)}px;
+  line-height: ${({ width }) => Math.min(width * 0.052, 24)}px;
   color: #222222;
   letter-spacing: -0.3px;
 `;
@@ -192,7 +194,7 @@ const StartButton = styled.TouchableOpacity<BaseStyledProps>`
 
 const ButtonText = styled.Text<BaseStyledProps>`
   color: white;
-  font-size: ${({ width }) => width * 0.04}px;
+  font-size: ${({ width }) => Math.min(width * 0.04, 18)}px;
   font-weight: bold;
 `;
 
@@ -359,7 +361,7 @@ const ButtonLabel = styled.Text<BaseStyledProps>`
 `;
 
 const MobileContainer = styled(BaseMobileContainer)<StyledProps>`
-  padding-top: ${props => props.insetsTop || 0}px;
+  padding-top: ${props => Platform.OS === "web" ? "24px" : `${props.insetsTop || 0}px`};
 `;
 
 const HomeScreen = () => {
@@ -776,16 +778,17 @@ const HomeScreen = () => {
                 { flex: 1 },
                 {
                   opacity: fadeAnim,
-                transform: [{ translateY: slideUpAnim }],
-              },
+                  transform: [{ translateY: slideUpAnim }],
+                },
               ]}
               contentContainerStyle={{
                 flexGrow: 1,
-              width: "100%",
-              paddingBottom: insets.bottom
+                width: "100%",
+                paddingBottom: insets.bottom,
+                paddingTop: 0
               }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
               <Container width={width}>
                 <Header width={width}>

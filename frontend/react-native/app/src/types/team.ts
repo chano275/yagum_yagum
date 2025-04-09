@@ -19,12 +19,4 @@ export interface TeamFullDetail {
   players: Player[];
   accounts: any[];
   upcoming_games: any[];
-}
-
-export interface GameResultResponse {
-  game_date: string;
-  result: string;
-  opponent_team_name: string;
-  score: string;
-  is_home: boolean;
 } 
