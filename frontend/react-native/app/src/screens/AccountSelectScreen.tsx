@@ -38,6 +38,7 @@ interface BaseStyledProps {
 // 확장된 StyledProps (insetsTop 포함)
 interface StyledProps extends BaseStyledProps {
   insetsTop?: number;
+  insetsBottom?: number;
   color?: string;
   isSelected?: boolean;
   disabled?: boolean;
@@ -531,8 +532,8 @@ const AccountSelectScreen = () => {
         console.log("API 요청 데이터:", JSON.stringify(requestData, null, 2));
         
         const response = await axios.post(
-          // `http://localhost:8000/api/account/create`
-          `http://3.38.183.156:8000/api/account/create`
+          `http://localhost:8000/api/account/create`
+          // `http://3.38.183.156:8000/api/account/create`
           , 
           requestData,
           { 
@@ -754,7 +755,7 @@ const AccountSelectScreen = () => {
   return (
     <AppWrapper>
       <MobileContainer insetsTop={insets.top}>
-        <StatusBar style="dark" />
+        <StatusBar style="dark-content" />
         <Header
           title="적금 가입"
           step={4}
