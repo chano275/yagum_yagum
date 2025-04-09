@@ -67,8 +67,8 @@ const AppNavigator = () => {
           name="TransactionDetail"
           component={TransactionDetailScreen}
         />
-         <Stack.Screen name="History" component={History} />
-         <Stack.Screen name="Transfer" component={TransferScreen} />
+        <Stack.Screen name="History" component={History} />
+        <Stack.Screen name="Transfer" component={TransferScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
