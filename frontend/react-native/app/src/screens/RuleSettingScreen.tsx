@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useTeam } from '../context/TeamContext';
 import styled from 'styled-components/native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useJoin } from '../context/JoinContext';
 import Header from '../components/Header';
@@ -25,19 +25,31 @@ import type { RootStackParamList } from '../navigation/AppNavigator';
 import Tooltip from '../components/Tooltip';
 import axios from 'axios';
 import { useStore } from '../store/useStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
 const MAX_MOBILE_WIDTH = 430;
 
+// BaseStyledProps 정의 (width는 필수로 변경)
+interface BaseStyledProps {
+  width: number;
+}
+
+// 확장된 StyledProps (insetsTop 포함)
+interface StyledProps extends BaseStyledProps {
+  insetsTop?: number;
+  // 다른 필요한 프롭들 (예: color, isActive)
+  color?: string;
+  isActive?: boolean;
+}
+
 const AppWrapper = styled.View`
   flex: 1;
-  align-items: center;
-  width: 100%;
-  background-color: white;
+  background-color: ${({ theme }) => theme.colors.background};
 `;
 
-const MobileContainer = styled.View<{ width: number }>`
+const MobileContainer = styled.View<StyledProps>`
   width: ${({ width }) => {
     const isWeb = Platform.OS === "web";
     const deviceWidth = Math.min(width, MAX_MOBILE_WIDTH);
@@ -47,6 +59,7 @@ const MobileContainer = styled.View<{ width: number }>`
   flex: 1;
   align-self: center;
   position: relative;
+  padding-top: ${props => props.insetsTop || 0}px;
 `;
 
 const TitleSection = styled.View`
@@ -371,10 +384,12 @@ type ToggleKeys = 'win' | 'basicHit' | 'basicHomerun' | 'basicScore' | 'basicDou
 
 const RuleSettingScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute();
   const { width: windowWidth } = useWindowDimensions();
   const { teamColor } = useTeam();
   const { joinData, updateSavingRules, updateLimits, applyRuleIdMapping, updateSavingRulesForAPI } = useJoin();
   const { token } = useStore();
+  const insets = useSafeAreaInsets();
   
   // 스크롤 위치 추적을 위한 ref와 타임아웃 ref
   const scrollViewRef = useRef(null);
@@ -1146,7 +1161,7 @@ const RuleSettingScreen = () => {
   return (
     <AppWrapper>
       <StatusBar backgroundColor='transparent' translucent={Platform.OS === 'android'} />
-      <MobileContainer width={windowWidth}>
+      <MobileContainer width={windowWidth} insetsTop={insets.top}>
         <Header
           title="적금 규칙 설정"
           step={3}

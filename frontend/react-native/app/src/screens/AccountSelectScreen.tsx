@@ -10,9 +10,10 @@ import {
   LayoutAnimation,
   UIManager,
   Easing,
+  StatusBar,
 } from "react-native";
 import styled from "styled-components/native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useTeam } from "../context/TeamContext";
 import { useAccountStore } from "../store/useStore";
 import { useStore } from "../store/useStore";
@@ -23,10 +24,24 @@ import { MaterialIcons } from "@expo/vector-icons";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 import axios from "axios";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
 const MAX_MOBILE_WIDTH = 430;
+
+// BaseStyledProps 정의 (선택적 width)
+interface BaseStyledProps {
+  width?: number;
+}
+
+// 확장된 StyledProps (insetsTop 포함)
+interface StyledProps extends BaseStyledProps {
+  insetsTop?: number;
+  color?: string;
+  isSelected?: boolean;
+  disabled?: boolean;
+}
 
 const AppWrapper = styled.View`
   flex: 1;
@@ -35,7 +50,7 @@ const AppWrapper = styled.View`
   background-color: white;
 `;
 
-const MobileContainer = styled.View`
+const MobileContainer = styled.View<StyledProps>`
   width: ${Platform.OS === "web"
     ? `${BASE_MOBILE_WIDTH}px`
     : `${MAX_MOBILE_WIDTH}px`};
@@ -49,6 +64,7 @@ const MobileContainer = styled.View`
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
     margin: 0 auto;
   `}
+  padding-top: ${props => props.insetsTop || 0}px;
 `;
 
 const TitleSection = styled.View`
@@ -231,8 +247,8 @@ interface SelectButtonProps {
   color: string;
 }
 
-const BottomSection = styled.View`
-  padding: 0 20px 16px 20px;
+const BottomSection = styled.View<StyledProps>`
+  padding: 0 20px ${props => props.insetsBottom || 16}px 20px;
   width: 100%;
   background-color: white;
 `;
@@ -332,8 +348,8 @@ const AnimatedSection = styled(Animated.View)`
 `;
 
 const AccountSelectScreen = () => {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute();
   const { teamColor } = useTeam();
   const { accountInfo, isLoading, error, fetchAccountInfo } = useAccountStore();
   const { isLoggedIn, token } = useStore();
@@ -354,6 +370,7 @@ const AccountSelectScreen = () => {
   const expandAnimation = useRef(new Animated.Value(0)).current;
   const opacityAnimation = useRef(new Animated.Value(0)).current;
   const dropdownAnimation = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     console.log("로그인 상태:", isLoggedIn);
@@ -736,7 +753,8 @@ const AccountSelectScreen = () => {
 
   return (
     <AppWrapper>
-      <MobileContainer>
+      <MobileContainer insetsTop={insets.top}>
+        <StatusBar style="dark" />
         <Header
           title="적금 가입"
           step={4}
@@ -836,7 +854,7 @@ const AccountSelectScreen = () => {
           </Content>
         </ScrollView>
 
-        <BottomSection>
+        <BottomSection insetsBottom={insets.bottom}>
           <SelectButton
             color={teamColor.primary}
             disabled={!canProceed || isSubmitting}
