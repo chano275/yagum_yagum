@@ -39,6 +39,7 @@ const TitleContainer = styled.View`
 
 const BackButton = styled.TouchableOpacity`
   padding: 8px;
+  padding-left: 12px;
 `;
 
 const Title = styled.Text`

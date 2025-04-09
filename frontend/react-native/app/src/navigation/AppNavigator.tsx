@@ -17,6 +17,7 @@ import RuleSettingScreen from "../screens/RuleSettingScreen";
 import History from "../screens/History";
 import TransferScreen from "../screens/TransferScreen";
 import TransactionDetailScreen from "@/screens/TransactionDetailScreen";
+import TransferCompleteScreen from "../screens/TransferCompleteScreen";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -24,6 +25,7 @@ export type RootStackParamList = {
   Login: undefined;
   SavingsJoin: undefined;
   Transfer: undefined;
+  TransferComplete: undefined;
   History: undefined;
   Service: undefined;
   PlayerSelect: undefined;
@@ -69,6 +71,7 @@ const AppNavigator = () => {
         />
         <Stack.Screen name="History" component={History} />
         <Stack.Screen name="Transfer" component={TransferScreen} />
+        <Stack.Screen name="TransferComplete" component={TransferCompleteScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
