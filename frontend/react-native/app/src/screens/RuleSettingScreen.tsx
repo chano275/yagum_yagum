@@ -761,8 +761,8 @@ const RuleSettingScreen = () => {
         
         // 선수 ID가 있는 경우 해당 선수 기반으로 규칙 조회
         let url = 
-        // `http://localhost:8000/api/saving_rule/rules`
-        `http://3.38.183.156:8000/api/saving_rule/rules`;
+        `http://localhost:8000/api/saving_rule/rules`
+        // `http://3.38.183.156:8000/api/saving_rule/rules`;
         if (playerId) {
           url += `?player_id=${playerId}`;
         }

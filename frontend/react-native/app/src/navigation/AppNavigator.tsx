@@ -23,7 +23,12 @@ export type RootStackParamList = {
   Login: undefined;
   SavingsJoin: undefined;
   Service: undefined;
-  Main: undefined;
+  Main: {
+    screen: string;
+    params: {
+      viewMode: string;
+    };
+  };
   PlayerSelect: undefined;
   SavingsGoal: undefined;
   RuleSetting: undefined;

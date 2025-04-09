@@ -771,48 +771,48 @@ const HomeScreen = () => {
               bottom: 0,
             }}
           />
-          <AnimatedScrollView
-            style={[
-              { flex: 1 },
-              {
-                opacity: fadeAnim,
+            <AnimatedScrollView
+              style={[
+                { flex: 1 },
+                {
+                  opacity: fadeAnim,
                 transform: [{ translateY: slideUpAnim }],
               },
-            ]}
-            contentContainerStyle={{
-              flexGrow: 1,
+              ]}
+              contentContainerStyle={{
+                flexGrow: 1,
               width: "100%",
               paddingBottom: insets.bottom
-            }}
+              }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
-          >
-            <Container width={width}>
-              <Header width={width}>
-                <HeaderTitle width={width}>홈</HeaderTitle>
-                <IconContainer>
+            >
+              <Container width={width}>
+                <Header width={width}>
+                  <HeaderTitle width={width}>홈</HeaderTitle>
+                  <IconContainer>
                   <IconButton width={width} onPress={handleAuthButtonPress}>
-                    <MaterialIcons
-                      name={isLoggedIn ? "logout" : "login"}
-                      size={iconSize}
-                      color="black"
-                    />
-                  </IconButton>
-                </IconContainer>
-              </Header>
+                      <MaterialIcons
+                        name={isLoggedIn ? "logout" : "login"}
+                        size={iconSize}
+                        color="black"
+                      />
+                    </IconButton>
+                  </IconContainer>
+                </Header>
 
-              {renderAccountSection()}
-              {renderSecondSection()}
+                {renderAccountSection()}
+                {renderSecondSection()}
 
-              <RecommendSection width={width}>
-                <AnimatedServiceCard
-                  width={width}
-                  style={[
+                <RecommendSection width={width}>
+                  <AnimatedServiceCard
+                    width={width}
+                    style={[
                     { backgroundColor: "#FFFFFF" },
                     { transform: [{ scale: recommendCardScale }] },
-                  ]}
-                  onPress={onRecommendCardPress}
-                  activeOpacity={1}
+                    ]}
+                    onPress={onRecommendCardPress}
+                    activeOpacity={1}
                 >
                   <SectionTitle
                     width={width}
@@ -929,8 +929,8 @@ const HomeScreen = () => {
                       </View>
                     </View>
                   ) : (
-                  <ServiceTitleContainer>
-                    <ServiceTextContainer width={width}>
+                    <ServiceTitleContainer>
+                      <ServiceTextContainer width={width}>
                         <ServiceTitle
                           width={width}
                           style={{ marginBottom: 4 }}
@@ -938,46 +938,46 @@ const HomeScreen = () => {
                           <ColoredText style={{ fontWeight: "700" }}>
                             야금야금
                           </ColoredText>
-                      </ServiceTitle>
-                      <ServiceDescription width={width}>
-                        지루했던 금융에
+                        </ServiceTitle>
+                        <ServiceDescription width={width}>
+                          지루했던 금융에
                           {"\n"}
-                        야구의 재미를 더하다!
-                      </ServiceDescription>
-                    </ServiceTextContainer>
-                    <ServiceIcon
+                          야구의 재미를 더하다!
+                        </ServiceDescription>
+                      </ServiceTextContainer>
+                      <ServiceIcon
                         source={require("../../assets/recommend.png")}
-                      resizeMode="contain"
-                      style={{
-                        width: 170,
-                        height: 170,
+                        resizeMode="contain"
+                        style={{
+                          width: 170,
+                          height: 170,
                           marginLeft: "auto",
                           marginRight: -10,
-                      }}
-                    />
-                  </ServiceTitleContainer>
+                        }}
+                      />
+                    </ServiceTitleContainer>
                   )}
-                </AnimatedServiceCard>
-              </RecommendSection>
-              {isLoggedIn && (
-                <TouchableOpacity 
-                  style={{ 
+                  </AnimatedServiceCard>
+                </RecommendSection>
+                {isLoggedIn && (
+                  <TouchableOpacity 
+                    style={{ 
                     backgroundColor: "#2D5BFF",
-                    padding: width * 0.03,
-                    borderRadius: width * 0.02,
+                      padding: width * 0.03,
+                      borderRadius: width * 0.02,
                     marginTop: width * 0.03,
-                  }}
-                  onPress={() => {
+                    }}
+                    onPress={() => {
                     navigation.navigate("Service");
-                  }}
-                >
-                  <ButtonLabel width={width} style={{ color: "#FFFFFF" }}>
-                    서비스 보기
-                  </ButtonLabel>
-                </TouchableOpacity>
-              )}
-            </Container>
-          </AnimatedScrollView>
+                    }}
+                  >
+                    <ButtonLabel width={width} style={{ color: "#FFFFFF" }}>
+                      서비스 보기
+                    </ButtonLabel>
+                  </TouchableOpacity>
+                )}
+              </Container>
+            </AnimatedScrollView>
         </MobileContainer>
       </AppWrapper>
     </>
