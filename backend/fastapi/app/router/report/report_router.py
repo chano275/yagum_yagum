@@ -651,6 +651,14 @@ async def update_news_summary(
             # 날짜가 제공되지 않은 경우 현재 날짜 사용
             report_date = datetime.now().date()
         
+        # 지난주의 월요일과 일요일 계산
+        # 현재 날짜와 상관없이 항상 가장 최근의 지난주를 기준으로 계산
+        days_since_monday = report_date.weekday()  # 0:월요일, 1:화요일, ..., 6:일요일
+        last_week_monday = report_date - timedelta(days=days_since_monday + 7)
+        last_week_sunday = last_week_monday + timedelta(days=6)
+        
+        logger.info(f"지난주 기간: {last_week_monday}(월) ~ {last_week_sunday}(일)")
+        
         results = []
         for news_item in data.body:
             team_name = news_item.team
@@ -672,40 +680,64 @@ async def update_news_summary(
             
             team_id = team.TEAM_ID
             
+            # 지난주의 팀 성적 계산
+            # 일반 기록(승/패/무)
+            team_win = db.query(func.count(models.GameLog.GAME_LOG_ID)).filter(
+                models.GameLog.TEAM_ID == team_id,
+                models.GameLog.RECORD_TYPE_ID == 1,  # 승리
+                models.GameLog.DATE >= last_week_monday,
+                models.GameLog.DATE <= last_week_sunday
+            ).scalar() or 0
+            
+            team_lose = db.query(func.count(models.GameLog.GAME_LOG_ID)).filter(
+                models.GameLog.TEAM_ID == team_id,
+                models.GameLog.RECORD_TYPE_ID == 2,  # 패배
+                models.GameLog.DATE >= last_week_monday,
+                models.GameLog.DATE <= last_week_sunday
+            ).scalar() or 0
+            
+            team_draw = db.query(func.count(models.GameLog.GAME_LOG_ID)).filter(
+                models.GameLog.TEAM_ID == team_id,
+                models.GameLog.RECORD_TYPE_ID == 3,  # 무승부
+                models.GameLog.DATE >= last_week_monday,
+                models.GameLog.DATE <= last_week_sunday
+            ).scalar() or 0
+            
+            # 팀 계정들의 총액 계산
+            team_amount = 0
+            accounts = db.query(models.Account).filter(models.Account.TEAM_ID == team_id).all()
+            if accounts:
+                team_amount = sum(account.TOTAL_AMOUNT for account in accounts)
+            
             # 해당 팀의 주간 보고서 조회 (없으면 생성)
             weekly_report = db.query(models.WeeklyReportTeam).filter(
                 models.WeeklyReportTeam.TEAM_ID == team_id,
-                models.WeeklyReportTeam.DATE == report_date
+                models.WeeklyReportTeam.DATE == last_week_monday
             ).first()
             
             if weekly_report:
                 # 기존 보고서 업데이트
                 weekly_report.NEWS_SUMMATION = summary
-                logger.info(f"기존 주간 보고서 업데이트: 팀 ID {team_id}, 팀 {team_name}, 날짜 {report_date}")
+                weekly_report.TEAM_WIN = team_win
+                weekly_report.TEAM_LOSE = team_lose
+                weekly_report.TEAM_DRAW = team_draw
+                weekly_report.TEAM_AMOUNT = team_amount
+                
+                logger.info(f"기존 주간 보고서 업데이트: 팀 ID {team_id}, 팀 {team_name}, 날짜 {last_week_monday}")
             else:
                 # 새 보고서 생성
-                # 승/패/무 등의 기본 데이터 설정
-                total_win = team.TOTAL_WIN
-                total_lose = team.TOTAL_LOSE
-                total_draw = team.TOTAL_DRAW
-                
-                # 팀 계정들의 총액 계산
-                team_amount = 0
-                accounts = db.query(models.Account).filter(models.Account.TEAM_ID == team_id).all()
-                if accounts:
-                    team_amount = sum(account.TOTAL_AMOUNT for account in accounts)
-                
                 weekly_report = models.WeeklyReportTeam(
                     TEAM_ID=team_id,
-                    DATE=report_date,
+                    DATE=last_week_monday,
                     NEWS_SUMMATION=summary,
                     TEAM_AMOUNT=team_amount,
-                    TEAM_WIN=total_win,
-                    TEAM_DRAW=total_draw,
-                    TEAM_LOSE=total_lose
+                    TEAM_WIN=team_win,
+                    TEAM_DRAW=team_draw,
+                    TEAM_LOSE=team_lose
                 )
                 db.add(weekly_report)
-                logger.info(f"새 주간 보고서 생성: 팀 ID {team_id}, 팀 {team_name}, 날짜 {report_date}")
+                
+                logger.info(f"새 주간 보고서 생성: 팀 ID {team_id}, 팀 {team_name}, 날짜 {last_week_monday}")
             
             # 결과에 추가
             results.append(report_schema.NewsSummaryResultItem(
@@ -721,7 +753,7 @@ async def update_news_summary(
         response = report_schema.NewsSummaryResponse(
             status="success",
             message=f"{len(results)}개 팀의 뉴스 요약 정보가 처리되었습니다",
-            date=report_date.isoformat(),
+            date=last_week_monday.isoformat(),
             results=results
         )
         
