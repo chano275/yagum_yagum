@@ -38,6 +38,7 @@ interface GameSchedule {
 // SavingsAccount를 확장하여 필요한 필드 추가
 interface ExtendedSavingsAccount extends SavingsAccount {
   team_id?: number;
+  preferred_player_type?: number;
 }
 
 // 규칙 인터페이스 정의
@@ -47,6 +48,16 @@ interface Rule {
   rule_name: string;
   rule_amount: number;
   is_active: boolean;
+}
+
+// 거래 내역 아이템 타입
+interface TransactionItem {
+  id: string;
+  opponent: string;
+  date: string;
+  description: string;
+  amount: number;
+  wins: number;
 }
 
 type MainPageNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -399,13 +410,16 @@ const MainPage = () => {
   const [isDailyReportLoading, setIsDailyReportLoading] =
     useState<boolean>(true);
   const [dailyReportError, setDailyReportError] = useState<Error | null>(null);
+  const [recentTransactions, setRecentTransactions] = useState<TransactionItem[]>([]);
+  const [isRecentTransactionsLoading, setIsRecentTransactionsLoading] = useState<boolean>(true);
 
   // 계좌 정보 조회 - useAccountStore 사용
   useEffect(() => {
     fetchAccountInfo();
   }, []);
   // 팀 ID 가져오기 함수
-  const getTeamIdByName = (name: string): number => {
+  const getTeamIdByName = (name: string | undefined): number => {
+    if (!name) return 1; // 기본값으로 1 반환
     const teamMapping: { [key: string]: number } = {
       "KIA 타이거즈": 1,
       "삼성 라이온즈": 2,
@@ -461,20 +475,16 @@ const MainPage = () => {
     const fetchDailyReport = async () => {
       try {
         setIsDailyReportLoading(true);
-
-        // 팀명으로 팀 ID 가져오기
         const teamId = getTeamIdByName(teamName);
+        console.log("일일 리포트 요청 - 팀 ID:", teamId);
 
-        // API 호출
         const response = await api.get(`/api/report/daily/team/${teamId}`);
-
-        if (
-          response.status === 200 &&
-          Array.isArray(response.data) &&
-          response.data.length > 0
-        ) {
-          setDailyReport(response.data[0]); // 첫 번째 리포트 사용
+        console.log("일일 리포트 API 응답:", response.data);
+        
+        if (response.status === 200 && response.data) {
+          setDailyReport(response.data);
         } else {
+          console.error("API 응답 형식 오류:", response);
           throw new Error("API 응답 형식이 올바르지 않습니다");
         }
       } catch (err) {
@@ -490,7 +500,7 @@ const MainPage = () => {
     if (teamName) {
       fetchDailyReport();
     }
-  }, [teamName]); // teamName이 변경될 때마다 실행
+  }, [teamName]);
 
   // 경기 일정 조회
   useEffect(() => {
@@ -600,7 +610,7 @@ const MainPage = () => {
   // 규칙을 SAVING_RULE_TYPE_ID 기준으로 분류하는 함수
   const organizeRulesByType = (
     rules: SavingRule[],
-    userPreferredPlayerType?: number
+    userPreferredPlayerType?: number | null
   ) => {
     // SAVING_RULE_TYPE_ID 기반 그룹화
     const rulesByTypeId: { [key: number]: SavingRule[] } = {};
@@ -674,6 +684,69 @@ const MainPage = () => {
     return organizedRules;
   };
 
+  // 팀 로고 가져오기 함수
+  const getTeamLogo = (teamName: string) => {
+    const logoMap: { [key: string]: any } = {
+      TWINS: require("../../assets/kbo/twins.png"),
+      BEARS: require("../../assets/kbo/bears.png"),
+      TIGERS: require("../../assets/kbo/tigers.png"),
+      LIONS: require("../../assets/kbo/lions.png"),
+      WIZ: require("../../assets/kbo/wiz.png"),
+      LANDERS: require("../../assets/kbo/landers.png"),
+      GIANTS: require("../../assets/kbo/giants.png"),
+      EAGLES: require("../../assets/kbo/eagles.png"),
+      DINOS: require("../../assets/kbo/dinos.png"),
+      HEROES: require("../../assets/kbo/heroes.png"),
+    };
+    return logoMap[teamName] || require("../../assets/icon.png");
+  };
+
+  // 최근 거래 내역 가져오기
+  const fetchRecentTransactions = async () => {
+    try {
+      setIsRecentTransactionsLoading(true);
+      const response = await api.get('/api/account/transfers_log', {
+        params: { month: new Date().getMonth() + 1 }
+      });
+      
+      // API 응답을 TransactionItem 형식으로 변환하고 최근 3개만 선택
+      const transactions: TransactionItem[] = response.data
+        .map((item: any) => {
+          const dateObj = new Date(item.DATE);
+          const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+          
+          let opponent = "TEAM";
+          if (item.TEXT.includes("트윈스")) opponent = "TWINS";
+          else if (item.TEXT.includes("베어스")) opponent = "BEARS";
+          else if (item.TEXT.includes("타이거즈")) opponent = "TIGERS";
+          else if (item.TEXT.includes("라이온즈")) opponent = "LIONS";
+          else if (item.TEXT.includes("위즈")) opponent = "WIZ";
+          else if (item.TEXT.includes("랜더스")) opponent = "LANDERS";
+          else if (item.TEXT.includes("자이언츠")) opponent = "GIANTS";
+          else if (item.TEXT.includes("이글스")) opponent = "EAGLES";
+          else if (item.TEXT.includes("다이노스")) opponent = "DINOS";
+          else if (item.TEXT.includes("히어로즈")) opponent = "HEROES";
+          
+          return {
+            id: item.DATE,
+            opponent,
+            date: formattedDate,
+            description: item.TEXT,
+            amount: item.AMOUNT,
+            wins: 1
+          };
+        })
+        .slice(0, 3); // 최근 3개만 선택
+      
+      setRecentTransactions(transactions);
+    } catch (error) {
+      console.error("최근 거래 내역 조회 실패:", error);
+      setRecentTransactions([]);
+    } finally {
+      setIsRecentTransactionsLoading(false);
+    }
+  };
+
   // accountInfo가 변경될 때 실행
   useEffect(() => {
     const updateAccountData = async () => {
@@ -703,7 +776,7 @@ const MainPage = () => {
         // 규칙 데이터 가져오기 - API 호출
         const rulesData = await fetchRules();
 
-        // 사용자의 선호 선수 타입 (1: 투수, 2: 타자)
+        // 사용자의 선호 선수 타자 (1: 투수, 2: 타자)
         // 계정 정보에서 가져오거나 기본값 사용
         const preferredPlayerType = account.preferred_player_type || null;
 
@@ -714,48 +787,51 @@ const MainPage = () => {
         );
         setSavingRules(organizedRules);
 
+        // 최근 거래 내역 가져오기
+        await fetchRecentTransactions();
+
         setIsLoading(false);
       } else {
         // 계좌 정보가 없는 경우 기본값 설정
         setIsLoading(false);
         // 기본 규칙 데이터 설정
         setSavingRules([
-          {
-            id: 1,
-            title: "기본 규칙",
-            rules: [
-              "팀이 승리하는 경우: 3,000원",
-              "팀이 안타를 친 경우: 1,000원",
-              "팀이 홈런을 친 경우: 5,000원",
-            ],
-          },
-          {
-            id: 2,
-            title: "투수 규칙",
-            rules: [
-              "투수 삼진을 잡는 경우: 1,000원",
-              "투수 볼넷을 던진 경우: -500원",
-              "투수 자책점: -1,000원",
-            ],
-          },
-          {
-            id: 3,
-            title: "타자 규칙",
-            rules: [
-              "타자 안타를 친 경우: 1,000원",
-              "타자 홈런을 친 경우: 5,000원",
-              "타자 도루하는 경우: 2,000원",
-            ],
-          },
-          {
-            id: 4,
-            title: "상대팀 규칙",
-            rules: [
-              "상대팀 삼진: 500원",
-              "상대팀 병살타: 1,000원",
-              "상대팀 실책: 1,000원",
-            ],
-          },
+    {
+      id: 1,
+      title: "기본 규칙",
+      rules: [
+        "팀이 승리하는 경우: 3,000원",
+        "팀이 안타를 친 경우: 1,000원",
+        "팀이 홈런을 친 경우: 5,000원",
+      ],
+    },
+    {
+      id: 2,
+      title: "투수 규칙",
+      rules: [
+        "투수 삼진을 잡는 경우: 1,000원",
+        "투수 볼넷을 던진 경우: -500원",
+        "투수 자책점: -1,000원",
+      ],
+    },
+    {
+      id: 3,
+      title: "타자 규칙",
+      rules: [
+        "타자 안타를 친 경우: 1,000원",
+        "타자 홈런을 친 경우: 5,000원",
+        "타자 도루하는 경우: 2,000원",
+      ],
+    },
+    {
+      id: 4,
+      title: "상대팀 규칙",
+      rules: [
+        "상대팀 삼진: 500원",
+        "상대팀 병살타: 1,000원",
+        "상대팀 실책: 1,000원",
+      ],
+    },
         ]);
       }
     };
@@ -772,29 +848,29 @@ const MainPage = () => {
   // 캐러셀 아이템 렌더링 함수
   const renderRuleItem = React.useCallback(
     ({ item }: { item: RuleItem }) => {
-      return (
-        <RuleCarouselCard width={width}>
-          <RuleCardHeader width={width} teamColor={teamColor.primary}>
-            <RuleCardTitle width={width}>{item.title}</RuleCardTitle>
+    return (
+      <RuleCarouselCard width={width}>
+        <RuleCardHeader width={width} teamColor={teamColor.primary}>
+          <RuleCardTitle width={width}>{item.title}</RuleCardTitle>
             <Ionicons
               name="information-circle-outline"
               size={20}
               color="white"
             />
-          </RuleCardHeader>
-          <RuleCardContent width={width}>
+        </RuleCardHeader>
+        <RuleCardContent width={width}>
             {item.rules.length > 0 ? (
               item.rules.map((rule: string, index: number) => (
-                <RuleText key={index} width={width}>
-                  • {rule}
-                </RuleText>
+            <RuleText key={index} width={width}>
+              • {rule}
+            </RuleText>
               ))
             ) : (
               <RuleText width={width}>• 설정된 규칙이 없습니다</RuleText>
             )}
-          </RuleCardContent>
-        </RuleCarouselCard>
-      );
+        </RuleCardContent>
+      </RuleCarouselCard>
+    );
     },
     [width, teamColor.primary] // 의존성 배열에 width와 teamColor.primary 추가
   );
@@ -806,42 +882,19 @@ const MainPage = () => {
       <View>
         <Carousel
           ref={carouselRef}
-          loop={false} // loop 비활성화로 자동 리셋 방지
+          loop={false}
           width={width - width * 0.12}
           height={width * 0.4}
           data={savingRules}
-          scrollAnimationDuration={500} // 더 짧은 애니메이션 시간
+          scrollAnimationDuration={500}
           onSnapToItem={(index) => {
-            console.log("캐러셀 스냅:", index); // 디버깅용
-            // setActiveSlide(index);
+            console.log("캐러셀 스냅:", index);
           }}
-          renderItem={renderRuleItem} // 테스트용 renderItem 사용
-          panGestureHandlerProps={{
-            activeOffsetX: [-10, 10], // 더 민감한 스와이프
-          }}
-          snapEnabled={true} // 스냅 기능 활성화
-          defaultIndex={activeSlide} // 초기 인덱스 설정
-          enabled={true} // 사용자 상호작용 활성화
-          mode="default" // parallax 모드는 문제를 일으킬 수 있음
+          renderItem={renderRuleItem}
+          defaultIndex={activeSlide}
+          enabled={true}
+          mode="parallax"
         />
-        {/* <PaginationContainer>
-          {savingRules.map((_, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={() => {
-                // 직접 캐러셀 위치 제어
-                if (carouselRef.current) {
-                  carouselRef.current.scrollTo({ index, animated: true });
-                }
-              }}
-            >
-              <PaginationDot
-                active={activeSlide === index} // 테스트 중에는 스와이프 시 시각적 업데이트 안됨
-                teamColor={teamColor.primary}
-              />
-            </TouchableOpacity>
-          ))}
-        </PaginationContainer> */}
       </View>
     );
   };
@@ -854,7 +907,7 @@ const MainPage = () => {
           <BackButton onPress={() => stackNavigation.navigate("Home")}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </BackButton>
-          <HeaderTitle width={width} pointerEvents="none">
+          <HeaderTitle width={width}>
             야금야금 -{" "}
             {accountInfo?.savings_accounts?.[0]?.team_name ||
               teamName ||
@@ -897,32 +950,32 @@ const MainPage = () => {
               </View>
             ) : (
               <>
-                <ProgressSection width={width} teamColor={teamColor.primary}>
-                  <ProgressTitle width={width}>{savingTitle}</ProgressTitle>
-                  <ProgressAmount width={width}>
+            <ProgressSection width={width} teamColor={teamColor.primary}>
+              <ProgressTitle width={width}>{savingTitle}</ProgressTitle>
+              <ProgressAmount width={width}>
                     {formatAmount(currentAmount)}원 /{" "}
                     {formatAmount(targetAmount)}원
-                  </ProgressAmount>
-                  <ProgressBarContainer width={width}>
-                    <ProgressFill percentage={percentage} />
-                  </ProgressBarContainer>
-                  <ProgressPercent width={width}>
-                    {percentage}% 달성
-                  </ProgressPercent>
-                </ProgressSection>
+              </ProgressAmount>
+              <ProgressBarContainer width={width}>
+                <ProgressFill percentage={percentage} />
+              </ProgressBarContainer>
+              <ProgressPercent width={width}>
+                {percentage}% 달성
+              </ProgressPercent>
+            </ProgressSection>
 
-                <StatsRow width={width}>
-                  <StatText width={width}>
-                    현재 금리: {interestRate.toFixed(1)}%
-                    {additionalRate > 0 && (
+            <StatsRow width={width}>
+              <StatText width={width}>
+                현재 금리: {interestRate.toFixed(1)}%
+                {additionalRate > 0 && (
                       <StatHighlight>
                         {" "}
                         +{additionalRate.toFixed(1)}%
                       </StatHighlight>
-                    )}
-                  </StatText>
+                )}
+              </StatText>
 
-                  <StatText width={width}>
+              <StatText width={width}>
                     팀 순위:{" "}
                     {isRankLoading
                       ? "로딩 중..."
@@ -946,15 +999,15 @@ const MainPage = () => {
                           : "±0"}
                       </StatHighlight>
                     )}
-                  </StatText>
-                </StatsRow>
+              </StatText>
+            </StatsRow>
 
-                <View style={{ padding: width * 0.04 }}>
-                  <Card width={width}>
-                    <CardHeader width={width}>
+            <View style={{ padding: width * 0.04 }}>
+              <Card width={width}>
+                <CardHeader width={width}>
                       <CardTitle width={width}>오늘의 적금 비교</CardTitle>
-                    </CardHeader>
-                    <CardContent width={width}>
+                </CardHeader>
+                <CardContent width={width}>
                       {isDailyReportLoading ? (
                         <View style={{ padding: 10, alignItems: "center" }}>
                           <Text>일일 리포트 로딩 중...</Text>
@@ -964,121 +1017,98 @@ const MainPage = () => {
                           <Text>일일 리포트를 불러오는데 실패했습니다.</Text>
                         </View>
                       ) : dailyReport && dailyReport.LLM_CONTEXT ? (
-                        <CardText width={width}>
+                  <CardText width={width}>
                           <RedText teamColor={teamColor.primary}>↗</RedText>{" "}
                           {dailyReport.LLM_CONTEXT}
-                        </CardText>
+                  </CardText>
                       ) : (
                         <CardText width={width}>
                           <RedText teamColor={teamColor.primary}>↗</RedText>{" "}
-                          두산이 승리했지만, 우리팀의 적금이 2배 더 많네요!
+                          오늘의 적금 리포트를 불러올 수 없습니다.
                         </CardText>
                       )}
-                    </CardContent>
-                  </Card>
+                </CardContent>
+              </Card>
 
-                  {/* 적금 규칙 캐러셀 카드 */}
-                  <Card width={width}>
-                    <CardHeader width={width}>
+              {/* 적금 규칙 캐러셀 카드 */}
+              <Card width={width}>
+                <CardHeader width={width}>
                       <CardTitle width={width}>적금 규칙</CardTitle>
-                    </CardHeader>
-                    <CardContent width={width}>
+                </CardHeader>
+                <CardContent width={width}>
                       {/* savingRules 데이터가 있을 때만 RulesCarousel 렌더링 */}
                       {savingRules && savingRules.length > 0 ? (
-                        <RulesCarousel />
+                  <RulesCarousel />
                       ) : (
                         // 데이터 로딩 중이거나 없을 때 표시할 내용 (선택 사항)
                         <View style={{ padding: 10, alignItems: "center" }}>
                           <Text>규칙 로딩 중...</Text>
                         </View>
                       )}
-                    </CardContent>
-                  </Card>
+                </CardContent>
+              </Card>
 
-                  <Card width={width}>
-                    <CardHeader width={width}>
-                      <CardTitle width={width}>
-                        최근 적금 내역 (API 연결 필요)
-                      </CardTitle>
-                      <TouchableOpacity
-                        onPress={() => {
+                  {/* 최근 적금 내역 카드 */}
+              <Card width={width}>
+                <CardHeader width={width}>
+                      <CardTitle width={width}>최근 적금 내역</CardTitle>
+                  <TouchableOpacity
+                    onPress={() => {
                           tabNavigation.navigate("적금내역", {
                             viewMode: "list",
-                          });
-                        }}
-                      >
-                        <ViewAllLink
-                          width={width}
-                          teamColor={teamColor.primary}
-                        >
-                          전체 내역 &gt;
-                        </ViewAllLink>
-                      </TouchableOpacity>
-                    </CardHeader>
-                    <CardContent width={width}>
-                      <HistoryItem width={width}>
-                        <TeamLogo
-                          width={width}
-                          source={require("../../assets/icon.png")}
-                        />
-                        <HistoryText width={width}>3/11 승리</HistoryText>
-                        <HistoryAmount
-                          width={width}
-                          teamColor={teamColor.primary}
-                        >
-                          +15,000원
-                        </HistoryAmount>
-                      </HistoryItem>
-                      <HistoryItem width={width}>
-                        <TeamLogo
-                          width={width}
-                          source={require("../../assets/icon.png")}
-                        />
-                        <HistoryText width={width}>3/9 안타 7개</HistoryText>
-                        <HistoryAmount
-                          width={width}
-                          teamColor={teamColor.primary}
-                        >
-                          +7,000원
-                        </HistoryAmount>
-                      </HistoryItem>
-                      <HistoryItem width={width}>
-                        <TeamLogo
-                          width={width}
-                          source={require("../../assets/icon.png")}
-                        />
-                        <HistoryText width={width}>
-                          3/8 승리, 안타 9개, 홈런 1개
-                        </HistoryText>
-                        <HistoryAmount
-                          width={width}
-                          teamColor={teamColor.primary}
-                        >
-                          +12,000원
-                        </HistoryAmount>
-                      </HistoryItem>
-                    </CardContent>
-                  </Card>
+                      });
+                    }}
+                  >
+                    <ViewAllLink width={width} teamColor={teamColor.primary}>
+                      전체 내역 &gt;
+                    </ViewAllLink>
+                  </TouchableOpacity>
+                </CardHeader>
+                <CardContent width={width}>
+                      {isRecentTransactionsLoading ? (
+                        <View style={{ padding: 10, alignItems: "center" }}>
+                          <Text>거래 내역 로딩 중...</Text>
+                        </View>
+                      ) : recentTransactions.length > 0 ? (
+                        recentTransactions.map((transaction) => (
+                          <HistoryItem key={transaction.id} width={width}>
+                    <TeamLogo
+                      width={width}
+                              source={getTeamLogo(transaction.opponent)}
+                    />
+                            <HistoryText width={width}>{transaction.description}</HistoryText>
+                    <HistoryAmount width={width} teamColor={teamColor.primary}>
+                              +{transaction.amount.toLocaleString()}원
+                    </HistoryAmount>
+                  </HistoryItem>
+                        ))
+                      ) : (
+                        <View style={{ padding: 10, alignItems: "center" }}>
+                          <Text>최근 거래 내역이 없습니다.</Text>
+                        </View>
+                      )}
+                </CardContent>
+              </Card>
 
-                  <Card width={width}>
-                    <CardHeader width={width}>
+              <Card width={width}>
+                <CardHeader width={width}>
                       <CardTitle width={width}>다음 경기 일정</CardTitle>
-                      <TouchableOpacity
-                        onPress={() => {
+                  <TouchableOpacity
+                    onPress={() => {
                           tabNavigation.navigate("적금내역", {
                             viewMode: "calendar",
-                          });
-                        }}
-                      >
+                      });
+                    }}
+                  >
                         <ViewAllLink
                           width={width}
                           teamColor={teamColor.primary}
                         >
-                          전체 일정 &gt;
-                        </ViewAllLink>
-                      </TouchableOpacity>
-                    </CardHeader>
-                    <CardContent width={width}>
+                      전체 일정 &gt;
+                    </ViewAllLink>
+                  </TouchableOpacity>
+                </CardHeader>
+                <CardContent width={width}>
                       {isScheduleLoading ? (
                         <View style={{ padding: 10, alignItems: "center" }}>
                           <Text>경기 일정 로딩 중...</Text>
@@ -1116,7 +1146,7 @@ const MainPage = () => {
                                 {location}{" "}
                                 <Text>({isHomeGame ? "홈" : "원정"})</Text>
                               </ScheduleTime>
-                            </ScheduleItem>
+                  </ScheduleItem>
                           );
                         })
                       ) : (
@@ -1124,9 +1154,9 @@ const MainPage = () => {
                           <Text>표시할 경기 일정이 없습니다.</Text>
                         </View>
                       )}
-                    </CardContent>
-                  </Card>
-                </View>
+                </CardContent>
+              </Card>
+            </View>
               </>
             )}
           </ScrollView>

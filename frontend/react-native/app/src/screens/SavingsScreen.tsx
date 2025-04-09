@@ -65,9 +65,10 @@ interface SeriesMatch {
   dateRange: string;
   result: string;
   days: {
-    date: string;
+    date: string;      // M/D 형식 (화면 표시용)
+    fullDate: string;  // YYYY-MM-DD 형식 (gameResults 조회용)
     amount: number | null;
-    status: GameStatus; // 상태 필드 추가
+    status: GameStatus;
   }[];
   totalAmount: number;
   status?: "current" | "past" | "upcoming";
@@ -96,6 +97,15 @@ interface TransactionItem {
   description: string;
   amount: number;
   wins: number;
+}
+
+// 경기 결과 응답 타입 정의
+interface GameResultResponse {
+  game_date: string;
+  result: string;
+  opponent_team_name: string;
+  score: string;
+  is_home: boolean;
 }
 
 // 모바일 기준 너비 설정
@@ -130,6 +140,35 @@ const isConsecutiveDates = (dates: string[]): boolean => {
     }
   }
   return true;
+};
+
+// 경기 결과별 색상 정의
+const RESULT_COLORS = {
+  win: {
+    text: '#155724',
+    badge: '#D4EDDA',
+    background: '#D4EDDA'
+  },
+  lose: {
+    text: '#721C24',
+    badge: '#F8D7DA',
+    background: '#F8D7DA'
+  },
+  draw: {
+    text: '#0C5460',
+    badge: '#D1ECF1',
+    background: '#D1ECF1'
+  },
+  cancelled: {
+    text: '#6C757D',
+    badge: '#EFEFEF',
+    background: '#EFEFEF'
+  },
+  upcoming: {
+    text: '#666666',
+    badge: 'transparent',
+    background: '#f9f9f9'
+  }
 };
 
 // 스타일 컴포넌트 정의
@@ -281,10 +320,10 @@ const DayCell = styled.TouchableOpacity<{
   teamColor: string;
 }>`
   width: ${100 / 7}%;
-  height: 68px; // 고정 높이로 변경
+  height: 68px;
   align-items: center;
-  justify-content: space-between; // 내용을 균등하게 분배
-  padding: 4px 2px 3px 2px; // 상하좌우 패딩 추가
+  justify-content: space-between;
+  padding: 4px 2px 3px 2px;
   opacity: ${(props) => (props.isCurrentMonth ? 1 : 0.4)};
   background-color: ${(props) => props.backgroundColor};
   border-width: ${(props) => (props.isToday || props.isSelected ? 1 : 0)}px;
@@ -350,17 +389,17 @@ const DayRowContainer = styled.View`
 
 const DayBox = styled.View<{ backgroundColor: string }>`
   flex: 1;
-  background-color: ${(props) => props.backgroundColor};
-  padding: 15px 10px;
-  margin: 5px;
-  border-radius: 8px;
+  padding: 14px;
+  margin: 4px;
+  border-radius: 12px;
   align-items: center;
+  background-color: ${props => props.backgroundColor};
 `;
 
 const DayText = styled.Text`
   color: #666;
   font-size: 14px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 `;
 
 const AmountText = styled.Text<{ color: string }>`
@@ -472,9 +511,9 @@ const SavingsScreen = () => {
   const [isSeriesLoading, setIsSeriesLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [calendarPermission, setCalendarPermission] = useState<boolean>(false);
-  const [transactionItems, setTransactionItems] = useState<TransactionItem[]>(
-    []
-  );
+  const [transactionItems, setTransactionItems] = useState<TransactionItem[]>([]);
+  // 경기 결과를 저장할 상태 추가
+  const [gameResults, setGameResults] = useState<{ [date: string]: GameResultResponse }>({});
 
   // 네비게이션 파라미터 처리
   useFocusEffect(
@@ -586,16 +625,29 @@ const SavingsScreen = () => {
 
   // 거래 상세 내역 페이지로 이동하는 함수
   const handleTransactionPress = (id: string) => {
+    // id는 이미 YYYY-MM-DD 형식이므로 그대로 사용
     navigation.navigate("TransactionDetail", { id });
   };
 
   // 3연전 시리즈 식별 함수
-  const identifySeriesMatches = (games: GameSchedule[]): SeriesMatch[] => {
+  const identifySeriesMatches = async (games: GameSchedule[]): Promise<SeriesMatch[]> => {
     const seriesMatchesData: SeriesMatch[] = [];
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // 오늘 날짜의 시작 시간으로 설정
+    today.setHours(0, 0, 0, 0);
 
     if (!games.length) return seriesMatchesData;
+
+    // 적립 금액 데이터 가져오기
+    let transfersData: { [date: string]: number } = {};
+    try {
+      const transfersResponse = await api.get('/api/account/transfers_log');
+      transfersData = transfersResponse.data.reduce((acc: { [date: string]: number }, transfer: any) => {
+        acc[transfer.DATE] = transfer.AMOUNT;
+        return acc;
+      }, {});
+    } catch (error) {
+      console.error('적립 금액 조회 실패:', error);
+    }
 
     // 팀 ID 조합으로 그룹화
     const matchesByTeams: { [key: string]: GameSchedule[] } = {};
@@ -608,61 +660,68 @@ const SavingsScreen = () => {
       matchesByTeams[teams].push(game);
     });
 
-    // 모든 3연전 시리즈 찾기
-    const allSeries: SeriesMatch[] = [];
-
     // 각 팀 조합별로 연속 3경기(3연전) 찾기
-    Object.values(matchesByTeams).forEach((teamGames) => {
-      // 날짜 기준 정렬
-      teamGames.sort(
-        (a, b) => new Date(a.DATE).getTime() - new Date(b.DATE).getTime()
-      );
+    for (const teamGames of Object.values(matchesByTeams)) {
+      teamGames.sort((a, b) => new Date(a.DATE).getTime() - new Date(b.DATE).getTime());
 
-      // 연속된 3경기 이상 찾기
       for (let i = 0; i <= teamGames.length - 3; i++) {
         const potentialSeries = teamGames.slice(i, i + 3);
         const dates = potentialSeries.map((game) => game.DATE);
 
         if (isConsecutiveDates(dates)) {
-          // 경기 날짜 포맷팅
           const startDate = formatShortDate(potentialSeries[0].DATE);
-          const endDate = formatShortDate(
-            potentialSeries[potentialSeries.length - 1].DATE
-          );
-
-          // 시리즈의 첫 경기 날짜와 마지막 경기 날짜
+          const endDate = formatShortDate(potentialSeries[potentialSeries.length - 1].DATE);
           const firstGameDate = new Date(potentialSeries[0].DATE);
           firstGameDate.setHours(0, 0, 0, 0);
-          const lastGameDate = new Date(
-            potentialSeries[potentialSeries.length - 1].DATE
-          );
+          const lastGameDate = new Date(potentialSeries[potentialSeries.length - 1].DATE);
           lastGameDate.setHours(0, 0, 0, 0);
 
-          // 시리즈 상태 결정 (진행 중/과거/미래)
-          let seriesStatus = "upcoming";
+          let seriesStatus: "current" | "past" | "upcoming" = "upcoming";
           if (lastGameDate < today) {
-            seriesStatus = "past"; // 3연전이 모두 지난 경우
+            seriesStatus = "past";
           } else if (firstGameDate <= today && today <= lastGameDate) {
-            seriesStatus = "current"; // 3연전이 진행 중인 경우
+            seriesStatus = "current";
           }
 
-          // 각 경기별 상세 정보 - 하드코딩 데이터 추가
-          const sampleStatuses: GameStatus[] = ["win", "lose", "upcoming"];
-          const sampleAmounts = [5000, 7500, 10000];
+          // 각 경기별 상세 정보 - 실제 결과와 금액 반영
+          const days = potentialSeries.map((game) => {
+            const gameDate = new Date(game.DATE);
+            gameDate.setHours(0, 0, 0, 0);
+            
+            let status: GameStatus = "upcoming";
+            
+            // 과거 경기인 경우에만 결과 반영
+            if (gameDate < today) {
+              const result = gameResults[game.DATE];
+              if (result) {
+                switch (result.result) {
+                  case "승리":
+                    status = "win";
+                    break;
+                  case "패배":
+                    status = "lose";
+                    break;
+                  case "무승부":
+                    status = "draw";
+                    break;
+                  case "취소":
+                    status = "cancelled";
+                    break;
+                }
+              }
+            }
 
-          const days = potentialSeries.map((game, index) => ({
-            date: formatShortDate(game.DATE),
-            amount: sampleAmounts[index % 3], // 인덱스가 3을 초과하지 않도록 modulo 연산
-            status: sampleStatuses[index % 3], // 인덱스가 3을 초과하지 않도록 modulo 연산
-          }));
+            return {
+              date: formatShortDate(game.DATE),
+              fullDate: game.DATE,
+              amount: transfersData[game.DATE] || null,
+              status
+            };
+          });
 
-          // 총 적립액 계산
-          const totalAmount = days.reduce(
-            (sum, day) => sum + (day.amount || 0),
-            0
-          );
+          // 총 적립액 계산 (실제 금액 기준)
+          const totalAmount = days.reduce((sum, day) => sum + (day.amount || 0), 0);
 
-          // 홈팀과 원정팀 결정
           const homeTeam = {
             name: potentialSeries[0].home_team_name.split(" ")[0],
             logo: getTeamLogo(potentialSeries[0].home_team_name),
@@ -673,96 +732,103 @@ const SavingsScreen = () => {
             logo: getTeamLogo(potentialSeries[0].away_team_name),
           };
 
-          // 오늘 시작하는지 확인
           const isStartingToday =
             firstGameDate.getFullYear() === today.getFullYear() &&
             firstGameDate.getMonth() === today.getMonth() &&
             firstGameDate.getDate() === today.getDate();
 
-          // 시리즈 정보 추가
-          allSeries.push({
-            id: `series-${allSeries.length + 1}`,
+          seriesMatchesData.push({
+            id: `series-${seriesMatchesData.length + 1}`,
             homeTeam,
             awayTeam,
             dateRange: `${startDate} ~ ${endDate}`,
             result: seriesStatus === "past" ? "지난 경기" : "예정된 경기",
             days,
-            totalAmount: totalAmount, // 자동 계산된 총액
+            totalAmount,
             status: seriesStatus,
             startTime: firstGameDate.getTime(),
             isStartingToday,
           });
         }
       }
-    });
+    }
 
-    // 우선순위에 따라 시리즈 정렬 및 선택
-    // 1. 현재 진행 중인 시리즈
-    const currentSeries = allSeries
+    // 우선순위에 따라 시리즈 정렬
+    const currentSeries = seriesMatchesData
       .filter((series) => series.status === "current")
       .sort((a, b) => {
-        // 정렬 기준 1: 오늘 시작하는 시리즈가 최우선
         if (a.isStartingToday && !b.isStartingToday) return -1;
         if (!a.isStartingToday && b.isStartingToday) return 1;
-
-        // 정렬 기준 2: 시작 시간이 최신인 것 (역순)
-        return b.startTime - a.startTime;
+        return (b.startTime || 0) - (a.startTime || 0);
       });
 
-    // 2. 과거 시리즈 (최신순)
-    const pastSeries = allSeries
+    const pastSeries = seriesMatchesData
       .filter((series) => series.status === "past")
-      .sort((a, b) => b.startTime - a.startTime);
+      .sort((a, b) => (b.startTime || 0) - (a.startTime || 0));
 
-    // 3. 결과 구성: 항상 총 3개의 시리즈가 출력되도록 수정
-    const maxDisplayCount = 3; // 총 표시할 시리즈 수
-    const result = [];
-
-    // 현재 진행 중인 시리즈 모두 추가
-    result.push(...currentSeries);
-
-    // 남은 자리를 과거 시리즈로 채우기
+    const maxDisplayCount = 3;
+    const result = [...currentSeries];
     const remainingSlots = Math.max(0, maxDisplayCount - result.length);
     if (remainingSlots > 0) {
       result.push(...pastSeries.slice(0, remainingSlots));
     }
 
-    // 최종적으로 최대 3개까지만 표시
     return result.slice(0, maxDisplayCount);
   };
 
-  // 월별 거래 내역 데이터 가져오기 (임시 더미 데이터)
-  const fetchTransactionsForMonth = (month: Date) => {
-    // 추후 API 호출로 변경될 예정
-    // 현재는 더미 데이터 반환
-    const dummyTransactions: TransactionItem[] = [
-      {
-        id: "1",
-        opponent: "TWINS",
-        date: "3/12",
-        description: "최형우의 시원한 홈런포로 팀이 승리...",
-        amount: 15000,
-        wins: 3,
-      },
-      {
-        id: "2",
-        opponent: "TWINS",
-        date: "3/11",
-        description: "아쉽게도 경기를 내줬지만, 내일을 기약...",
-        amount: 2000,
-        wins: 1,
-      },
-      {
-        id: "3",
-        opponent: "BEARS",
-        date: "3/8",
-        description: "치열한 접전 끝에 아쉽게 패배했습니다...",
-        amount: 3000,
-        wins: 1,
-      },
-    ];
-
-    setTransactionItems(dummyTransactions);
+  // 월별 거래 내역 데이터 가져오기
+  const fetchTransactionsForMonth = async (month: Date) => {
+    try {
+      setIsLoading(true);
+      
+      // 현재 월 가져오기 (1-12)
+      const currentMonth = month.getMonth() + 1;
+      
+      // API 호출
+      const response = await api.get('/api/account/transfers_log', {
+        params: { month: currentMonth }
+      });
+      
+      // API 응답을 TransactionItem 형식으로 변환
+      const transactions: TransactionItem[] = response.data.map((item: any) => {
+        // 날짜 형식 변환 (YYYY-MM-DD -> M/D)
+        const dateObj = new Date(item.DATE);
+        const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+        
+        // 상대팀 이름 추출 (TEXT에서 추출 또는 기본값 사용)
+        let opponent = "TEAM";
+        if (item.TEXT.includes("트윈스")) opponent = "TWINS";
+        else if (item.TEXT.includes("베어스")) opponent = "BEARS";
+        else if (item.TEXT.includes("타이거즈")) opponent = "TIGERS";
+        else if (item.TEXT.includes("라이온즈")) opponent = "LIONS";
+        else if (item.TEXT.includes("위즈")) opponent = "WIZ";
+        else if (item.TEXT.includes("랜더스")) opponent = "LANDERS";
+        else if (item.TEXT.includes("자이언츠")) opponent = "GIANTS";
+        else if (item.TEXT.includes("이글스")) opponent = "EAGLES";
+        else if (item.TEXT.includes("다이노스")) opponent = "DINOS";
+        else if (item.TEXT.includes("히어로즈")) opponent = "HEROES";
+        
+        // 승리 횟수 추출 (기본값 1)
+        const wins = 1;
+        
+        return {
+          id: item.DATE, // DAILY_TRANSFER_ID 대신 DATE를 id로 사용
+          opponent,
+          date: formattedDate,
+          description: item.TEXT,
+          amount: item.AMOUNT,
+          wins
+        };
+      });
+      
+      setTransactionItems(transactions);
+    } catch (error) {
+      console.error("월별 거래 내역 조회 실패:", error);
+      // 에러 발생 시 빈 배열 설정
+      setTransactionItems([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // API에서 경기 일정 가져오기
@@ -773,21 +839,27 @@ const SavingsScreen = () => {
         setIsSeriesLoading(true);
 
         // 팀명으로 팀 ID 가져오기
-        const teamId = getTeamIdByName(teamName);
+        const teamId = getTeamIdByName(teamName || "");
         console.log("팀 ID로 경기일정 조회:", teamId);
 
-        // API 호출
-        const response = await api.get(`/api/game/schedule/team/${teamId}`);
+        // 경기 결과 API 호출을 먼저 수행
+        const resultsResponse = await api.get<GameResultResponse[]>('/api/game/user-team-results');
+        
+        // 경기 결과를 날짜별로 매핑
+        const resultsMap = resultsResponse.data.reduce((acc, result) => {
+          acc[result.game_date] = result;
+          return acc;
+        }, {} as { [date: string]: GameResultResponse });
+        
+        setGameResults(resultsMap);
 
-        if (response.status === 200 && Array.isArray(response.data)) {
-          // API 응답 로그 출력
-          console.log(`경기 일정 ${response.data.length}개 조회 성공`);
+        // 경기 일정 API 호출
+        const scheduleResponse = await api.get(`/api/game/schedule/team/${teamId}`);
 
-          // 경기 일정 데이터 설정
-          setGameSchedules(response.data);
-
-          // 3연전 시리즈 식별
-          const seriesData = identifySeriesMatches(response.data);
+        if (scheduleResponse.status === 200 && Array.isArray(scheduleResponse.data)) {
+          console.log(`경기 일정 ${scheduleResponse.data.length}개 조회 성공`);
+          setGameSchedules(scheduleResponse.data);
+          const seriesData = await identifySeriesMatches(scheduleResponse.data);
           setSeriesMatches(seriesData);
         } else {
           throw new Error("API 응답 형식이 올바르지 않습니다");
@@ -795,7 +867,6 @@ const SavingsScreen = () => {
       } catch (err) {
         console.error("경기 일정 조회 실패:", err);
         setError(err instanceof Error ? err : new Error("알 수 없는 오류"));
-        // 에러 시 빈 배열 설정
         setGameSchedules([]);
         setSeriesMatches([]);
       } finally {
@@ -807,7 +878,7 @@ const SavingsScreen = () => {
     if (teamName) {
       fetchGameSchedules();
     }
-  }, [teamName]); // 팀 변경시 다시 불러오기
+  }, [teamName]);
 
   // 거래 내역 초기 로드
   useEffect(() => {
@@ -819,34 +890,59 @@ const SavingsScreen = () => {
     if (isLoading || !gameSchedules.length) return {};
 
     const markingsData: { [date: string]: MarkingData } = {};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     gameSchedules.forEach((game) => {
-      // 현재 팀이 홈팀인지 원정팀인지 확인
       const isHomeTeam = game.HOME_TEAM_ID === getTeamIdByName(teamName);
-      const opponentTeam = isHomeTeam
-        ? game.away_team_name
-        : game.home_team_name;
+      const opponentTeam = isHomeTeam ? game.away_team_name : game.home_team_name;
+      const gameDate = new Date(game.DATE);
+      gameDate.setHours(0, 0, 0, 0);
 
-      // 모든 경기를 "upcoming"으로 설정 (무작위 값 대신 고정 값 사용)
-      const status: GameStatus = "upcoming";
-      const amount: number | null = null;
+      // 경기 결과 확인
+      const gameResult = gameResults[game.DATE];
+      let status: GameStatus = "upcoming";  // 기본값을 'upcoming'으로 설정
+      
+      // 오늘 포함 미래 경기는 무조건 upcoming
+      if (gameDate >= today) {
+        status = "upcoming";
+      }
+      // 과거 경기만 결과 반영
+      else if (gameResult) {
+        switch (gameResult.result) {
+          case "승리":
+            status = "win";
+            break;
+          case "패배":
+            status = "lose";
+            break;
+          case "무승부":
+            status = "draw";
+            break;
+          case "취소":
+            status = "cancelled";
+            break;
+          default:
+            status = "upcoming";
+        }
+      }
 
       const gameWithStatus = {
         ...game,
         status,
-        amount,
+        amount: null,
       };
 
       markingsData[game.DATE] = {
         gameResult: status,
-        amount: amount,
+        amount: null,
         teamLogo: getTeamLogo(opponentTeam),
         fixture: gameWithStatus,
       };
     });
 
     return markingsData;
-  }, [gameSchedules, teamName]);
+  }, [gameSchedules, teamName, gameResults]);
 
   // 선택한 날짜의 경기 정보
   const selectedFixture = useMemo(() => {
@@ -931,46 +1027,44 @@ const SavingsScreen = () => {
 
   // 날짜 셀 렌더링 함수
   const renderDayCell = (day: CalendarDay) => {
-    // 경기 결과에 따른 라벨 설정 (배경색은 제거)
-    let bgColor = "transparent"; // 캘린더 셀 배경색을 투명하게 설정
     let statusLabel = "";
     let statusColor = "#333";
     let badgeBgColor = "transparent";
+    let cellBgColor = "transparent";
 
-    if (day.marking) {
+    if (day.marking?.gameResult) {
       const { gameResult } = day.marking;
       switch (gameResult) {
         case "win":
           statusLabel = "승";
-          statusColor = "#f44336";
-          badgeBgColor = "rgba(244, 67, 54, 0.2)";
+          statusColor = RESULT_COLORS.win.text;
+          badgeBgColor = RESULT_COLORS.win.badge;
+          cellBgColor = RESULT_COLORS.win.background;
           break;
         case "lose":
           statusLabel = "패";
-          statusColor = "#2196f3";
-          badgeBgColor = "rgba(33, 150, 243, 0.2)";
+          statusColor = RESULT_COLORS.lose.text;
+          badgeBgColor = RESULT_COLORS.lose.badge;
+          cellBgColor = RESULT_COLORS.lose.background;
           break;
         case "draw":
           statusLabel = "무";
-          statusColor = "#4caf50";
-          badgeBgColor = "rgba(76, 175, 80, 0.2)";
+          statusColor = RESULT_COLORS.draw.text;
+          badgeBgColor = RESULT_COLORS.draw.badge;
+          cellBgColor = RESULT_COLORS.draw.background;
           break;
         case "cancelled":
           statusLabel = "취소";
-          statusColor = "#9e9e9e";
-          badgeBgColor = "rgba(158, 158, 158, 0.2)";
-          break;
-        case "upcoming":
-          statusLabel = "예정";
-          statusColor = "#9c27b0";
-          badgeBgColor = "rgba(156, 39, 176, 0.2)";
+          statusColor = RESULT_COLORS.cancelled.text;
+          badgeBgColor = RESULT_COLORS.cancelled.badge;
+          cellBgColor = RESULT_COLORS.cancelled.background;
           break;
       }
     }
 
-    // 선택된 날짜 또는 오늘 날짜의 배경색 변경
+    // 선택된 날짜 스타일
     if (day.isSelected) {
-      bgColor = day.marking ? "transparent" : "#f0f0f0"; // 선택된 날짜도 투명하게 유지
+      cellBgColor = day.marking ? cellBgColor : "#f0f0f0";
     }
 
     return (
@@ -980,10 +1074,9 @@ const SavingsScreen = () => {
         isToday={day.isToday}
         isSelected={day.isSelected}
         isCurrentMonth={day.isCurrentMonth}
-        backgroundColor={bgColor}
+        backgroundColor={cellBgColor}
         teamColor={teamColor.primary}
       >
-        {/* 날짜와 상태 표시 - 가로 배치로 변경 */}
         <View
           style={{
             flexDirection: "row",
@@ -996,7 +1089,7 @@ const SavingsScreen = () => {
           <Text
             style={{
               fontSize: 14,
-              color: day.isCurrentMonth ? "#333" : "#ccc",
+              color: day.isCurrentMonth ? statusColor : "#ccc",
               fontWeight: day.isToday || day.isSelected ? "bold" : "normal",
             }}
           >
@@ -1026,37 +1119,33 @@ const SavingsScreen = () => {
           ) : null}
         </View>
 
-        {/* 하단 영역: 금액과 로고 */}
         <View
           style={{
             alignItems: "center",
-            justifyContent: "flex-end", // center에서 flex-end로 변경하여 하단 정렬
-            marginTop: 0, // 2px에서 0px로 줄임
-            marginBottom: 2, // 3px에서 2px로 줄임
-            height: 32, // 고정 높이 설정으로 공간 효율화
+            justifyContent: "flex-end",
+            marginTop: -4,
+            marginBottom: 2,
+            height: 32,
           }}
         >
-          {/* 적금 금액 */}
-          {day.marking?.amount !== null &&
-            day.marking?.amount !== undefined && (
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontWeight: "bold",
-                  color: teamColor.primary,
-                  marginBottom: 1,
-                }}
-              >
-                {day.marking.amount.toLocaleString()}원
-              </Text>
-            )}
+          {day.marking?.amount !== null && day.marking?.amount !== undefined && (
+            <Text
+              style={{
+                fontSize: 10,
+                fontWeight: "bold",
+                color: statusColor,
+                marginBottom: 1,
+              }}
+            >
+              {day.marking.amount.toLocaleString()}원
+            </Text>
+          )}
 
-          {/* 팀 로고 */}
           {day.marking?.teamLogo && (
             <Image
               source={day.marking.teamLogo}
               style={{
-                width: 28, // 로고 크기 약간 증가
+                width: 28,
                 height: 28,
               }}
               resizeMode="contain"
@@ -1103,131 +1192,124 @@ const SavingsScreen = () => {
   };
 
   // 경기 상세 정보 카드 컴포넌트
-  const FixtureDetailComponent = ({
-    fixture,
-  }: {
-    fixture: GameSchedule | null;
-  }) => {
+  const FixtureDetailComponent = ({ fixture }: { fixture: GameSchedule | null }) => {
+    const [gameResult, setGameResult] = useState<GameResultResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+      const fetchGameResult = async () => {
+        if (!fixture) return;
+        
+        try {
+          setIsLoading(true);
+          
+          // 미래 경기 체크
+          const gameDate = new Date(fixture.DATE);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          gameDate.setHours(0, 0, 0, 0);
+
+          if (gameDate > today) {
+            setGameResult(null);
+            return;
+          }
+
+          const response = await api.get<GameResultResponse[]>('/api/game/user-team-results', {
+            params: {
+              end_date: fixture.DATE
+            }
+          });
+          
+          const result = response.data.find(
+            (result) => result.game_date === fixture.DATE
+          );
+          
+          setGameResult(result || null);
+        } catch (error) {
+          console.error('경기 결과 조회 실패:', error);
+          setGameResult(null);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchGameResult();
+    }, [fixture]);
+
     if (!fixture) return null;
 
     // 상대팀 정보만 구하기
     const isHomeTeam = fixture.HOME_TEAM_ID === getTeamIdByName(teamName);
-    const opponent = isHomeTeam
-      ? fixture.away_team_name
-      : fixture.home_team_name;
+    const opponent = isHomeTeam ? fixture.away_team_name : fixture.home_team_name;
     const opponentLogo = getTeamLogo(opponent);
-
-    // 경기 장소 정보 추가
     const locationText = isHomeTeam ? "홈경기" : "원정경기";
 
     // 경기 상태 텍스트
-    const getStatusText = (status?: GameStatus) => {
-      if (!status) return "예정됨";
+    const getGameStatusText = () => {
+      const gameDate = new Date(fixture.DATE);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      gameDate.setHours(0, 0, 0, 0);
 
-      switch (status) {
-        case "win":
-          return "승리";
-        case "lose":
-          return "패배";
-        case "draw":
-          return "무승부";
-        case "cancelled":
-          return "취소됨";
-        case "upcoming":
-          return "예정됨";
+      // 오늘 포함 미래 경기
+      if (gameDate >= today) {
+        return "예정됨";
       }
+
+      // 과거 경기
+      if (gameResult) {
+        return `${gameResult.result} (${gameResult.score})`;
+      }
+
+      return "예정됨";
     };
 
     return (
       <Card width={width} style={{ borderRadius: 16, overflow: "hidden" }}>
-        <CardHeader
-          width={width}
-          style={{
-            backgroundColor: "#f8f8f8",
-            borderBottomWidth: 0,
-          }}
-        >
+        <CardHeader width={width} style={{ backgroundColor: "#f8f8f8", borderBottomWidth: 0 }}>
           <CardTitle width={width}>경기 상세 정보</CardTitle>
         </CardHeader>
         <CardContent width={width} style={{ padding: 16 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: 16,
-            }}
-          >
-            <Image
-              source={opponentLogo}
-              style={{ width: 36, height: 36, marginRight: 12 }}
-              resizeMode="contain"
-            />
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 16 }}>
+            <Image source={opponentLogo} style={{ width: 36, height: 36, marginRight: 12 }} resizeMode="contain" />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 18, fontWeight: "bold", color: "#333" }}>
-                vs {opponent}
-              </Text>
-              <Text style={{ fontSize: 14, color: "#666", marginTop: 4 }}>
-                {locationText}
-              </Text>
+              <Text style={{ fontSize: 18, fontWeight: "bold", color: "#333" }}>vs {opponent}</Text>
+              <Text style={{ fontSize: 14, color: "#666", marginTop: 4 }}>{locationText}</Text>
             </View>
           </View>
 
-          <View
-            style={{
-              flexDirection: "row",
-              backgroundColor: "#f8f8f8",
-              padding: 12,
-              borderRadius: 12,
-              marginBottom: 16,
-            }}
-          >
+          <View style={{ flexDirection: "row", backgroundColor: "#f8f8f8", padding: 12, borderRadius: 12, marginBottom: 16 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13, color: "#888" }}>일시</Text>
-              <Text style={{ fontSize: 15, fontWeight: "500", marginTop: 4 }}>
-                {fixture.DATE}
-              </Text>
+              <Text style={{ fontSize: 15, fontWeight: "500", marginTop: 4 }}>{fixture.DATE}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13, color: "#888" }}>상태</Text>
-              <Text
-                style={{
+              {isLoading ? (
+                <Text style={{ fontSize: 15, fontWeight: "600", marginTop: 4 }}>로딩 중...</Text>
+              ) : (
+                <Text style={{
                   fontSize: 15,
                   fontWeight: "600",
                   marginTop: 4,
-                  color:
-                    fixture.status === "win"
+                  color: gameResult
+                    ? gameResult.result === "승리"
                       ? "#ff5555"
-                      : fixture.status === "lose"
-                      ? "#2196f3"
-                      : "#333",
-                }}
-              >
-                {getStatusText(fixture.status)}
-              </Text>
+                      : gameResult.result === "패배"
+                        ? "#2196f3"
+                        : "#333"
+                    : "#333"
+                }}>
+                  {getGameStatusText()}
+                </Text>
+              )}
             </View>
           </View>
 
           {fixture.amount !== null && fixture.amount !== undefined && (
-            <View
-              style={{
-                backgroundColor: "#f0f8ff",
-                padding: 12,
-                borderRadius: 12,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
+            <View style={{ backgroundColor: "#f0f8ff", padding: 12, borderRadius: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ fontSize: 15, color: "#333" }}>적립액</Text>
-              <Text
-                style={{
-                  fontSize: 17,
-                  fontWeight: "bold",
-                  color: teamColor.primary,
-                }}
-              >
-                {fixture.amount.toLocaleString()}원
-              </Text>
+              <Text style={{ fontSize: 17, fontWeight: "bold", color: teamColor.primary }}>{fixture.amount.toLocaleString()}원</Text>
             </View>
           )}
         </CardContent>
@@ -1237,84 +1319,52 @@ const SavingsScreen = () => {
 
   // 3연전 시리즈 카드 컴포넌트
   const SeriesMatchCard = ({ match }: { match: SeriesMatch }) => {
-    // 금액 포맷
     const formatAmount = (amount: number | null): string => {
       if (amount === null) return "-";
       return `${amount.toLocaleString()}원`;
     };
 
-    // 상대팀 정보만 구하기
-    const isMyTeamHome = match.homeTeam.name.includes(teamName.split(" ")[0]);
+    const isMyTeamHome = match.homeTeam.name.includes(teamName?.split(" ")[0] || "");
     const opponentTeam = isMyTeamHome ? match.awayTeam : match.homeTeam;
     const locationText = isMyTeamHome ? "홈" : "원정";
 
-    // 진행 중인 시리즈에 특별한 스타일 적용
     const isCurrentSeries = match.status === "current";
     const badgeColor = isCurrentSeries ? "#1588CF" : "#e8f4ff";
     const badgeTextColor = isCurrentSeries ? "white" : "#0066cc";
 
+    // 경기 결과 표시 함수
+    const getGameStatus = (date: string, fullDate: string): GameStatus => {
+      const gameDate = new Date(fullDate);  // fullDate(YYYY-MM-DD) 사용
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      gameDate.setHours(0, 0, 0, 0);
+
+      if (gameDate > today) return "upcoming";
+
+      const result = gameResults[fullDate];  // fullDate로 결과 조회
+      if (!result) return "upcoming";
+
+      switch (result.result) {
+        case "승리": return "win";
+        case "패배": return "lose";
+        case "무승부": return "draw";
+        case "취소": return "cancelled";
+        default: return "upcoming";
+      }
+    };
+
     return (
-      <SeriesCard
-        style={{
-          borderRadius: 16,
-          marginBottom: 16,
-          borderColor: "#eeeeee",
-        }}
-      >
-        <SeriesHeader
-          style={{
-            padding: 16,
-            borderBottomWidth: 1,
-            borderBottomColor: "#f5f5f5",
-          }}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-            }}
-          >
-            <TeamLogo
-              source={opponentTeam.logo}
-              resizeMode="contain"
-              style={{ width: 32, height: 32 }}
-            />
+      <SeriesCard style={{ borderRadius: 16, marginBottom: 16, borderColor: "#eeeeee" }}>
+        <SeriesHeader style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: "#f5f5f5" }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <TeamLogo source={opponentTeam.logo} resizeMode="contain" style={{ width: 32, height: 32 }} />
             <View style={{ marginLeft: 12 }}>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: "bold",
-                  color: "#333",
-                }}
-              >
-                vs {opponentTeam.name}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: "#666",
-                  marginTop: 2,
-                }}
-              >
-                {match.dateRange} ({locationText})
-              </Text>
+              <Text style={{ fontSize: 16, fontWeight: "bold", color: "#333" }}>vs {opponentTeam.name}</Text>
+              <Text style={{ fontSize: 13, color: "#666", marginTop: 2 }}>{match.dateRange} ({locationText})</Text>
             </View>
           </View>
-          <ResultBadge
-            style={{
-              backgroundColor: badgeColor,
-              paddingVertical: 6,
-              paddingHorizontal: 12,
-              borderRadius: 12,
-            }}
-          >
-            <ResultText
-              style={{
-                color: badgeTextColor,
-                fontSize: 13,
-                fontWeight: "600",
-              }}
-            >
+          <ResultBadge style={{ backgroundColor: badgeColor, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12 }}>
+            <ResultText style={{ color: badgeTextColor, fontSize: 13, fontWeight: "600" }}>
               {isCurrentSeries ? "진행 중" : match.result}
             </ResultText>
           </ResultBadge>
@@ -1322,135 +1372,31 @@ const SavingsScreen = () => {
 
         <DayRowContainer style={{ padding: 12 }}>
           {match.days.map((day, index) => {
-            // 경기 상태에 따른 색상 및 라벨 설정
-            let statusLabel = "";
-            let statusColor = "#333";
-            let badgeBgColor = "transparent";
-
-            switch (day.status) {
-              case "win":
-                statusLabel = "승";
-                statusColor = "#f44336";
-                badgeBgColor = "rgba(244, 67, 54, 0.2)";
-                break;
-              case "lose":
-                statusLabel = "패";
-                statusColor = "#2196f3";
-                badgeBgColor = "rgba(33, 150, 243, 0.2)";
-                break;
-              case "draw":
-                statusLabel = "무";
-                statusColor = "#4caf50";
-                badgeBgColor = "rgba(76, 175, 80, 0.2)";
-                break;
-              case "cancelled":
-                statusLabel = "취소";
-                statusColor = "#9e9e9e";
-                badgeBgColor = "rgba(158, 158, 158, 0.2)";
-                break;
-              case "upcoming":
-                statusLabel = "예정";
-                statusColor = "#9c27b0";
-                badgeBgColor = "rgba(156, 39, 176, 0.2)";
-                break;
-            }
-
-            // 배경색 설정
-            const bgColor =
-              day.status === "win"
-                ? "#f4f9ff"
-                : day.status === "lose"
-                ? "#fff0f0"
-                : "#f9f9f9";
-
-            // 텍스트 색상 설정
-            const textColor =
-              day.status === "win"
-                ? "#1588CF"
-                : day.status === "lose"
-                ? "#ff4444"
-                : "#666";
+            const gameStatus = getGameStatus(day.date, day.fullDate);
+            const resultStyle = RESULT_COLORS[gameStatus];
 
             return (
-              <DayBox
-                key={index}
-                backgroundColor={bgColor}
-                style={{
-                  flex: 1,
-                  padding: 14,
-                  margin: 4,
-                  borderRadius: 12,
-                  alignItems: "center",
-                }}
-              >
-                <DayText
-                  style={{
-                    color: "#666",
-                    fontSize: 14,
-                    marginBottom: 6,
-                  }}
-                >
-                  {day.date}
-                </DayText>
-
-                {/* 경기 상태 라벨 */}
-                {statusLabel && (
-                  <View
-                    style={{
-                      paddingHorizontal: 8,
-                      paddingVertical: 2,
-                      borderRadius: 10,
-                      backgroundColor: badgeBgColor,
-                      marginBottom: 4,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontWeight: "bold",
-                        color: statusColor,
-                      }}
-                    >
-                      {statusLabel}
-                    </Text>
-                  </View>
-                )}
-
-                {/* 금액 */}
-                <AmountText
-                  color={textColor}
-                  style={{
-                    fontSize: 15,
-                    fontWeight: "600",
-                  }}
-                >
+              <DayBox key={index} backgroundColor={resultStyle.background} style={{ flex: 1, padding: 14, margin: 4, borderRadius: 12, alignItems: "center" }}>
+                <DayText style={{ color: "#666", fontSize: 14, marginBottom: 6 }}>{day.date}</DayText>
+                <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: resultStyle.badge, marginBottom: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "bold", color: resultStyle.text }}>
+                    {gameStatus === "upcoming" ? "-" :
+                     gameStatus === "win" ? "승" :
+                     gameStatus === "lose" ? "패" :
+                     gameStatus === "draw" ? "무" : "취소"}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 15, fontWeight: "600", color: resultStyle.text }}>
                   {formatAmount(day.amount)}
-                </AmountText>
+                </Text>
               </DayBox>
             );
           })}
         </DayRowContainer>
 
-        <TotalContainer
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            padding: 16,
-            borderTopWidth: 1,
-            borderTopColor: "#f0f0f0",
-            backgroundColor: "#fcfcfc",
-          }}
-        >
-          <TotalLabel style={{ fontSize: 14, color: "#666" }}>
-            총 적립액
-          </TotalLabel>
-          <TotalAmount
-            style={{
-              fontSize: 16,
-              fontWeight: "bold",
-              color: "#1588CF",
-            }}
-          >
+        <TotalContainer style={{ padding: 16, borderTopWidth: 1, borderTopColor: "#f0f0f0" }}>
+          <TotalLabel style={{ fontSize: 14, color: "#666" }}>총 적립액</TotalLabel>
+          <TotalAmount style={{ fontSize: 16, fontWeight: "bold", color: "#1588CF" }}>
             {formatAmount(match.totalAmount)}
           </TotalAmount>
         </TotalContainer>
@@ -1463,23 +1409,11 @@ const SavingsScreen = () => {
     <>
       <CalendarCard width={width}>
         {isLoading ? (
-          <View
-            style={{
-              padding: 20,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+          <View style={{ padding: 20, alignItems: "center", justifyContent: "center" }}>
             <Text>경기 일정 로딩 중...</Text>
           </View>
         ) : error ? (
-          <View
-            style={{
-              padding: 20,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+          <View style={{ padding: 20, alignItems: "center", justifyContent: "center" }}>
             <Text>경기 일정을 불러오는데 실패했습니다.</Text>
           </View>
         ) : (
@@ -1547,13 +1481,8 @@ const SavingsScreen = () => {
                 {/* 좌측: 팀 정보와 날짜 */}
                 <TeamInfoContainer>
                   <Text style={{ fontWeight: "bold", marginRight: 5 }}>vs</Text>
-                  <Image
-                    source={getTeamLogo(item.opponent)}
-                    style={{ width: 28, height: 28, marginRight: 10 }}
-                  />
-                  <Text style={{ color: "#666", fontSize: 14 }}>
-                    {item.date}
-                  </Text>
+                  <Image source={getTeamLogo(item.opponent)} style={{ width: 28, height: 28, marginRight: 10 }} />
+                  <Text style={{ color: "#666", fontSize: 14 }}>{item.date}</Text>
                 </TeamInfoContainer>
 
                 {/* 우측: 금액 */}
@@ -1588,30 +1517,17 @@ const SavingsScreen = () => {
         <Header width={width} teamColor={teamColor.primary}>
           <HeaderTitle width={width}>적금 내역</HeaderTitle>
           <HeaderRight>
-            <IconButton
-              isActive={viewMode === "calendar"}
-              onPress={() => setViewMode("calendar")}
-            >
+            <IconButton isActive={viewMode === "calendar"} onPress={() => setViewMode("calendar")}>
               <Ionicons name="calendar" size={24} color="white" />
             </IconButton>
-            <IconButton
-              isActive={viewMode === "list"}
-              onPress={() => setViewMode("list")}
-            >
+            <IconButton isActive={viewMode === "list"} onPress={() => setViewMode("list")}>
               <Ionicons name="list" size={24} color="white" />
             </IconButton>
           </HeaderRight>
         </Header>
 
         <SafeAreaView style={{ flex: 1, paddingBottom: 60 }}>
-          <ScrollView
-            style={{ flex: 1 }}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              padding: width * 0.04,
-              paddingBottom: 20,
-            }}
-          >
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: width * 0.04, paddingBottom: 20 }}>
             {viewMode === "calendar" ? renderCalendarView() : renderListView()}
           </ScrollView>
         </SafeAreaView>

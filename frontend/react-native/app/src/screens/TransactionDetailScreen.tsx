@@ -17,6 +17,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTeam } from "@/context/TeamContext";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { api } from "@/api/axios";
+import { getDailySavingDetail } from "@/api/account";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "@/navigation/AppNavigator";
 
 // 스타일드 컴포넌트 인터페이스
 interface StyledProps {
@@ -25,15 +28,13 @@ interface StyledProps {
 
 // 상세 내역 항목 인터페이스
 interface TransactionDetail {
-  id: string;
-  date: string;
-  opponent: string;
-  description: string;
-  amount: number;
-  items: {
-    title: string;
-    amount: number;
-  }[];
+  DATE: string;
+  COUNT: number;
+  rule_type_name: string;
+  record_name: string;
+  player_name: string | null;
+  unit_amount: number;
+  DAILY_SAVING_AMOUNT: number;
 }
 
 // 기본 컴포넌트 스타일
@@ -123,9 +124,11 @@ const AmountText = styled.Text`
   color: ${({ theme }) => theme.colors.primary};
 `;
 
+type TransactionDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, "TransactionDetail">;
+
 const TransactionDetailScreen = () => {
   const { teamColor, teamName } = useTeam();
-  const navigation = useNavigation();
+  const navigation = useNavigation<TransactionDetailScreenNavigationProp>();
   const route = useRoute();
   const { width: windowWidth } = useWindowDimensions();
   const width =
@@ -160,29 +163,21 @@ const TransactionDetailScreen = () => {
     const fetchTransactionDetail = async () => {
       try {
         setIsLoading(true);
-        // 추후 API 호출로 대체될 예정
-        // 현재는 더미 데이터 사용
-        const id = route.params?.id;
+        const params = route.params as { id: string };
+        if (!params?.id) {
+          console.error("ID가 없습니다.");
+          return;
+        }
 
-        // 임시 더미 데이터
-        const dummyDetail: TransactionDetail = {
-          id: id as string,
-          date: "3/12",
-          opponent: "TWINS",
-          description: "최형우의 시원한 홈런포로 팀이 승리를 거머쥐었습니다!",
-          amount: 15000,
-          items: [
-            { title: "승리", amount: 3000 },
-            { title: "안타 8개", amount: 8000 },
-            { title: "홈런 2개", amount: 4000 },
-          ],
-        };
-
-        // 실제 API 호출이 필요할 경우:
-        // const response = await api.get(`/api/transaction/${id}`);
-        // setTransactionDetail(response.data);
-
-        setTransactionDetail(dummyDetail);
+        // API 호출
+        const details = await getDailySavingDetail(params.id);
+        console.log("API 응답:", details);
+        console.log("API 응답 상세:", JSON.stringify(details, null, 2));
+        if (details && details.length > 0) {
+          setTransactionDetail(details[0]); // 첫 번째 항목 사용
+        } else {
+          console.log("데이터가 없습니다.");
+        }
       } catch (error) {
         console.error("상세 내역을 불러오는데 실패했습니다", error);
       } finally {
@@ -195,9 +190,8 @@ const TransactionDetailScreen = () => {
 
   // 뒤로 가기 핸들러
   const handleGoBack = () => {
-    // goBack() 대신 navigate를 사용하여 Main 스크린의 Savings 탭으로 이동하면서 viewMode 파라미터 전달
     navigation.navigate("Main", {
-      screen: "적금내역", // 또는 'Savings' - 실제 사용 중인 탭 이름으로 변경
+      screen: "적금내역",
       params: { viewMode: "list" },
     });
   };
@@ -230,48 +224,30 @@ const TransactionDetailScreen = () => {
             ) : transactionDetail ? (
               <Card width={width}>
                 <TransactionHeader>
-                  <Text
-                    style={{
-                      fontSize: 18,
-                      fontWeight: "bold",
-                      marginBottom: 12,
-                    }}
-                  >
+                  <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 12 }}>
                     상세 내역
                   </Text>
 
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginBottom: 10,
-                    }}
-                  >
+                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
                     <Text style={{ fontWeight: "bold", marginRight: 5 }}>
-                      vs
+                      {transactionDetail.record_name}
                     </Text>
-                    <Image
-                      source={getTeamLogo(transactionDetail.opponent)}
-                      style={{ width: 36, height: 36, marginRight: 10 }}
-                    />
-                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>
-                      {transactionDetail.date} 경기
-                    </Text>
+                    {transactionDetail.player_name && (
+                      <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                        {transactionDetail.player_name}
+                      </Text>
+                    )}
                   </View>
 
-                  <Text
-                    style={{ fontSize: 14, color: "#333", marginBottom: 4 }}
-                  >
+                  <Text style={{ fontSize: 14, color: "#333", marginBottom: 4 }}>
                     총 적립액:{" "}
-                    <Text
-                      style={{ fontWeight: "bold", color: teamColor.primary }}
-                    >
-                      {transactionDetail.amount.toLocaleString()}원
+                    <Text style={{ fontWeight: "bold", color: teamColor.primary }}>
+                      {transactionDetail.DAILY_SAVING_AMOUNT.toLocaleString()}원
                     </Text>
                   </Text>
 
                   <Text style={{ fontSize: 14, color: "#666" }}>
-                    {transactionDetail.description}
+                    {transactionDetail.rule_type_name}
                   </Text>
                 </TransactionHeader>
 
@@ -279,27 +255,20 @@ const TransactionDetailScreen = () => {
                   <SectionTitle>적립 내역</SectionTitle>
                 </SectionHeader>
 
-                <FlatList
-                  data={transactionDetail.items}
-                  keyExtractor={(item, index) => `item-${index}`}
-                  renderItem={({ item }) => (
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        padding: 16,
-                        borderBottomWidth: 1,
-                        borderBottomColor: "#f0f0f0",
-                      }}
-                    >
-                      <Text style={{ fontSize: 16 }}>{item.title}</Text>
-                      <AmountText style={{ fontSize: 16 }}>
-                        +{item.amount.toLocaleString()}원
-                      </AmountText>
-                    </View>
-                  )}
-                  scrollEnabled={false}
-                />
+                <View style={{ padding: 16 }}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" }}>
+                    <Text style={{ fontSize: 16 }}>단위 금액</Text>
+                    <AmountText style={{ fontSize: 16 }}>
+                      {transactionDetail.unit_amount.toLocaleString()}원
+                    </AmountText>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" }}>
+                    <Text style={{ fontSize: 16 }}>적립 횟수</Text>
+                    <AmountText style={{ fontSize: 16 }}>
+                      {transactionDetail.COUNT}회
+                    </AmountText>
+                  </View>
+                </View>
               </Card>
             ) : (
               <View style={{ padding: 20, alignItems: "center" }}>

@@ -24,6 +24,24 @@ interface StyledProps {
 const BASE_MOBILE_WIDTH = 390;
 const MAX_MOBILE_WIDTH = 430;
 
+// 주간 리포트 응답 타입 정의
+interface WeeklyReport {
+  DATE: string;
+  WEEKLY_AMOUNT: number;
+  LLM_CONTEXT: string | null;
+  TEAM_RECORD: {
+    WIN: number;
+    LOSE: number;
+    DRAW: number;
+  };
+  PREVIOUS_WEEK: number;
+  CHANGE_PERCENTAGE: number;
+  DAILY_SAVINGS: {
+    [key: string]: number;
+  };
+  NEWS_SUMMATION: string;
+}
+
 // --- 스타일 컴포넌트 (기존과 동일) ---
 const AppWrapper = styled.View`
   flex: 1;
@@ -353,7 +371,6 @@ const CustomDonutChart = ({ data, width }) => {
 };
 
 const WeeklyReportScreen = ({ navigation }) => {
-  // teamColor가 없을 경우 대비 기본값 설정
   const {
     teamColor = { primary: "#007AFF" },
     teamName,
@@ -368,101 +385,62 @@ const WeeklyReportScreen = ({ navigation }) => {
   const [newsData, setNewsData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const getTeamIdByName = (name) => {
-    const teamMapping = {
-      "KIA 타이거즈": 1,
-      "삼성 라이온즈": 2,
-      "LG 트윈스": 3,
-      "두산 베어스": 4,
-      "KT 위즈": 5,
-      "SSG 랜더스": 6,
-      "롯데 자이언츠": 7,
-      "한화 이글스": 8,
-      "NC 다이노스": 9,
-      "키움 히어로즈": 10,
-    };
-    return teamMapping[name] || 9; // 기본값 NC 다이노스 ID
-  };
+  const [weeklyData, setWeeklyData] = useState<WeeklyReport | null>(null);
 
   useEffect(() => {
     const fetchWeeklyReport = async () => {
       try {
         setIsLoading(true);
-        const teamId = getTeamIdByName(teamName); // 현재 컨텍스트의 teamName 사용
-        console.log(`Workspaceing report for team: ${teamName}, ID: ${teamId}`); // 디버깅 로그 추가
-
-        // API 호출 시 teamId가 유효한지 확인
-        if (!teamId) {
-          throw new Error("팀 ID를 찾을 수 없습니다.");
-        }
-
-        const response = await api.get(`/api/report/weekly/team/${teamId}`);
-        console.log("API Response Status:", response.status); // 응답 상태 로그
-
+        const response = await api.get('/api/report/weekly/');
+        
         if (response.status === 200 && response.data) {
-          console.log("API Response Data:", response.data); // 응답 데이터 로그
-          setNewsData(response.data);
-        } else {
-          console.warn(
-            "API 응답 성공했으나 데이터 없음 또는 상태 코드 이상:",
-            response.status
-          );
-          setNewsData([]); // 데이터 없는 경우 빈 배열 처리
+          setWeeklyData(response.data);
+          
+          // 뉴스 데이터 처리
+          if (response.data.NEWS_SUMMATION) {
+            const newsLines = response.data.NEWS_SUMMATION.split('\n')
+              .map((line: string, index: number) => ({
+                id: index + 1,
+                title: line.startsWith('- ') ? line.substring(2).trim() : line.trim(),
+                date: response.data.DATE
+              }))
+              .filter((item: { title: string }) => item.title);
+            setNewsData(newsLines);
+          }
         }
       } catch (err) {
         console.error("Weekly report fetch failed:", err);
         setError(err);
-        setNewsData([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (teamName) {
-      // teamName이 있을 때만 fetch
-      fetchWeeklyReport();
-    } else {
-      console.warn("Team name is not available yet."); // teamName 없을 경우 로그
-      setIsLoading(false); // 로딩 종료
-    }
-  }, [teamName]); // teamName 의존성 유지
+    fetchWeeklyReport();
+  }, []);
 
-  const processNewsData = () => {
-    // newsData가 배열이 아니거나 비어있거나, 첫 항목에 NEWS_SUMMATION 없으면 기본값 반환
-    if (
-      !Array.isArray(newsData) ||
-      newsData.length === 0 ||
-      !newsData[0]?.NEWS_SUMMATION
-    ) {
-      return [
-        { id: 1, title: "이번 주 뉴스 요약을 불러오지 못했습니다.", date: "" },
-      ];
-    }
-    const newsItem = newsData[0];
-    // NEWS_SUMMATION이 문자열인지 확인
-    if (typeof newsItem.NEWS_SUMMATION !== "string") {
-      return [
-        {
-          id: 1,
-          title: "뉴스 요약 데이터 형식이 올바르지 않습니다.",
-          date: newsItem.DATE || "",
-        },
-      ];
-    }
-    return newsItem.NEWS_SUMMATION.split("\n")
-      .map((news, index) => {
-        const title = news.startsWith("- ")
-          ? news.substring(2).trim()
-          : news.trim();
-        // 빈 줄은 제외
-        if (!title) return null;
-        return { id: index + 1, title, date: newsItem.DATE || "" }; // DATE가 없을 경우 빈 문자열
-      })
-      .filter((item) => item !== null); // null 항목 제거
+  // 일간 적금 데이터를 차트 데이터로 변환
+  const getBarChartData = () => {
+    if (!weeklyData) return {
+      labels: ["월", "화", "수", "목", "금", "토", "일"],
+      datasets: [{ data: [0, 0, 0, 0, 0, 0, 0] }]
+    };
+
+    const sortedDates = Object.keys(weeklyData.DAILY_SAVINGS).sort();
+    const data = sortedDates.map(date => weeklyData.DAILY_SAVINGS[date]);
+
+    return {
+      labels: ["월", "화", "수", "목", "금", "토", "일"],
+      datasets: [{ data }]
+    };
   };
 
-  const newsHighlights = processNewsData();
+  // 승패 기록 포맷팅
+  const getTeamRecord = () => {
+    if (!weeklyData) return "0승 0패";
+    const { WIN, LOSE, DRAW } = weeklyData.TEAM_RECORD;
+    return `${WIN}승 ${LOSE}패${DRAW > 0 ? ` ${DRAW}무` : ''}`;
+  };
 
   // --- 가짜 데이터 (기존과 동일) ---
   const weekSummary = {
@@ -510,30 +488,37 @@ const WeeklyReportScreen = ({ navigation }) => {
             <Card width={width}>
               <CardHeader width={width}>
                 <CardTitle width={width}>
-                  {" "}
-                  주간 요약 ({weekSummary.period}){" "}
+                  주간 요약 ({weeklyData ? new Date(weeklyData.DATE).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }) : ""})
                 </CardTitle>
               </CardHeader>
               <CardContent width={width}>
                 <SummaryItem>
                   <SummaryLabel>주간 적립액</SummaryLabel>
                   <SummaryValue teamColor={teamColor.primary}>
-                    {" "}
-                    {weekSummary.totalAmount}{" "}
+                    {weeklyData ? `${weeklyData.WEEKLY_AMOUNT.toLocaleString()}원` : "0원"}
                   </SummaryValue>
                 </SummaryItem>
                 <SummaryItem>
                   <SummaryLabel>주간 경기</SummaryLabel>
-                  <SummaryValue>{weekSummary.games}</SummaryValue>
+                  <SummaryValue>
+                    {weeklyData ? `${weeklyData.TEAM_RECORD.WIN}승 ${weeklyData.TEAM_RECORD.LOSE}패${weeklyData.TEAM_RECORD.DRAW > 0 ? ` ${weeklyData.TEAM_RECORD.DRAW}무` : ''}` : "0승 0패"}
+                  </SummaryValue>
                 </SummaryItem>
                 <SummaryItem style={{ borderBottomWidth: 0 }}>
                   <SummaryLabel>이번 주 증가율</SummaryLabel>
-                  <SummaryValue positive>+23%</SummaryValue>
+                  <SummaryValue positive={weeklyData?.CHANGE_PERCENTAGE > 0}>
+                    {weeklyData ? `${weeklyData.CHANGE_PERCENTAGE > 0 ? '+' : ''}${weeklyData.CHANGE_PERCENTAGE}%` : "0%"}
+                  </SummaryValue>
+                </SummaryItem>
+                <SummaryItem style={{ borderBottomWidth: 0, marginTop: 8 }}>
+                  <SummaryValue style={{ fontSize: 14, color: '#666666' }}>
+                    {weeklyData?.LLM_CONTEXT || "이번 주 요약 정보가 없습니다."}
+                  </SummaryValue>
                 </SummaryItem>
               </CardContent>
             </Card>
 
-            {/* 주간 적금 현황 (막대 그래프) */}
+            {/* 주간 적금 현황 */}
             <Card width={width}>
               <CardHeader width={width}>
                 <CardTitle width={width}>주간 적금 현황</CardTitle>
@@ -541,15 +526,19 @@ const WeeklyReportScreen = ({ navigation }) => {
               <CardContent width={width}>
                 <ChartContainer>
                   <BarChartFallback
-                    data={barData}
+                    data={{
+                      labels: ["월", "화", "수", "목", "금", "토", "일"],
+                      datasets: [{
+                        data: weeklyData ? Object.values(weeklyData.DAILY_SAVINGS) : [0, 0, 0, 0, 0, 0, 0]
+                      }]
+                    }}
                     width={width}
                     teamColor={teamColor.primary}
                   />
                 </ChartContainer>
                 <View style={{ alignItems: "flex-end", marginTop: 10 }}>
                   <SummaryValue teamColor={teamColor.primary}>
-                    {" "}
-                    주간 총 적금액: 78,500원{" "}
+                    주간 총 적금액: {weeklyData ? `${weeklyData.WEEKLY_AMOUNT.toLocaleString()}원` : "0원"}
                   </SummaryValue>
                 </View>
               </CardContent>
@@ -610,13 +599,15 @@ const WeeklyReportScreen = ({ navigation }) => {
                   <View style={{ padding: 20, alignItems: "center" }}>
                     <Text>뉴스 데이터 로딩 실패</Text>
                   </View>
-                ) : newsHighlights.length > 0 ? (
-                  newsHighlights.map((news) => (
-                    <NewsItem key={news.id}>
-                      <NewsTitle>• {news.title}</NewsTitle>
-                      {news.date && <NewsDate>{news.date}</NewsDate>}
-                    </NewsItem>
-                  ))
+                ) : weeklyData?.NEWS_SUMMATION ? (
+                  weeklyData.NEWS_SUMMATION.split('\n')
+                    .filter(line => line.trim())
+                    .map((line, index) => (
+                      <NewsItem key={index}>
+                        <NewsTitle>• {line.trim()}</NewsTitle>
+                        <NewsDate>{weeklyData.DATE}</NewsDate>
+                      </NewsItem>
+                    ))
                 ) : (
                   <View style={{ padding: 20, alignItems: "center" }}>
                     <Text>이번 주 뉴스 요약이 없습니다.</Text>
