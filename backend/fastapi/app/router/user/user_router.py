@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from database import get_db
 import models
-from router.user.user_schema import UserCreate, UserUpdate, UserResponse, UserLogin, TokenResponse, TokenData
+from router.user.user_schema import UserCreate, UserResponse, TokenResponse, TokenData,CheckNum
 import router.user.user_crud as user_crud
 from router.account import account_schema, account_crud
 from router.user.user_ssafy_api_utils import get_or_create_user_key
@@ -377,46 +377,7 @@ async def transfer_money(
         )
 
 
-# 사용자 삭제
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user_id: int, db: Session = Depends(get_db), 
-                     current_user: models.User = Depends(get_current_user)):
-    try:
-        logger.info(f"사용자 삭제 요청: {user_id}")
-        
-        # 권한 확인
-        if current_user.USER_ID != user_id:
-            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 대상 ID {user_id}")
-            raise HTTPException(status_code=403, detail="권한이 없습니다")
-        
-        # 사용자 존재 여부 확인
-        db_user = user_crud.get_user_by_id(db, user_id=user_id)
-        if not db_user:
-            logger.warning(f"삭제할 사용자를 찾을 수 없음: {user_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="사용자를 찾을 수 없습니다"
-            )
-        
-        # 사용자 삭제
-        success = user_crud.delete_user(db=db, user_id=user_id)
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="사용자 삭제 중 오류가 발생했습니다"
-            )
-            
-        return None
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"사용자 삭제 중 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"사용자 삭제 중 오류가 발생했습니다: {str(e)}"
-        )
-    
+   
 @router.get("/accounts", response_model=account_schema.UserAccountsResponse)
 async def get_user_accounts(
     db: Session = Depends(get_db),
@@ -480,3 +441,97 @@ async def get_user_accounts(
             detail=f"사용자 계좌 정보 조회 중 오류 발생: {str(e)}"
         )
     
+@router.get("/check-account-num", response_model=CheckNum)
+async def check_account_num(
+    account_num: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # 사용자 키 확인
+        user_key = current_user.USER_KEY
+        if not user_key:
+            logger.warning(f"사용자 키가 없음: 사용자 ID {current_user.USER_ID}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="사용자 인증 정보가 없습니다"
+            )
+
+        try:
+            from router.user.user_ssafy_api_utils import check_account_num
+            user_name = await check_account_num(
+                user_key=user_key,
+                account_no=account_num
+            )
+
+            # 성공 응답
+            result = {
+                "NAME": user_name,
+                "ACCOUNT_NUM": account_num,
+                "BOOL": True
+            }
+            return result
+            
+        except Exception as api_error:
+            error_message = str(api_error)
+            # 계좌번호 유효성 오류 확인
+            if "계좌번호가 유효하지 않습니다" in error_message:
+                # 유효하지 않은 계좌번호일 경우도 200 응답, 하지만 BOOL은 False
+                result = {
+                    "NAME": "",
+                    "ACCOUNT_NUM": account_num,
+                    "BOOL": False
+                }
+                return result
+            else:
+                # 그 외의 API 오류는 다시 예외로 발생시켜 외부 catch로 전달
+                raise api_error
+
+    except Exception as e:
+        logger.error(f"계좌번호 조회 중 오류: {str(e)}")
+        # 다른 모든 오류에 대해서는 500 에러 응답
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"계좌번호 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+# 사용자 삭제
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(user_id: int, db: Session = Depends(get_db), 
+                     current_user: models.User = Depends(get_current_user)):
+    try:
+        logger.info(f"사용자 삭제 요청: {user_id}")
+        
+        # 권한 확인
+        if current_user.USER_ID != user_id:
+            logger.warning(f"권한 없음: 요청자 ID {current_user.USER_ID}, 대상 ID {user_id}")
+            raise HTTPException(status_code=403, detail="권한이 없습니다")
+        
+        # 사용자 존재 여부 확인
+        db_user = user_crud.get_user_by_id(db, user_id=user_id)
+        if not db_user:
+            logger.warning(f"삭제할 사용자를 찾을 수 없음: {user_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="사용자를 찾을 수 없습니다"
+            )
+        
+        # 사용자 삭제
+        success = user_crud.delete_user(db=db, user_id=user_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="사용자 삭제 중 오류가 발생했습니다"
+            )
+            
+        return None
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"사용자 삭제 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"사용자 삭제 중 오류가 발생했습니다: {str(e)}"
+        )
+ 

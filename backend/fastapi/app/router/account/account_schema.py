@@ -231,18 +231,13 @@ class DailyTransferResponse(BaseModel):
 
 class DailySavingDetailResponse(BaseModel):
     """일일 적금 상세 내역 응답 모델"""
-    DAILY_SAVING_ID: int
-    ACCOUNT_ID: int
     DATE: date
-    SAVING_RULED_DETAIL_ID: int
-    SAVING_RULED_TYPE_ID: int
     COUNT: int
-    DAILY_SAVING_AMOUNT: int
     rule_type_name: Optional[str] = None  # 규칙 타입 이름 (기본 규칙, 투수, 타자, 상대팀)
-    rule_description: Optional[str] = None  # 규칙 설명
     record_name: Optional[str] = None  # 기록 유형 이름 (승리, 안타, 홈런 등)
     player_name: Optional[str] = None  # 선수 이름 (선수 규칙인 경우)
     unit_amount: Optional[int] = None  # 건당 적립 금액
+    DAILY_SAVING_AMOUNT: int
     
     class Config:
         orm_mode = True

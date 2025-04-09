@@ -60,14 +60,19 @@ record_type_mapping = {
     '경기결과': None  # 이 값은 처리 시 변경됩니다
 }
 
-def update_team_victory_missions(db_session):
+async def update_team_victory_missions(db_session):
     """
     팀의 승리 횟수를 체크하고, 10승마다 해당 팀을 응원하는 유저들의 미션 카운트를 업데이트합니다.
     
     Args:
         db_session (Session): 데이터베이스 세션
     """
+    from utils.interest_utils import recalculate_interest_history
+    
     logger.info("팀 승리 미션 업데이트 시작...")
+    
+    # 이자 재계산이 필요한 계정 ID 목록
+    accounts_to_recalculate = []
     
     # 1. 미션 정보 가져오기 ("응원팀 10승당 우대금리" 미션)
     team_victory_mission = db_session.query(models.Mission).filter(
@@ -147,9 +152,24 @@ def update_team_victory_missions(db_session):
                     used_mission.COUNT = new_count
                     logger.info(f"계정 ID {account_id}의 미션 카운트 업데이트: {old_count} -> {new_count}")
                     
+                    # 이자 재계산이 필요한 계정으로 추가
+                    accounts_to_recalculate.append(account_id)
+                    
                     # 최대 카운트에 도달했는지 체크
                     if new_count >= used_mission.MAX_COUNT:
                         logger.info(f"계정 ID {account_id}의 미션 카운트가 최대치({used_mission.MAX_COUNT})에 도달했습니다.")
+    
+    # 변경사항 커밋
+    db_session.commit()
+    
+    # 비동기 이자 재계산 실행
+    if accounts_to_recalculate:
+        logger.info(f"{len(accounts_to_recalculate)}개 계정의 이자 소급 재계산 실행")
+        
+        for account_id in accounts_to_recalculate:
+            await recalculate_interest_history(db_session, account_id)
+        
+        logger.info(f"{len(accounts_to_recalculate)}개 계정의 이자 소급 재계산 완료")
     
     logger.info("팀 승리 미션 업데이트 완료")
 

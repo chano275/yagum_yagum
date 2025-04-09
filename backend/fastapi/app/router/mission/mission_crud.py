@@ -209,22 +209,22 @@ def calculate_account_interest_rate(db: Session, account_id: int):
     
     return total_interest_rate
 
-def update_account_interest_rate(db: Session, account_id: int):
-    """계정의 이자율 업데이트"""
-    # 계정 정보 조회
-    account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
-    if not account:
-        return None
+# def update_account_interest_rate(db: Session, account_id: int):
+#     """계정의 이자율 업데이트"""
+#     # 계정 정보 조회
+#     account = db.query(models.Account).filter(models.Account.ACCOUNT_ID == account_id).first()
+#     if not account:
+#         return None
     
-    # 미션 달성에 따른 이자율 계산
-    new_interest_rate = calculate_account_interest_rate(db, account_id)
+#     # 미션 달성에 따른 이자율 계산
+#     new_interest_rate = calculate_account_interest_rate(db, account_id)
     
-    # 이자율 업데이트
-    account.INTEREST_RATE = new_interest_rate
-    db.commit()
-    db.refresh(account)
+#     # 이자율 업데이트
+#     account.INTEREST_RATE = new_interest_rate
+#     db.commit()
+#     db.refresh(account)
     
-    return account
+#     return account
 
 def calculate_account_interest_details(db: Session, account_id: int):
     """

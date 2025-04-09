@@ -18,6 +18,7 @@
 4. 문장 생성
 5. 적금 진행
 
+# 코드 스케줄링링
 1. 경기 및 선수기록 데이터 크롤링 - baseball_data/ def_crawl_gamelog.py, def_preprocessing.py, def_change_json.py
 2. 경기 및 선수기록 DB에 저장 - utils/ update_game_log.py, save_player_record.py, update_daily_rank.py
 3. 사용자별 입금 예상액 계산 - utils/ process_saving.py

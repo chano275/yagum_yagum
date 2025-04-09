@@ -13,13 +13,21 @@ def get_daily_report_by_id(db: Session, daily_report_id: int):
     """일일 보고서 ID로 조회"""
     return db.query(models.DailyReport).filter(models.DailyReport.DAILY_REPORT_ID == daily_report_id).first()
 
+# def get_daily_reports_by_team(db: Session, team_id: int, skip: int = 0, limit: int = 30):
+#     """팀 ID로 일일 보고서 조회"""
+#     return db.query(models.DailyReport).filter(
+#         models.DailyReport.TEAM_ID == team_id
+#     ).order_by(
+#         models.DailyReport.DATE.desc()
+#     ).offset(skip).limit(limit).all()
+
 def get_daily_reports_by_team(db: Session, team_id: int, skip: int = 0, limit: int = 30):
     """팀 ID로 일일 보고서 조회"""
     return db.query(models.DailyReport).filter(
         models.DailyReport.TEAM_ID == team_id
     ).order_by(
         models.DailyReport.DATE.desc()
-    ).offset(skip).limit(limit).all()
+    ).offset(skip).limit(limit).first()
 
 def get_daily_report_by_team_and_date(db: Session, team_id: int, report_date: date):
     """팀 ID와 날짜로 일일 보고서 조회"""
