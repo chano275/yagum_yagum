@@ -257,8 +257,7 @@ async def create_account(
 
 @router.get("/transfers_log", response_model=List[account_schema.DailyTransferResponse])
 async def get_my_transfers(
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
+    month: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -271,9 +270,34 @@ async def get_my_transfers(
         
         logger.info(f"사용자의 계정으로 송금 내역 조회: 계정 ID {account_id}")
         
+        # 조회할 시작일과 종료일 초기화
+        start_date = None
+        end_date = None
+        
+        # 월 파라미터가 제공된 경우 해당 월의 시작일과 종료일을 설정
+        if month is not None:
+            if month < 1 or month > 12:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="월은 1에서 12 사이의 값이어야 합니다."
+                )
+                
+            # 현재 연도 구하기
+            current_year = datetime.now().year
+            
+            # 해당 월의 시작일과 종료일 계산
+            start_date = date(current_year, month, 1)
+            
+            # 다음 달의 첫날 - 1일 = 현재 달의 마지막 날
+            if month == 12:
+                end_date = date(current_year + 1, 1, 1) - timedelta(days=1)
+            else:
+                end_date = date(current_year, month + 1, 1) - timedelta(days=1)
+                
+            logger.info(f"{month}월 송금 내역 조회: {start_date} ~ {end_date}")
+        
         # 송금 내역 조회
         transfers = account_crud.get_account_transfers(db, account_id, start_date, end_date)
-        
         return transfers
         
     except HTTPException:
@@ -371,18 +395,13 @@ async def get_my_daily_savings_detail(
             
             # 상세 정보 구성
             detail = {
-                "DAILY_SAVING_ID": saving.DAILY_SAVING_ID,
-                "ACCOUNT_ID": saving.ACCOUNT_ID,
                 "DATE": saving.DATE,
-                "SAVING_RULED_DETAIL_ID": saving.SAVING_RULED_DETAIL_ID,
-                "SAVING_RULED_TYPE_ID": saving.SAVING_RULED_TYPE_ID,
                 "COUNT": saving.COUNT,
-                "DAILY_SAVING_AMOUNT": saving.DAILY_SAVING_AMOUNT,
                 "rule_type_name": rule_type.SAVING_RULE_TYPE_NAME if rule_type else None,
-                "rule_description": rule_description,
                 "record_name": record_type.RECORD_NAME if record_type else None,
                 "player_name": player.PLAYER_NAME if player else None,
-                "unit_amount": user_rule.USER_SAVING_RULED_AMOUNT if user_rule else None
+                "unit_amount": user_rule.USER_SAVING_RULED_AMOUNT if user_rule else None,
+                "DAILY_SAVING_AMOUNT": saving.DAILY_SAVING_AMOUNT,
             }
             
             result.append(detail)

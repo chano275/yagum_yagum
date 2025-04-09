@@ -665,3 +665,77 @@ async def post_transfer_money(user_key, deposit_account_no, transaction_balance,
     except Exception as e:
         logger.error(f"계좌 이체 중 오류: {str(e)}")
         raise
+
+async def check_account_num(user_key,account_no):
+    """
+    금융 API를 통해 예금주를 조회합니다.
+    
+    Args:
+        user_key (str): 사용자 키
+        account_no (str) : 확인할 계좌번호
+    
+    """
+    try:
+        # API 이름 설정
+        api_name = "inquireDemandDepositAccountHolderName"
+        api_url = f"{SSAFY_API_BASE_URL}/edu/demandDeposit/inquireDemandDepositAccountHolderName"
+        
+        # 헤더 생성
+        from utils.api_header_utils import generate_api_header
+        header = generate_api_header(
+            api_name=api_name,
+            user_key=user_key,
+            api_key=DEFAULT_API_KEY
+        )
+        
+        # 요청 데이터 구성
+        request_data = {
+            "Header": header,
+            "accountNo" : account_no
+        }
+        
+        logger.info(f"{account_no}의 예금주 확인")
+        
+        # API 요청
+        response = requests.post(
+            api_url,
+            json=request_data,
+            headers={"Content-Type": "application/json"}
+        )
+        
+        logger.info(f"API 응답 상태 코드: {response.status_code}")
+        
+        # 응답 확인
+        if response.status_code in [200, 201]:
+            try:
+                response_data = response.json()
+                logger.info("내가만든 로거~",response_data)
+                # 응답 코드 확인
+                header = response_data.get("Header", {})
+                response_code = header.get("responseCode")
+                if response_code != "H0000":
+                    response_message = header.get("responseMessage", "알 수 없는 오류")
+                    logger.error(f"API 오류 응답: {response_code} - {response_message}")
+                    raise Exception(f"금융 API 오류: {response_code} - {response_message}")
+                
+                
+                # 거래 내역 추출
+                response_body = response_data.get("REC",{})
+                return response_body.get("userName")
+                
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON 파싱 오류: {str(e)}")
+                raise Exception(f"API 응답 파싱 오류: {str(e)}")
+        else:
+            logger.error(f"API 응답 오류: {response.status_code} - {response.text}")
+            try:
+                error_data = response.json()
+                error_message = error_data.get("responseMessage", "알 수 없는 오류")
+                raise Exception(f"금융 API 오류: {error_message}")
+            except json.JSONDecodeError:
+                # JSON 파싱이 실패하면 원래처럼 전체 텍스트를 반환
+                raise Exception(f"금융 API 응답 오류: {response.text}")
+            
+    except Exception as e:
+        logger.error(f"예금주 조회 중 오류: {str(e)}")
+        raise

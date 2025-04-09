@@ -22,7 +22,7 @@ import models
 from database import engine
 
 # update_daily_balances 모듈에서 필요한 함수 import
-from update_daily_balances import update_daily_balances, calculate_daily_interest
+from utils.update_daily_balances import update_daily_balances, calculate_daily_interest
 
 # 로깅 설정
 logging.basicConfig(
@@ -115,12 +115,14 @@ async def process_actual_transfers(db, date_param=None):
                         withdrawal_account=account.SOURCE_ACCOUNT,  # 출금 계좌 (입출금 계좌)
                         deposit_account=account.ACCOUNT_NUM,        # 입금 계좌 (적금 계좌)
                         amount=saving_amount,
-                        llm_text=llm_text  # 트랜잭션 메시지
+                        llm_text="야금야금 출금"  # 트랜잭션 메시지
                     )
                     
                     # 이체 성공 시 계정 잔액 업데이트
                     account.TOTAL_AMOUNT += saving_amount
                     
+                    daily_transfer.TEXT = llm_text
+
                     total_transferred += saving_amount
                     processed_accounts += 1
                     
