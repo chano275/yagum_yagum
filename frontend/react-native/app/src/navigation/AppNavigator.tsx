@@ -16,6 +16,8 @@ import AccountSelectScreen from "../screens/AccountSelectScreen";
 import CompletionScreen from "../screens/CompletionScreen";
 import SavingsGoalScreen from "../screens/SavingsGoalScreen";
 import RuleSettingScreen from "../screens/RuleSettingScreen";
+import History from "../screens/History";
+import TransferScreen from "../screens/TransferScreen";
 
 export type RootStackParamList = {
   Home: undefined;
@@ -32,6 +34,8 @@ export type RootStackParamList = {
   Merchdiscount: undefined;
   Primerate: undefined;
   Verifyticket: undefined;
+  History: undefined;
+  Transfer: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -61,6 +65,8 @@ const AppNavigator = () => {
         <Stack.Screen name="Merchdiscount" component={Merchdiscount} />
         <Stack.Screen name="Primerate" component={Primerate} />
         <Stack.Screen name="Verifyticket" component={Verifyticket} />
+        <Stack.Screen name="History" component={History} />
+        <Stack.Screen name="Transfer" component={TransferScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

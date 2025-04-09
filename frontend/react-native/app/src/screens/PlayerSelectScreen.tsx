@@ -20,10 +20,43 @@ import { useJoin } from '../context/JoinContext';
 import { api } from '../api/axios';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/AppNavigator';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
 const MAX_MOBILE_WIDTH = 430;
+
+// BaseStyledProps 정의 (선택적 width)
+interface BaseStyledProps {
+  width?: number;
+}
+
+// 확장된 StyledProps
+interface StyledProps extends BaseStyledProps {
+  insetsTop?: number;
+  color?: string;
+  isSelected?: boolean;
+  disabled?: boolean;
+}
+
+// 최상위 컨테이너 수정
+const Container = styled.View<StyledProps>`
+  flex: 1;
+  background-color: #fff;
+  padding-top: ${props => props.insetsTop || 0}px; // 상단 패딩 적용
+`;
+
+// HeaderContainer는 width 불필요
+const HeaderContainer = styled.View`
+  padding: 12px 20px;
+  border-bottom-width: 1px;
+  border-bottom-color: #eee;
+`;
+
+// ContentContainer는 width 불필요
+const ContentContainer = styled.View`
+  flex: 1;
+`;
 
 const AppWrapper = styled.View`
   flex: 1;
@@ -315,6 +348,7 @@ const PlayerSelectScreen = () => {
   const [scrollViewHeight, setScrollViewHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const [indicatorHeight, setIndicatorHeight] = useState(200);
+  const insets = useSafeAreaInsets();
 
   const tabs = ['투수', '타자'];
 
