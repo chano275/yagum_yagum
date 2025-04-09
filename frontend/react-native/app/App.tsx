@@ -11,6 +11,7 @@ import { theme } from "./src/styles/theme";
 import { DimensionProvider } from "./src/context/DimensionContext";
 import { TeamProvider } from "./src/context/TeamContext";
 import { JoinProvider } from "./src/context/JoinContext";
+import { AccountProvider } from "./src/context/AccountContext";
 import AppNavigator from "./src/navigation/AppNavigator";
 import axios from "axios";
 import { useStore } from "./src/store/useStore";
@@ -63,8 +64,10 @@ export default function App() {
           <DimensionProvider>
             <TeamProvider>
               <JoinProvider>
-                <StatusBar style="auto" />
-                <AppNavigator />
+                <AccountProvider>
+                  <StatusBar style="auto" />
+                  <AppNavigator />
+                </AccountProvider>
               </JoinProvider>
             </TeamProvider>
           </DimensionProvider>

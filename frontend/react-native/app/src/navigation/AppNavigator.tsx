@@ -14,6 +14,8 @@ import AccountSelectScreen from "../screens/AccountSelectScreen";
 import CompletionScreen from "../screens/CompletionScreen";
 import SavingsGoalScreen from "../screens/SavingsGoalScreen";
 import RuleSettingScreen from "../screens/RuleSettingScreen";
+import History from "../screens/History";
+import TransferScreen from "../screens/TransferScreen";
 import TransactionDetailScreen from "@/screens/TransactionDetailScreen";
 
 export type RootStackParamList = {
@@ -31,6 +33,8 @@ export type RootStackParamList = {
   Merchdiscount: undefined;
   Primerate: undefined;
   Verifyticket: undefined;
+  History: undefined;
+  Transfer: undefined;
   TransactionDetail: { id: string };
 };
 
@@ -63,6 +67,8 @@ const AppNavigator = () => {
           name="TransactionDetail"
           component={TransactionDetailScreen}
         />
+         <Stack.Screen name="History" component={History} />
+         <Stack.Screen name="Transfer" component={TransferScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

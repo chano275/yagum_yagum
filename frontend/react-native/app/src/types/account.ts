@@ -20,4 +20,13 @@ export interface UserAccountsResponse {
   user_name: string;
   source_account: SourceAccount;
   savings_accounts: SavingsAccount[];
+}
+
+export interface TransactionHistory {
+  transactionId: string;
+  transactionDate: string;
+  transactionType: string;
+  summary: string;
+  balance: string;
+  afterBalance: string;
 } 
