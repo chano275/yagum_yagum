@@ -20,15 +20,12 @@ import TransactionDetailScreen from "@/screens/TransactionDetailScreen";
 
 export type RootStackParamList = {
   Home: undefined;
+  Main: undefined;
   Login: undefined;
   SavingsJoin: undefined;
+  Transfer: undefined;
+  History: undefined;
   Service: undefined;
-  Main: {
-    screen: string;
-    params: {
-      viewMode: string;
-    };
-  };
   PlayerSelect: undefined;
   SavingsGoal: undefined;
   RuleSetting: undefined;
@@ -38,8 +35,6 @@ export type RootStackParamList = {
   Merchdiscount: undefined;
   Primerate: undefined;
   Verifyticket: undefined;
-  History: undefined;
-  Transfer: undefined;
   TransactionDetail: { id: string };
 };
 
