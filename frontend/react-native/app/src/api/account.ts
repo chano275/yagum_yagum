@@ -37,4 +37,43 @@ export const getTransactionHistory = async (): Promise<TransactionHistory[]> => 
     }
     throw error;
   }
+};
+
+interface CheckAccountResponse {
+  NAME: string;
+  ACCOUNT_NUM: string;
+  BOOL: boolean;
+}
+
+export const checkAccountNumber = async (accountNum: string): Promise<CheckAccountResponse> => {
+  const response = await api.get<CheckAccountResponse>(`/api/user/check-account-num?account_num=${accountNum}`);
+  return response.data;
+};
+
+interface TransferMoneyRequest {
+  deposit_account_no: string;
+  balance: number;
+}
+
+export const transferMoney = async (data: TransferMoneyRequest) => {
+  try {
+    console.log('이체 요청 데이터:', data);
+    const response = await api.post('/api/user/transfer-money', null, {
+      params: {
+        deposit_account_no: data.deposit_account_no,
+        balance: data.balance
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('이체 요청 실패:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('상세 에러 정보:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+    }
+    throw error;
+  }
 }; 

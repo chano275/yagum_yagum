@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, SafeAreaView, Platform, useWindowDimensions, ActivityIndicator, Animated, KeyboardAvoidingView } from 'react-native';
+import { View, TextInput, TouchableOpacity, SafeAreaView, Platform, useWindowDimensions, ActivityIndicator, Animated, KeyboardAvoidingView, Alert } from 'react-native';
 import styled from 'styled-components/native';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { BASE_MOBILE_WIDTH, MAX_MOBILE_WIDTH } from '../constants/layout';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { checkAccountNumber, transferMoney } from '../api/account';
 
 interface StyledProps {
   width: number;
@@ -19,6 +20,8 @@ const TransferScreen = () => {
   const [displayAmount, setDisplayAmount] = useState('');
   const [validationStatus, setValidationStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
   const [isValidated, setIsValidated] = useState(false);
+  const [recipientName, setRecipientName] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false);
   const insets = useSafeAreaInsets();
 
   const width = Platform.OS === 'web' 
@@ -34,16 +37,24 @@ const TransferScreen = () => {
     }
   }, [accountNumber, isValidated]);
 
-  const validateAccount = () => {
-    setValidationStatus('checking');
-    setTimeout(() => {
-      if (accountNumber === '9998546139866046') {
+  const validateAccount = async () => {
+    try {
+      setValidationStatus('checking');
+      const response = await checkAccountNumber(accountNumber);
+      
+      if (response.BOOL) {
         setValidationStatus('success');
         setIsValidated(true);
+        setRecipientName(response.NAME);
       } else {
         setValidationStatus('error');
+        setIsValidated(false);
       }
-    }, 1000);
+    } catch (error) {
+      console.error('계좌번호 확인 중 오류:', error);
+      setValidationStatus('error');
+      setIsValidated(false);
+    }
   };
 
   const handleAccountNumberChange = (text: string) => {
@@ -58,10 +69,45 @@ const TransferScreen = () => {
     setAmount(numericValue);
     
     if (numericValue) {
-      const formattedAmount = Number(numericValue).toLocaleString();
+      const formattedAmount = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       setDisplayAmount(formattedAmount);
     } else {
       setDisplayAmount('');
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!accountNumber || !amount || !isValidated || isTransferring) return;
+
+    try {
+      setIsTransferring(true);
+      
+      // 숫자만 추출하여 이체 금액으로 변환
+      const numericAmount = parseInt(amount.replace(/,/g, ''), 10);
+      
+      await transferMoney({
+        deposit_account_no: accountNumber,
+        balance: numericAmount
+      });
+
+      Alert.alert(
+        '이체 성공',
+        `${recipientName}님께 ${displayAmount}원이 이체되었습니다.`,
+        [
+          {
+            text: '확인',
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('이체 중 오류:', error);
+      Alert.alert(
+        '이체 실패',
+        '이체 중 오류가 발생했습니다. 다시 시도해주세요.'
+      );
+    } finally {
+      setIsTransferring(false);
     }
   };
 
@@ -97,15 +143,17 @@ const TransferScreen = () => {
       
       {isValidated && (
         <View style={{ marginTop: 24, width: '100%' }}>
-          <AmountInputWrapper>
+          <View style={{ width: '100%' }}>
             <InputLabel>금액</InputLabel>
             <UnderlineInput
               value={displayAmount}
               onChangeText={handleAmountChange}
               keyboardType="number-pad"
+              placeholder="금액을 입력해주세요"
+              placeholderTextColor="#999999"
             />
             <AmountUnit>원</AmountUnit>
-          </AmountInputWrapper>
+          </View>
         </View>
       )}
     </InputSection>
@@ -123,7 +171,7 @@ const TransferScreen = () => {
               <Icon name="chevron-back" size={24} color="#000" />
             </BackButton>
             <HeaderTitle>
-              <BlueText>누구</BlueText>
+              <BlueText>{recipientName || "누구"}</BlueText>
               <HeaderText>에게 보낼까요?</HeaderText>
             </HeaderTitle>
           </HeaderContainer>
@@ -133,8 +181,15 @@ const TransferScreen = () => {
           </ContentContainer>
 
           <BottomButtonContainer>
-            <TransferButton disabled={!accountNumber || !amount}>
-              <TransferText>다음</TransferText>
+            <TransferButton 
+              disabled={!accountNumber || !amount || !isValidated || isTransferring}
+              onPress={handleTransfer}
+            >
+              {isTransferring ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <TransferText>다음</TransferText>
+              )}
             </TransferButton>
           </BottomButtonContainer>
         </KeyboardAvoidingView>
@@ -194,12 +249,12 @@ const BlueText = styled.Text`
 const ContentContainer = styled.View`
   flex: 1;
   padding: 0 16px;
-  margin-top: 20px;
+  margin-top: 8px;
   margin-left: 4px;
 `;
 
 const InputSection = styled.View`
-  margin-top: 40px;
+  margin-top: 20px;
 `;
 
 const InputWrapper = styled.View`
@@ -216,7 +271,7 @@ const ValidationStatusContainer = styled.View`
   align-items: center;
   position: absolute;
   right: 0;
-  bottom: 8px;
+  bottom: 11px;
 `;
 
 const UnderlineInput = styled.TextInput.attrs({
@@ -225,18 +280,20 @@ const UnderlineInput = styled.TextInput.attrs({
   autoCapitalize: 'none',
   autoCorrect: false
 })`
-  font-size: 16px;
+  font-size: 18px;
   padding: 8px 0;
   padding-right: 32px;
   border-bottom-width: 1px;
   border-bottom-color: #CCCCCC;
   width: 100%;
+  line-height: 22px;
 `;
 
 const InputLabel = styled.Text`
   font-size: 14px;
   color: #666666;
   margin-bottom: 8px;
+  font-weight: 500;
 `;
 
 const BottomButtonContainer = styled.View`
@@ -261,19 +318,13 @@ const TransferText = styled.Text`
   font-weight: 600;
 `;
 
-const AmountInputWrapper = styled.View`
-  flex-direction: row;
-  align-items: center;
-  position: relative;
-  width: 100%;
-`;
-
 const AmountUnit = styled.Text`
   position: absolute;
   right: 0;
   bottom: 8px;
-  font-size: 16px;
+  font-size: 18px;
   color: #1A1A1A;
+  line-height: 22px;
 `;
 
 export default TransferScreen;

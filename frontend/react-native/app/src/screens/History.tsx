@@ -31,6 +31,12 @@ const formatDate = (dateStr: string) => {
   return dateStr;
 };
 
+// 금액 포맷팅 함수 추가
+const formatAmount = (amount: string) => {
+  const numericValue = amount.replace(/[^0-9]/g, '');
+  return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
 const History = () => {
   const navigation = useNavigation();
   const { width: windowWidth } = useWindowDimensions();
@@ -71,7 +77,7 @@ const History = () => {
             left: 0,
             right: 0,
             top: 0,
-            height: 320,
+            height: 245,
           }}
         />
         <HeaderContainer>
@@ -94,15 +100,9 @@ const History = () => {
             </AccountTopSection>
 
             <BalanceSection>
-              <Balance>{balance}</Balance>
-              <BalanceLabel>총 계좌잔액 {balance}</BalanceLabel>
+              <Balance>{formatAmount(balance)}원</Balance>
+              <BalanceLabel>총 계좌잔액 {formatAmount(balance)}원</BalanceLabel>
             </BalanceSection>
-
-            <TransferButton>
-              <TransferText>이체</TransferText>
-            </TransferButton>
-
-            <Divider width={width} />
           </AccountSection>
 
           <TransactionList
@@ -117,9 +117,9 @@ const History = () => {
                 </TransactionLeftSection>
                 <AmountInfo>
                   <AmountText isDeposit={transaction.transactionType.substring(0, 2) === '입금'}>
-                    {transaction.transactionType.substring(0, 2) === '입금' ? '+' : '-'}{transaction.balance}원
+                    {transaction.transactionType.substring(0, 2) === '입금' ? '+' : '-'}{formatAmount(transaction.balance)}원
                   </AmountText>
-                  <TotalAmount>{transaction.afterBalance}원</TotalAmount>
+                  <TotalAmount>{formatAmount(transaction.afterBalance)}원</TotalAmount>
                 </AmountInfo>
               </TransactionItem>
             ))}
@@ -159,34 +159,34 @@ const BackButton = styled.TouchableOpacity`
   height: 48px;
   justify-content: center;
   align-items: center;
-  padding-left: 0;
 `;
 
 const HeaderTitle = styled.Text`
   font-size: 18px;
   font-weight: 600;
-  color: #000000;
-  margin-left: -6px;
+  color: #1A1A1A;
+  margin-left: -4px;
 `;
 
 const ContentContainer = styled.View`
   flex: 1;
+  margin-top: 8px;
 `;
 
 const AccountSection = styled.View`
   padding: 0 14px;
-  margin-top: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 `;
 
 const AccountTopSection = styled.View`
   flex-direction: row;
   align-items: center;
   margin-bottom: 20px;
+  padding-left: 12px;
 `;
 
 const BankLogoContainer = styled.View`
-  margin-right: 12px;
+  margin-right: 16px;
 `;
 
 const BankLogo = styled.Image`
@@ -211,15 +211,17 @@ const AccountNumber = styled.Text`
 `;
 
 const BalanceSection = styled.View`
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+  margin-top: 4px;
   align-items: flex-end;
+  padding-right: 12px;
 `;
 
 const Balance = styled.Text`
   font-size: 24px;
   font-weight: bold;
   color: #1a1a1a;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 `;
 
 const BalanceLabel = styled.Text`
@@ -227,31 +229,9 @@ const BalanceLabel = styled.Text`
   color: #666;
 `;
 
-const TransferButton = styled.TouchableOpacity`
-  background-color: #4374D9;
-  padding: 14px;
-  border-radius: 8px;
-  align-self: stretch;
-  margin-bottom: 12px;
-  margin-top: 8px;
-`;
-
-const TransferText = styled.Text`
-  color: white;
-  text-align: center;
-  font-size: 16px;
-  font-weight: 600;
-`;
-
-const Divider = styled.View<BaseStyledProps>`
-  height: 1px;
-  background-color: #f0f0f0;
-  margin: 0 -12px;
-`;
-
 const TransactionList = styled.ScrollView`
   flex: 1;
-  margin-top: 24px;
+  margin-top: 12px;
   padding: 0 14px;
 `;
 
@@ -260,6 +240,8 @@ const TransactionItem = styled.View`
   justify-content: space-between;
   align-items: flex-start;
   padding: 16px 0;
+  border-bottom-width: 1px;
+  border-bottom-color: #E5E5E5;
 `;
 
 const TransactionLeftSection = styled.View`

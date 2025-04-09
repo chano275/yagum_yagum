@@ -313,8 +313,8 @@ async def read_transaction_history(
 
 @router.post("/transfer-money")
 async def transfer_money(
-    deposit_account_no = str,
-    balance = int,
+    deposit_account_no : str,
+    balance : int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):

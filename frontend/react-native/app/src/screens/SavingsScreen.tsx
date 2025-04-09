@@ -1235,236 +1235,228 @@ const SavingsScreen = () => {
     );
   };
 
-  // 3연전 시리즈 카드 컴포넌트 - React.memo로 최적화
-  const SeriesMatchCard = React.memo(
-    ({ match }: { match: SeriesMatch }) => {
-      // 금액 포맷
-      const formatAmount = (amount: number | null): string => {
-        if (amount === null) return "-";
-        return `${amount.toLocaleString()}원`;
-      };
+  // 3연전 시리즈 카드 컴포넌트
+  const SeriesMatchCard = ({ match }: { match: SeriesMatch }) => {
+    // 금액 포맷
+    const formatAmount = (amount: number | null): string => {
+      if (amount === null) return "-";
+      return `${amount.toLocaleString()}원`;
+    };
 
-      // 상대팀 정보만 구하기
-      const isMyTeamHome = match.homeTeam.name.includes(teamName.split(" ")[0]);
-      const opponentTeam = isMyTeamHome ? match.awayTeam : match.homeTeam;
-      const locationText = isMyTeamHome ? "홈" : "원정";
+    // 상대팀 정보만 구하기
+    const isMyTeamHome = match.homeTeam.name.includes(teamName.split(" ")[0]);
+    const opponentTeam = isMyTeamHome ? match.awayTeam : match.homeTeam;
+    const locationText = isMyTeamHome ? "홈" : "원정";
 
-      // 진행 중인 시리즈에 특별한 스타일 적용
-      const isCurrentSeries = match.status === "current";
-      const badgeColor = isCurrentSeries ? "#1588CF" : "#e8f4ff";
-      const badgeTextColor = isCurrentSeries ? "white" : "#0066cc";
+    // 진행 중인 시리즈에 특별한 스타일 적용
+    const isCurrentSeries = match.status === "current";
+    const badgeColor = isCurrentSeries ? "#1588CF" : "#e8f4ff";
+    const badgeTextColor = isCurrentSeries ? "white" : "#0066cc";
 
-      return (
-        <SeriesCard
+    return (
+      <SeriesCard
+        style={{
+          borderRadius: 16,
+          marginBottom: 16,
+          borderColor: "#eeeeee",
+        }}
+      >
+        <SeriesHeader
           style={{
-            borderRadius: 16,
-            marginBottom: 16,
-            borderColor: "#eeeeee",
+            padding: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: "#f5f5f5",
           }}
         >
-          <SeriesHeader
-            style={{
-              padding: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: "#f5f5f5",
-            }}
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-              }}
-            >
-              <TeamLogo
-                source={opponentTeam.logo}
-                resizeMode="contain"
-                style={{ width: 32, height: 32 }}
-                fadeDuration={0} // 페이드 효과 제거
-                defaultSource={opponentTeam.logo} // 기본 이미지로 동일 소스 사용
-              />
-              <View style={{ marginLeft: 12 }}>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "bold",
-                    color: "#333",
-                  }}
-                >
-                  vs {opponentTeam.name}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    color: "#666",
-                    marginTop: 2,
-                  }}
-                >
-                  {match.dateRange} ({locationText})
-                </Text>
-              </View>
-            </View>
-            <ResultBadge
-              style={{
-                backgroundColor: badgeColor,
-                paddingVertical: 6,
-                paddingHorizontal: 12,
-                borderRadius: 12,
-              }}
-            >
-              <ResultText
-                style={{
-                  color: badgeTextColor,
-                  fontSize: 13,
-                  fontWeight: "600",
-                }}
-              >
-                {isCurrentSeries ? "진행 중" : match.result}
-              </ResultText>
-            </ResultBadge>
-          </SeriesHeader>
-
-          <DayRowContainer style={{ padding: 12 }}>
-            {match.days.map((day, index) => {
-              // 경기 상태에 따른 색상 및 라벨 설정
-              let statusLabel = "";
-              let statusColor = "#333";
-              let badgeBgColor = "transparent";
-
-              switch (day.status) {
-                case "win":
-                  statusLabel = "승";
-                  statusColor = "#f44336";
-                  badgeBgColor = "rgba(244, 67, 54, 0.2)";
-                  break;
-                case "lose":
-                  statusLabel = "패";
-                  statusColor = "#2196f3";
-                  badgeBgColor = "rgba(33, 150, 243, 0.2)";
-                  break;
-                case "draw":
-                  statusLabel = "무";
-                  statusColor = "#4caf50";
-                  badgeBgColor = "rgba(76, 175, 80, 0.2)";
-                  break;
-                case "cancelled":
-                  statusLabel = "취소";
-                  statusColor = "#9e9e9e";
-                  badgeBgColor = "rgba(158, 158, 158, 0.2)";
-                  break;
-                case "upcoming":
-                  statusLabel = "예정";
-                  statusColor = "#9c27b0";
-                  badgeBgColor = "rgba(156, 39, 176, 0.2)";
-                  break;
-              }
-
-              // 배경색 설정
-              const bgColor =
-                day.status === "win"
-                  ? "#f4f9ff"
-                  : day.status === "lose"
-                  ? "#fff0f0"
-                  : "#f9f9f9";
-
-              // 텍스트 색상 설정
-              const textColor =
-                day.status === "win"
-                  ? "#1588CF"
-                  : day.status === "lose"
-                  ? "#ff4444"
-                  : "#666";
-
-              return (
-                <DayBox
-                  key={index}
-                  backgroundColor={bgColor}
-                  style={{
-                    flex: 1,
-                    padding: 14,
-                    margin: 4,
-                    borderRadius: 12,
-                    alignItems: "center",
-                  }}
-                >
-                  <DayText
-                    style={{
-                      color: "#666",
-                      fontSize: 14,
-                      marginBottom: 6,
-                    }}
-                  >
-                    {day.date}
-                  </DayText>
-
-                  {/* 경기 상태 라벨 */}
-                  {statusLabel && (
-                    <View
-                      style={{
-                        paddingHorizontal: 8,
-                        paddingVertical: 2,
-                        borderRadius: 10,
-                        backgroundColor: badgeBgColor,
-                        marginBottom: 4,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 12,
-                          fontWeight: "bold",
-                          color: statusColor,
-                        }}
-                      >
-                        {statusLabel}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* 금액 */}
-                  <AmountText
-                    color={textColor}
-                    style={{
-                      fontSize: 15,
-                      fontWeight: "600",
-                    }}
-                  >
-                    {formatAmount(day.amount)}
-                  </AmountText>
-                </DayBox>
-              );
-            })}
-          </DayRowContainer>
-
-          <TotalContainer
+          <View
             style={{
               flexDirection: "row",
-              justifyContent: "space-between",
-              padding: 16,
-              borderTopWidth: 1,
-              borderTopColor: "#f0f0f0",
-              backgroundColor: "#fcfcfc",
+              alignItems: "center",
             }}
           >
-            <TotalLabel style={{ fontSize: 14, color: "#666" }}>
-              총 적립액
-            </TotalLabel>
-            <TotalAmount
+            <TeamLogo
+              source={opponentTeam.logo}
+              resizeMode="contain"
+              style={{ width: 32, height: 32 }}
+            />
+            <View style={{ marginLeft: 12 }}>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: "bold",
+                  color: "#333",
+                }}
+              >
+                vs {opponentTeam.name}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: "#666",
+                  marginTop: 2,
+                }}
+              >
+                {match.dateRange} ({locationText})
+              </Text>
+            </View>
+          </View>
+          <ResultBadge
+            style={{
+              backgroundColor: badgeColor,
+              paddingVertical: 6,
+              paddingHorizontal: 12,
+              borderRadius: 12,
+            }}
+          >
+            <ResultText
               style={{
-                fontSize: 16,
-                fontWeight: "bold",
-                color: "#1588CF",
+                color: badgeTextColor,
+                fontSize: 13,
+                fontWeight: "600",
               }}
             >
-              {formatAmount(match.totalAmount)}
-            </TotalAmount>
-          </TotalContainer>
-        </SeriesCard>
-      );
-    },
-    (prevProps, nextProps) => {
-      // id가 같으면 리렌더링하지 않음 (최적화)
-      return prevProps.match.id === nextProps.match.id;
-    }
-  );
+              {isCurrentSeries ? "진행 중" : match.result}
+            </ResultText>
+          </ResultBadge>
+        </SeriesHeader>
+
+        <DayRowContainer style={{ padding: 12 }}>
+          {match.days.map((day, index) => {
+            // 경기 상태에 따른 색상 및 라벨 설정
+            let statusLabel = "";
+            let statusColor = "#333";
+            let badgeBgColor = "transparent";
+
+            switch (day.status) {
+              case "win":
+                statusLabel = "승";
+                statusColor = "#f44336";
+                badgeBgColor = "rgba(244, 67, 54, 0.2)";
+                break;
+              case "lose":
+                statusLabel = "패";
+                statusColor = "#2196f3";
+                badgeBgColor = "rgba(33, 150, 243, 0.2)";
+                break;
+              case "draw":
+                statusLabel = "무";
+                statusColor = "#4caf50";
+                badgeBgColor = "rgba(76, 175, 80, 0.2)";
+                break;
+              case "cancelled":
+                statusLabel = "취소";
+                statusColor = "#9e9e9e";
+                badgeBgColor = "rgba(158, 158, 158, 0.2)";
+                break;
+              case "upcoming":
+                statusLabel = "예정";
+                statusColor = "#9c27b0";
+                badgeBgColor = "rgba(156, 39, 176, 0.2)";
+                break;
+            }
+
+            // 배경색 설정
+            const bgColor =
+              day.status === "win"
+                ? "#f4f9ff"
+                : day.status === "lose"
+                ? "#fff0f0"
+                : "#f9f9f9";
+
+            // 텍스트 색상 설정
+            const textColor =
+              day.status === "win"
+                ? "#1588CF"
+                : day.status === "lose"
+                ? "#ff4444"
+                : "#666";
+
+            return (
+              <DayBox
+                key={index}
+                backgroundColor={bgColor}
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  margin: 4,
+                  borderRadius: 12,
+                  alignItems: "center",
+                }}
+              >
+                <DayText
+                  style={{
+                    color: "#666",
+                    fontSize: 14,
+                    marginBottom: 6,
+                  }}
+                >
+                  {day.date}
+                </DayText>
+
+                {/* 경기 상태 라벨 */}
+                {statusLabel && (
+                  <View
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 10,
+                      backgroundColor: badgeBgColor,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        color: statusColor,
+                      }}
+                    >
+                      {statusLabel}
+                    </Text>
+                  </View>
+                )}
+
+                {/* 금액 */}
+                <AmountText
+                  color={textColor}
+                  style={{
+                    fontSize: 15,
+                    fontWeight: "600",
+                  }}
+                >
+                  {formatAmount(day.amount)}
+                </AmountText>
+              </DayBox>
+            );
+          })}
+        </DayRowContainer>
+
+        <TotalContainer
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            padding: 16,
+            borderTopWidth: 1,
+            borderTopColor: "#f0f0f0",
+            backgroundColor: "#fcfcfc",
+          }}
+        >
+          <TotalLabel style={{ fontSize: 14, color: "#666" }}>
+            총 적립액
+          </TotalLabel>
+          <TotalAmount
+            style={{
+              fontSize: 16,
+              fontWeight: "bold",
+              color: "#1588CF",
+            }}
+          >
+            {formatAmount(match.totalAmount)}
+          </TotalAmount>
+        </TotalContainer>
+      </SeriesCard>
+    );
+  };
 
   // 캘린더 뷰 렌더링
   const renderCalendarView = () => (
@@ -1498,36 +1490,31 @@ const SavingsScreen = () => {
       {/* 선택한 날짜의 경기 상세 정보 */}
       {selectedFixture && <FixtureDetailComponent fixture={selectedFixture} />}
 
-      {/* 3연전 일정 카드 - useMemo로 최적화 */}
-      {useMemo(
-        () => (
-          <Card width={width}>
-            <CardHeader width={width}>
-              <CardTitle width={width}>3연전 일정</CardTitle>
-            </CardHeader>
-            <CardContent width={width} style={{ padding: 8 }}>
-              {isSeriesLoading ? (
-                <View style={{ padding: 20, alignItems: "center" }}>
-                  <Text>3연전 정보 로딩 중...</Text>
-                </View>
-              ) : seriesMatches.length > 0 ? (
-                seriesMatches.map((match) => (
-                  <SeriesMatchCard key={match.id} match={match} />
-                ))
-              ) : (
-                <View style={{ padding: 20, alignItems: "center" }}>
-                  <Text>표시할 3연전 정보가 없습니다.</Text>
-                </View>
-              )}
-            </CardContent>
-          </Card>
-        ),
-        [isSeriesLoading, seriesMatches, width]
-      )}
+      {/* 3연전 일정 카드 */}
+      <Card width={width}>
+        <CardHeader width={width}>
+          <CardTitle width={width}>3연전 일정</CardTitle>
+        </CardHeader>
+        <CardContent width={width} style={{ padding: 8 }}>
+          {isSeriesLoading ? (
+            <View style={{ padding: 20, alignItems: "center" }}>
+              <Text>3연전 정보 로딩 중...</Text>
+            </View>
+          ) : seriesMatches.length > 0 ? (
+            seriesMatches.map((match) => (
+              <SeriesMatchCard key={match.id} match={match} />
+            ))
+          ) : (
+            <View style={{ padding: 20, alignItems: "center" }}>
+              <Text>표시할 3연전 정보가 없습니다.</Text>
+            </View>
+          )}
+        </CardContent>
+      </Card>
     </>
   );
 
-  // 리스트 뷰 렌더링
+  // 리스트 뷰 렌더링 (새로 구현한 부분)
   const renderListView = () => (
     <Card width={width}>
       <CardHeader width={width}>
@@ -1563,7 +1550,6 @@ const SavingsScreen = () => {
                   <Image
                     source={getTeamLogo(item.opponent)}
                     style={{ width: 28, height: 28, marginRight: 10 }}
-                    fadeDuration={0} // 페이드 효과 제거
                   />
                   <Text style={{ color: "#666", fontSize: 14 }}>
                     {item.date}
