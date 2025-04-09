@@ -90,16 +90,7 @@ const TransferScreen = () => {
         balance: numericAmount
       });
 
-      Alert.alert(
-        '이체 성공',
-        `${recipientName}님께 ${displayAmount}원이 이체되었습니다.`,
-        [
-          {
-            text: '확인',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
+      navigation.navigate('TransferComplete');
     } catch (error) {
       console.error('이체 중 오류:', error);
       Alert.alert(
@@ -287,6 +278,13 @@ const UnderlineInput = styled.TextInput.attrs({
   border-bottom-color: #CCCCCC;
   width: 100%;
   line-height: 22px;
+  outline: none;
+  ${Platform.OS === 'web' && `
+    outline: none;
+    &:focus {
+      outline: none;
+    }
+  `}
 `;
 
 const InputLabel = styled.Text`
