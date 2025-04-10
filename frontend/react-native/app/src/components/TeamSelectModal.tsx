@@ -6,6 +6,7 @@ import { useTeam } from '../context/TeamContext';
 import { useJoin } from '../context/JoinContext';
 import { teamColors } from '../styles/teamColors';
 import { useNavigation } from '@react-navigation/native';
+import { Theme } from '../styles/theme';
 
 // 팀 이름과 코드 매핑
 const teamNameToCode: { [key: string]: keyof typeof teamColors } = {
@@ -74,6 +75,7 @@ const Title = styled.Text`
   font-size: 20px;
   font-weight: bold;
   color: #1B1D1F;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const CloseButton = styled.TouchableOpacity`
@@ -86,6 +88,7 @@ const SubTitle = styled.Text`
   margin-bottom: 12px;
   margin-top: -4px;
   padding-horizontal: 20px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const TeamGrid = styled.View`
@@ -119,8 +122,9 @@ const TeamLogo = styled.Image`
 
 const TeamName = styled.Text<{ isSelected: boolean }>`
   font-size: 15px;
-  color: ${props => props.isSelected ? '#1B1D1F' : '#1B1D1F'};
-  font-weight: ${props => props.isSelected ? '700' : '600'};
+  color: ${({ isSelected }) => isSelected ? '#1B1D1F' : '#1B1D1F'};
+  font-weight: ${({ isSelected }) => isSelected ? '700' : '600'};
+  font-family: ${({ isSelected, theme }) => isSelected ? theme.fonts.bold : theme.fonts.medium};
 `;
 
 const Backdrop = styled.Pressable`
@@ -150,6 +154,7 @@ const SelectButtonText = styled.Text`
   color: #fff;
   font-size: 18px;
   font-weight: 900;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const TeamSelectModal: React.FC<TeamSelectModalProps> = ({ visible, onClose, onSelectTeam, width }) => {

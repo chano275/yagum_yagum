@@ -101,6 +101,7 @@ const HeaderTitle = styled.Text`
   font-size: 20px;
   font-weight: 600;
   color: #1A1A1A;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const PageNumber = styled.Text`
@@ -109,6 +110,7 @@ const PageNumber = styled.Text`
   font-size: 14px;
   color: #666666;
   font-weight: 400;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const TitleSection = styled.View`
@@ -127,12 +129,14 @@ const MainTitle = styled.Text`
   font-weight: 600;
   color: #1B1D1F;
   margin-bottom: 8px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const SubTitle = styled.Text`
   font-size: 14px;
   color: #666666;
   font-weight: 400;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const SearchContainer = styled.View`
@@ -151,6 +155,7 @@ const SearchInput = styled.TextInput`
   font-size: 15px;
   color: #1B1D1F;
   padding-left: 8px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const SearchIcon = styled.View`
@@ -176,6 +181,7 @@ const TabText = styled.Text<{ isSelected: boolean; color: string }>`
   color: ${({ isSelected, color }) => isSelected ? 'white' : color};
   font-size: 15px;
   font-weight: ${({ isSelected }) => isSelected ? '600' : '400'};
+  font-family: ${({ theme, isSelected }) => isSelected ? theme.fonts.bold : theme.fonts.regular};
 `;
 
 const PlayerGrid = styled.View`
@@ -235,6 +241,7 @@ const PlayerNumber = styled.Text<PlayerNumberProps>`
   font-weight: ${props => props.isSelected ? '700' : '600'};
   color: ${props => props.isSelected ? props.textColor : '#666666'};
   margin-right: 4px;
+  font-family: ${({ theme, isSelected }) => isSelected ? theme.fonts.bold : theme.fonts.medium};
 `;
 
 interface PlayerNameProps {
@@ -245,11 +252,13 @@ const PlayerName = styled.Text<PlayerNameProps>`
   font-size: 16px;
   font-weight: ${props => props.isSelected ? '700' : '600'};
   color: ${props => props.isSelected ? '#000000' : '#1B1D1F'};
+  font-family: ${({ theme, isSelected }) => isSelected ? theme.fonts.bold : theme.fonts.medium};
 `;
 
 const PlayerPosition = styled.Text`
   color: #666666;
   fontSize: 13px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const BottomSection = styled.View`
@@ -272,6 +281,7 @@ const SelectButtonText = styled.Text`
   color: white;
   fontSize: 18px;
   fontWeight: 900;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const CustomScrollView = styled(Animated.ScrollView)`

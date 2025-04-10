@@ -26,6 +26,9 @@ import type { RootStackParamList } from "../navigation/AppNavigator";
 import axios from "axios";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import TermsModal from "../components/TermsModal";
+import PrivacyModal from "../components/PrivacyModal";
+import MarketingModal from "../components/MarketingModal";
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
@@ -85,12 +88,14 @@ const MainTitle = styled.Text`
   font-weight: 600;
   color: #333333;
   margin-bottom: 8px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const SubTitle = styled.Text`
   font-size: 14px;
   color: #666666;
   font-weight: 400;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const Content = styled.View`
@@ -153,12 +158,14 @@ const AgreementTextAll = styled.Text`
   font-size: 16px;
   font-weight: 700;
   color: #1b1d1f;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const AgreementText = styled.Text`
   flex: 1;
   font-size: 14px;
   color: #666666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const ViewButton = styled.TouchableOpacity`
@@ -168,6 +175,7 @@ const ViewButton = styled.TouchableOpacity`
 const ViewButtonText = styled.Text`
   font-size: 12px;
   color: #666666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const AccountSection = styled(Section)`
@@ -181,19 +189,17 @@ const AccountSelect = styled.TouchableOpacity`
   justify-content: space-between;
   padding: 16px;
   border-radius: 12px;
-  border: 1px solid #eeeeee;
   margin-top: 16px;
 `;
 
 const AccountPlaceholder = styled.Text`
   font-size: 16px;
   color: #999999;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const AccountDropdown = styled(Animated.View)`
   background-color: white;
-  border: 1px solid #eeeeee;
-  border-radius: 12px;
   margin-top: 4px;
   z-index: 9999;
   overflow: hidden;
@@ -216,11 +222,13 @@ const AccountName = styled.Text`
   color: #333333;
   font-weight: 600;
   margin-bottom: 4px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const AccountNumber = styled.Text`
   font-size: 14px;
   color: #666666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const AccountIcon = styled.View<{ color: string }>`
@@ -242,6 +250,7 @@ const AccountRow = styled.View`
 const AccountSelectText = styled.Text`
   font-size: 16px;
   color: #666666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 interface SelectButtonProps {
@@ -269,6 +278,7 @@ const SelectButtonText = styled.Text<{ disabled: boolean }>`
   color: white;
   font-size: 18px;
   font-weight: 900;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const ModalOverlay = styled.View`
@@ -296,6 +306,7 @@ const ModalTitle = styled.Text`
   font-size: 18px;
   font-weight: 600;
   color: #1b1d1f;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const CloseButton = styled.TouchableOpacity`
@@ -331,6 +342,7 @@ const LoadingText = styled.Text`
   font-size: 14px;
   color: #666666;
   margin-top: 8px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const ErrorContainer = styled.View`
@@ -347,6 +359,7 @@ const ErrorText = styled.Text`
   color: #D33A3A;
   text-align: center;
   line-height: 20px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const RetryButton = styled.TouchableOpacity`
@@ -361,6 +374,7 @@ const RetryButtonText = styled.Text`
   font-size: 14px;
   color: #333333;
   font-weight: 500;
+  font-family: ${({ theme }) => theme.fonts.medium};
 `;
 
 const AnimatedSection = styled(Animated.View)`
@@ -391,6 +405,10 @@ const AccountSelectScreen = () => {
   const opacityAnimation = useRef(new Animated.Value(0)).current;
   const dropdownAnimation = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
+  const [isTermsModalVisible, setIsTermsModalVisible] = useState(false);
+  const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
+  const [isMarketingModalVisible, setIsMarketingModalVisible] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(Platform.OS === "web" ? BASE_MOBILE_WIDTH : MAX_MOBILE_WIDTH);
 
   useEffect(() => {
     console.log("로그인 상태:", isLoggedIn);
@@ -508,15 +526,18 @@ const AccountSelectScreen = () => {
   };
 
   const handleDropdownToggle = () => {
-    setIsDropdownOpen(!isDropdownOpen);
-    animateDropdown(!isDropdownOpen ? 1 : 0);
-    if (!isDropdownOpen) {
-      setTimeout(() => {
+    const newIsOpen = !isDropdownOpen;
+    setIsDropdownOpen(newIsOpen);
+    animateDropdown(newIsOpen ? 1 : 0);
+    
+    if (newIsOpen) {
+      // 드롭다운이 열릴 때만 스크롤
+      requestAnimationFrame(() => {
         scrollViewRef.current?.scrollTo({
           y: 500,
           animated: true,
         });
-      }, 50);
+      });
     }
   };
 
@@ -751,7 +772,13 @@ const AccountSelectScreen = () => {
 
   return (
     <AppWrapper>
-      <MobileContainer insetsTop={insets.top}>
+      <MobileContainer 
+        insetsTop={insets.top}
+        onLayout={(e) => {
+          const { width } = e.nativeEvent.layout;
+          setContainerWidth(width);
+        }}
+      >
         <ExpoStatusBar style="dark" />
         <Header
           title="적금 가입"
@@ -791,7 +818,7 @@ const AccountSelectScreen = () => {
                     {agreements.terms && <CheckIcon />}
                   </CheckBox>
                   <AgreementText>(필수) 야금야금 이용약관</AgreementText>
-                  <ViewButton>
+                  <ViewButton onPress={() => setIsTermsModalVisible(true)}>
                     <ViewButtonText>보기</ViewButtonText>
                   </ViewButton>
                 </AgreementItem>
@@ -804,10 +831,8 @@ const AccountSelectScreen = () => {
                   >
                     {agreements.privacy && <CheckIcon />}
                   </CheckBox>
-                  <AgreementText>
-                    (필수) 개인정보 수집 및 이용 동의
-                  </AgreementText>
-                  <ViewButton>
+                  <AgreementText>(필수) 개인정보 수집 및 이용 동의</AgreementText>
+                  <ViewButton onPress={() => setIsPrivacyModalVisible(true)}>
                     <ViewButtonText>보기</ViewButtonText>
                   </ViewButton>
                 </AgreementItem>
@@ -821,7 +846,7 @@ const AccountSelectScreen = () => {
                     {agreements.marketing && <CheckIcon />}
                   </CheckBox>
                   <AgreementText>(선택) 마케팅 정보 수신 동의</AgreementText>
-                  <ViewButton>
+                  <ViewButton onPress={() => setIsMarketingModalVisible(true)}>
                     <ViewButtonText>보기</ViewButtonText>
                   </ViewButton>
                 </AgreementItemLast>
@@ -867,8 +892,24 @@ const AccountSelectScreen = () => {
             )}
           </SelectButton>
         </BottomSection>
+
+        {renderAccountModal()}
+        <TermsModal 
+          isVisible={isTermsModalVisible}
+          onClose={() => setIsTermsModalVisible(false)}
+          width={containerWidth}
+        />
+        <PrivacyModal 
+          isVisible={isPrivacyModalVisible}
+          onClose={() => setIsPrivacyModalVisible(false)}
+          width={containerWidth}
+        />
+        <MarketingModal 
+          isVisible={isMarketingModalVisible}
+          onClose={() => setIsMarketingModalVisible(false)}
+          width={containerWidth}
+        />
       </MobileContainer>
-      {renderAccountModal()}
     </AppWrapper>
   );
 };

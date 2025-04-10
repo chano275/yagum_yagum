@@ -25,6 +25,7 @@ import { api } from "../api/axios";
 import { useAccountStore } from "../store/useStore";
 import { SavingsAccount } from "../types/account";
 import { teamColors, teamIdToCode } from "../styles/teamColors";
+import { MaterialIcons } from "@expo/vector-icons";
 
 // 경기 일정 데이터 타입 정의
 interface GameSchedule {
@@ -125,21 +126,19 @@ const Header = styled.View<StyledProps & { teamColor: string }>`
   justify-content: space-between;
   align-items: center;
   background-color: ${(props) => props.teamColor};
-  padding: ${({ width }) => width * 0.04}px;
-  padding-top: ${({ width }) => width * 0.1}px;
+  height: 56px;
+  padding-horizontal: 16px;
+  padding-top: ${Platform.OS === 'web' ? '0px' : '${StatusBar.currentHeight}px'};
   position: relative;
 `;
 
 const HeaderTitle = styled.Text<StyledProps>`
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: ${({ width }) => width * 0.1}px;
   color: white;
-  font-size: ${({ width }) => width * 0.046}px;
+  font-size: 20px;
   font-weight: bold;
   font-family: ${({ theme }) => theme.fonts.bold};
   text-align: center;
+  flex: 1;
 `;
 
 const BackButton = styled.TouchableOpacity`
@@ -147,7 +146,7 @@ const BackButton = styled.TouchableOpacity`
   width: 40px;
   height: 40px;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
 `;
 
 const IconContainer = styled.TouchableOpacity`
@@ -1097,7 +1096,7 @@ const MainPage = () => {
         <StatusBar style="light" />
         <Header width={width} teamColor={teamColor.primary}>
           <BackButton onPress={() => stackNavigation.navigate("Home")}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <MaterialIcons name="chevron-left" size={28} color="white" />
           </BackButton>
           <HeaderTitle width={width}>
             야금야금

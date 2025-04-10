@@ -87,6 +87,7 @@ const CompleteText = styled.Text`
   font-size: 32px;
   font-weight: 600;
   color: #000000;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const BottomButtonContainer = styled.View`
@@ -108,6 +109,7 @@ const ButtonText = styled.Text`
   color: white;
   font-size: 16px;
   font-weight: 600;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 export default TransferCompleteScreen; 

@@ -19,6 +19,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/AppNavigator";
 import { api } from "@/api/axios"; // API 클라이언트 임포트
+import { MaterialIcons } from "@expo/vector-icons";
 
 // 네비게이션 타입 정의
 type MatchrankScreenNavigationProp =
@@ -66,22 +67,29 @@ const MobileContainer = styled.View<StyledProps>`
 
 const Header = styled.View<{ teamColor: string }>`
   flex-direction: row;
+  justify-content: space-between;
   align-items: center;
   background-color: ${(props) => props.teamColor};
-  padding: 20px;
-  padding-top: 60px;
-  padding-bottom: 15px;
+  height: 56px;
+  padding-horizontal: 16px;
+  padding-top: ${Platform.OS === 'web' ? '0px' : '${StatusBar.currentHeight}px'};
+  position: relative;
 `;
 
 const BackButton = styled.TouchableOpacity`
-  margin-right: 15px;
+  padding: 8px;
+  z-index: 1;
 `;
 
 const HeaderTitle = styled.Text`
+  position: absolute;
+  left: 0;
+  right: 0;
   color: white;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
   font-family: ${({ theme }) => theme.fonts.bold};
+  text-align: center;
 `;
 
 const ContentContainer = styled.View`
@@ -457,7 +465,7 @@ const MatchrankScreen = () => {
         {/* 헤더 영역 */}
         <Header teamColor={teamColor.primary}>
           <BackButton onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <MaterialIcons name="chevron-left" size={28} color="white" />
           </BackButton>
           <HeaderTitle>팀 순위 맞추기</HeaderTitle>
         </Header>

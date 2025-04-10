@@ -14,6 +14,8 @@ import { useTeam } from "@/context/TeamContext";
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/api/axios"; // API 클라이언트 임포트
 import { useNavigation } from "@react-navigation/native"; // useNavigation 임포트 추가
+import { MaterialIcons } from "@expo/vector-icons";
+import { theme } from "@/styles/theme";  // theme import 추가
 
 // 동적 스타일링을 위한 인터페이스
 interface StyledProps {
@@ -88,19 +90,26 @@ const Header = styled.View<StyledProps & { teamColor: string }>`
   justify-content: space-between;
   align-items: center;
   background-color: ${(props) => props.teamColor};
-  padding: ${({ width }) => width * 0.04}px;
-  padding-top: ${({ width }) => width * 0.1}px;
+  height: 56px;
+  padding-horizontal: 16px;
+  padding-top: ${Platform.OS === 'web' ? '0px' : '${StatusBar.currentHeight}px'};
+  position: relative;
 `;
 
 const HeaderTitle = styled.Text<StyledProps>`
+  position: absolute;
+  left: 0;
+  right: 0;
   color: white;
-  font-size: ${({ width }) => width * 0.046}px;
+  font-size: 20px;
   font-weight: bold;
   font-family: ${({ theme }) => theme.fonts.bold};
+  text-align: center;
 `;
 
 const BackButton = styled.TouchableOpacity`
   padding: 8px;
+  z-index: 1;
 `;
 
 const Card = styled.View<StyledProps>`
@@ -148,6 +157,7 @@ const SummaryItem = styled.View`
 const SummaryLabel = styled.Text`
   font-size: 14px;
   color: #666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const SummaryValue = styled.Text<{ teamColor?: string; positive?: boolean }>`
@@ -155,6 +165,7 @@ const SummaryValue = styled.Text<{ teamColor?: string; positive?: boolean }>`
   font-weight: bold;
   color: ${(props) =>
     props.positive ? "#4CAF50" : props.teamColor ? props.teamColor : "#333"};
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const ChartContainer = styled.View`
@@ -187,6 +198,7 @@ const LegendColor = styled.View<{ color: string }>`
 const LegendText = styled.Text`
   font-size: 12px;
   color: #666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const TeamStatItem = styled.View`
@@ -200,12 +212,14 @@ const TeamStatItem = styled.View`
 const TeamStatLabel = styled.Text`
   font-size: 14px;
   color: #333;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const TeamStatValue = styled.Text<{ highlight?: boolean }>`
   font-size: 14px;
   font-weight: ${(props) => (props.highlight ? "bold" : "normal")};
   color: ${(props) => (props.highlight ? "#4CAF50" : "#333")};
+  font-family: ${(props) => props.highlight ? props.theme.fonts.bold : props.theme.fonts.regular};
 `;
 
 const NewsItem = styled.TouchableOpacity`
@@ -219,11 +233,13 @@ const NewsTitle = styled.Text`
   font-weight: bold;
   color: #333;
   margin-bottom: 4px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const NewsDate = styled.Text`
   font-size: 12px;
   color: #999;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 // -----------------------------
 
@@ -262,7 +278,12 @@ const BarChartFallback = ({
               key={index}
               style={{ alignItems: "center", flex: 1, marginHorizontal: 2 }}
             >
-              <Text style={{ fontSize: 10, color: "#999", marginBottom: 2 }}>
+              <Text style={{ 
+                fontSize: 10, 
+                color: "#999", 
+                marginBottom: 2,
+                fontFamily: theme.fonts.regular 
+              }}>
                 {value.toLocaleString()}원
               </Text>
               <View
@@ -274,7 +295,12 @@ const BarChartFallback = ({
                   borderTopRightRadius: 4,
                 }}
               />
-              <Text style={{ marginTop: 5, fontSize: 12, color: "#666" }}>
+              <Text style={{ 
+                marginTop: 5, 
+                fontSize: 12, 
+                color: "#666",
+                fontFamily: theme.fonts.regular 
+              }}>
                 {label}
               </Text>
             </View>
@@ -302,7 +328,12 @@ const CustomDonutChart = ({
   return (
     <View style={{ width: width * 0.85, alignItems: "center" }}>
       <View style={{ marginBottom: 20, alignItems: "center" }}>
-        <Text style={{ fontSize: 16, fontWeight: "bold", color: "#333" }}>
+        <Text style={{ 
+          fontSize: 16, 
+          fontWeight: "bold", 
+          color: "#333",
+          fontFamily: theme.fonts.bold 
+        }}>
           적금 유형별 분석
         </Text>
       </View>
@@ -338,12 +369,20 @@ const CustomDonutChart = ({
                       marginRight: 6,
                     }}
                   />
-                  <Text style={{ fontWeight: "bold", color: "#333" }}>
+                  <Text style={{ 
+                    fontWeight: "bold", 
+                    color: "#333",
+                    fontFamily: theme.fonts.bold 
+                  }}>
                     {" "}
                     {item.name}{" "}
                   </Text>
                 </View>
-                <Text style={{ fontWeight: "bold", color: "#333" }}>
+                <Text style={{ 
+                  fontWeight: "bold", 
+                  color: "#333",
+                  fontFamily: theme.fonts.bold 
+                }}>
                   {" "}
                   {item.population}%{" "}
                 </Text>
@@ -371,6 +410,7 @@ const CustomDonutChart = ({
                   color: "#666",
                   alignSelf: "flex-end",
                   marginTop: 2,
+                  fontFamily: theme.fonts.regular
                 }}
               >
                 {amount.toLocaleString()}원
@@ -390,8 +430,16 @@ const CustomDonutChart = ({
           borderRadius: 8,
         }}
       >
-        <Text style={{ fontWeight: "bold", color: "#333" }}>총 적립액</Text>
-        <Text style={{ fontWeight: "bold", color: "#1E3A8A" }}>
+        <Text style={{ 
+          fontWeight: "bold", 
+          color: "#333",
+          fontFamily: theme.fonts.bold 
+        }}>총 적립액</Text>
+        <Text style={{ 
+          fontWeight: "bold", 
+          color: "#1E3A8A",
+          fontFamily: theme.fonts.bold 
+        }}>
           {totalAmount.toLocaleString()}원
         </Text>
       </View>
@@ -505,9 +553,6 @@ const WeeklyReportScreen = ({ navigation }: { navigation: NavigationProps }) => 
       <MobileContainer width={width}>
         <StatusBar style="light" />
         <Header width={width} teamColor={teamColor.primary}>
-          <BackButton onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </BackButton>
           <HeaderTitle width={width}>리포트</HeaderTitle>
           <View style={{ width: 24 }} />
         </Header>
@@ -623,11 +668,15 @@ const WeeklyReportScreen = ({ navigation }: { navigation: NavigationProps }) => 
               <CardContent width={width}>
                 {isLoading ? (
                   <View style={{ padding: 20, alignItems: "center" }}>
-                    <Text>뉴스 데이터 로딩 중...</Text>
+                    <Text style={{ fontFamily: theme.fonts.regular }}>
+                      뉴스 데이터 로딩 중...
+                    </Text>
                   </View>
                 ) : error ? (
                   <View style={{ padding: 20, alignItems: "center" }}>
-                    <Text>뉴스 데이터 로딩 실패</Text>
+                    <Text style={{ fontFamily: theme.fonts.regular }}>
+                      뉴스 데이터 로딩 실패
+                    </Text>
                   </View>
                 ) : weeklyData?.NEWS_SUMMATION ? (
                   weeklyData.NEWS_SUMMATION.split('\n')
@@ -639,7 +688,9 @@ const WeeklyReportScreen = ({ navigation }: { navigation: NavigationProps }) => 
                     ))
                 ) : (
                   <View style={{ padding: 20, alignItems: "center" }}>
-                    <Text>이번 주 뉴스 요약이 없습니다.</Text>
+                    <Text style={{ fontFamily: theme.fonts.regular }}>
+                      이번 주 뉴스 요약이 없습니다.
+                    </Text>
                   </View>
                 )}
               </CardContent>

@@ -166,6 +166,7 @@ const HeaderTitle = styled.Text`
   font-weight: 600;
   color: #1A1A1A;
   margin-left: -4px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const ContentContainer = styled.View`
@@ -203,11 +204,13 @@ const AccountType = styled.Text`
   font-weight: 600;
   margin-bottom: 4px;
   color: #1a1a1a;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const AccountNumber = styled.Text`
   color: #666;
   font-size: 14px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const BalanceSection = styled.View`
@@ -222,11 +225,13 @@ const Balance = styled.Text`
   font-weight: bold;
   color: #1a1a1a;
   margin-bottom: 6px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const BalanceLabel = styled.Text`
   font-size: 13px;
   color: #666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const TransactionList = styled.ScrollView`
@@ -251,12 +256,14 @@ const TransactionLeftSection = styled.View`
 const DateText = styled.Text`
   font-size: 14px;
   color: #666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const MerchantName = styled.Text`
   font-size: 16px;
   font-weight: 600;
   color: #1a1a1a;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const AmountInfo = styled.View`
@@ -268,11 +275,13 @@ const AmountText = styled.Text<{ isDeposit: boolean }>`
   font-size: 16px;
   font-weight: 600;
   color: ${({ isDeposit }) => isDeposit ? '#00B050' : '#FF3B30'};
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const TotalAmount = styled.Text`
   font-size: 14px;
   color: #666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 export default History;
