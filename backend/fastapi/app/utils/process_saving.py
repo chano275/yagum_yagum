@@ -543,7 +543,7 @@ def process_savings_for_date(game_date=None, session=None):
                 DATE=game_date,
                 AMOUNT=total_amount,
                 created_at=datetime.now(),
-                TEXT="야금야금!"
+                TEXT="출금예정!!"
             )
             session.add(daily_transfer)
         
