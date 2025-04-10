@@ -1,0 +1,7 @@
+pandas==2.2.3
+protobuf==6.30.2
+python-dotenv==1.1.0
+selenium==4.31.0
+torch==2.6.0
+transformers==4.50.0
+webdriver_manager==4.0.2

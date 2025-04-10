@@ -1,0 +1,53 @@
+{
+  "accounts": {
+    "1": {
+      "our_team": "SSG 랜더스",
+      "opposing_team": "KT 위즈",
+      "favorite_player": "박성한",
+      "saving_goal": 100000,
+      "savings_rules": {
+        "우리팀_승리": 3000,
+        "우리팀_안타": 500,
+        "우리팀_홈런": 1000,
+        "선수_안타": 500,
+        "선수_홈런": 3000
+      },
+      "game_results": {
+        "우리팀_승리": 0,
+        "우리팀_안타": 0,
+        "우리팀_홈런": 0,
+        "선수_안타": 0,
+        "선수_홈런": 0
+      },
+      "original_outcome": 0,
+      "real_outcome": 0,
+      "news_highlights": [
+        "SSG, 한유섬 홈런과 문승원 호투로 키움에 8-2 승리하며 2연패 탈출",
+        "문승원, 541일 만의 선발승으로 SSG 연패 끊고 성공적인 복귀",
+        "한유섬, 시즌 첫 홈런으로 팀 승리 기여하며 동료들에게 격려 메시지 전달"
+      ]
+    },
+    "2": {
+      "our_team": "KIA 타이거즈",
+      "opposing_team": "LG 트윈스",
+      "favorite_player": "김도영",
+      "saving_goal": 500000,
+      "savings_rules": {
+        "우리팀_승리": 500
+      },
+      "game_results": {
+        "우리팀_승리": 0
+      },
+      "original_outcome": 0,
+      "real_outcome": 0,
+      "news_highlights": [
+        "KIA 위즈덤, 3경기 연속 홈런으로 팀 연패 탈출에 기여하며 류현진 무너뜨려",
+        "KIA 조상우, 구속과 구위 향상 다짐하며 팀 불펜진 강화에 힘쓸 것을 약속",
+        "KIA 김규성, 주전 유격수 공백을 메우며 남다른 노력으로 기회를 잡아"
+      ]
+    }
+  },
+  "date": "2025-04-05",
+  "total_accounts": 2,
+  "accounts_with_games": 2
+}
