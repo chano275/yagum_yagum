@@ -51,6 +51,9 @@ interface Rule {
   is_active: boolean;
 }
 
+// 간소화된 경기 상태 타입 추가
+type GameStatus = "win" | "lose" | "draw" | "cancelled" | "upcoming";
+
 // 거래 내역 아이템 타입
 interface TransactionItem {
   id: string;
@@ -59,6 +62,24 @@ interface TransactionItem {
   description: string;
   amount: number;
   wins: number;
+  result: string; // 승패 결과 텍스트 (승, 패, 무, 취소, 경기전)
+  status: GameStatus; // 결과 상태 (win, lose, draw, cancelled, upcoming)
+}
+
+// 우대금리 정보 인터페이스 추가
+interface InterestDetails {
+  base_interest_rate: number;
+  mission_interest_rate: number;
+  total_interest_rate: number;
+  total_mission_rate: number;
+  mission_details: {
+    mission_id: number;
+    mission_name: string;
+    mission_rate: number;
+    current_count: number;
+    max_count: number;
+    is_completed: boolean;
+  }[];
 }
 
 type MainPageNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -145,6 +166,16 @@ const ProgressSection = styled.View<StyledProps & { teamColor: string }>`
   background-color: ${(props) => props.teamColor};
   padding: ${({ width }) => width * 0.04}px;
   padding-top: ${({ width }) => width * 0.02}px;
+`;
+const ProgressTitleContainer = styled.View<StyledProps>`
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: ${({ width }) => width * 0.01}px;
+`;
+const ProgressTitleLogo = styled.Image<StyledProps>`
+  width: ${({ width }) => width * 0.06}px;
+  height: ${({ width }) => width * 0.06}px;
+  margin-right: ${({ width }) => width * 0.02}px;
 `;
 const ProgressTitle = styled.Text<StyledProps>`
   color: white;
@@ -271,19 +302,42 @@ const HistoryItem = styled.View<StyledProps>`
   flex-direction: row;
   align-items: center;
   margin-bottom: ${({ width }) => width * 0.02}px;
+  padding: ${({ width }) => width * 0.01}px 0;
 `;
 const TeamLogo = styled.Image<StyledProps>`
   width: ${({ width }) => width * 0.06}px;
   height: ${({ width }) => width * 0.06}px;
-  margin-right: ${({ width }) => width * 0.02}px;
+  margin-right: ${({ width }) => width * 0.015}px;
+  margin-left: ${({ width }) => width * 0.0}px;
 `;
-const HistoryText = styled.Text<StyledProps>`
-  flex: 1;
+const HistoryDate = styled.Text<StyledProps>`
   font-size: ${({ width }) => width * 0.035}px;
-  color: #333;
+  color: #666;
+  width: ${({ width }) => width * 0.08}px;
+  margin-right: ${({ width }) => width * 0.0}px;
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
-
+const ResultText = styled.Text<StyledProps & { status: GameStatus }>`
+  flex: 1;
+  font-size: ${({ width }) => width * 0.035}px;
+  color: ${({ status }) => {
+    switch (status) {
+      case 'win':
+        return '#4caf50'; // 초록색 (승리)
+      case 'lose':
+        return '#f44336'; // 빨간색 (패배)
+      case 'draw':
+        return '#9e9e9e'; // 회색 (무승부)
+      case 'cancelled':
+        return '#6c757d'; // 어두운 회색 (취소)
+      default:
+        return '#333';    // 기본값 (경기전)
+    }
+  }};
+  font-weight: ${({ status }) => status === 'win' ? 'bold' : 'normal'};
+  font-family: ${({ theme }) => theme.fonts.regular};
+  margin-left: ${({ width }) => width * 0.01}px;
+`;
 const HistoryAmount = styled.Text<StyledProps & { teamColor: string }>`
   font-size: ${({ width }) => width * 0.035}px;
   color: ${(props) => props.teamColor};
@@ -291,10 +345,13 @@ const HistoryAmount = styled.Text<StyledProps & { teamColor: string }>`
   font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
-const ScheduleItem = styled.View<StyledProps>`
+const ScheduleItem = styled.TouchableOpacity<StyledProps>`
   flex-direction: row;
+  justify-content: center;
   align-items: center;
-  margin-bottom: ${({ width }) => width * 0.02}px;
+  margin-bottom: ${({ width }) => width * 0.03}px;
+  margin-top: ${({ width }) => width * 0.01}px;
+  padding: ${({ width }) => width * 0.015}px 0;
 `;
 const ScheduleDate = styled.Text<StyledProps>`
   width: ${({ width }) => width * 0.1}px;
@@ -302,17 +359,32 @@ const ScheduleDate = styled.Text<StyledProps>`
   color: #333;
   font-family: ${({ theme }) => theme.fonts.regular};
 `;
-const ScheduleTeam = styled.Text<StyledProps>`
-  flex: 1;
-  font-size: ${({ width }) => width * 0.035}px;
-  color: #333;
-  font-family: ${({ theme }) => theme.fonts.regular};
+
+// vs 텍스트 추가
+const VsText = styled.Text<StyledProps>`
+  font-size: ${({ width }) => width * 0.03}px;
+  color: #666;
+  margin-right: ${({ width }) => width * 0.01}px;
 `;
 
+// 팀 로고 컨테이너
+const TeamContainer = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+`;
+
+// 팀 로고 이미지
+const TeamLogoImage = styled.Image<StyledProps>`
+  width: ${({ width }) => width * 0.06}px;
+  height: ${({ width }) => width * 0.06}px;
+`;
 const ScheduleTime = styled.Text<StyledProps>`
   font-size: ${({ width }) => width * 0.035}px;
   color: #666;
   font-family: ${({ theme }) => theme.fonts.regular};
+  margin-left: 2px;
 `;
 
 // 캐러셀 관련 새로운 스타일 컴포넌트
@@ -367,6 +439,33 @@ interface RuleItem {
   rules: string[];
 }
 
+// 세로 구분선 컴포넌트 추가
+const VerticalDivider = styled.View<StyledProps>`
+  width: 1px;
+  background-color: #EEEEEE;
+  height: 100%;
+  margin: 0 ${({ width }) => width * 0.02}px;
+`;
+
+// 일정 컨테이너 스타일 추가
+const SchedulesContainer = styled.View`
+  flex-direction: row;
+  width: 100%;
+  justify-content: center;
+`;
+
+// 일정 열 컨테이너 스타일 추가
+const SchedulesColumn = styled.View`
+  flex: 1;
+`;
+
+// 이미 존재하는 HistoryLeftGroup을 활용하여 날짜, 로고, 결과 그룹화
+const HistoryLeftGroup = styled.View`
+  flex-direction: row;
+  align-items: center;
+  flex: 1;
+`;
+
 const MainPage = () => {
   const tabNavigation = useNavigation<TabNavigationProp>();
   const stackNavigation = useNavigation<MainPageNavigationProp>();
@@ -413,10 +512,14 @@ const MainPage = () => {
   const [dailyReportError, setDailyReportError] = useState<Error | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<TransactionItem[]>([]);
   const [isRecentTransactionsLoading, setIsRecentTransactionsLoading] = useState<boolean>(true);
+  // 우대금리 정보 상태 추가
+  const [interestDetails, setInterestDetails] = useState<InterestDetails | null>(null);
+  const [isInterestLoading, setIsInterestLoading] = useState<boolean>(true);
 
   // 계좌 정보 조회 - useAccountStore 사용
   useEffect(() => {
     fetchAccountInfo();
+    fetchInterestDetails();
   }, []);
   // 팀 ID 가져오기 함수
   const getTeamIdByName = (name: string | undefined): number => {
@@ -528,7 +631,7 @@ const MainPage = () => {
             .sort((a: GameSchedule, b: GameSchedule) => {
               return new Date(a.DATE).getTime() - new Date(b.DATE).getTime();
             })
-            .slice(0, 3); // 다음 3개 경기만 선택
+            .slice(0, 6); // 다음 6개 경기만 선택
 
           setGameSchedules(filteredGames);
         } else {
@@ -731,7 +834,7 @@ const MainPage = () => {
     return logoMap[teamName] || teamLogos.NC; // 매칭 실패 시 NC 로고를 기본값으로 사용
   };
 
-  // 최근 거래 내역 가져오기
+  // 최근 거래 내역 가져오기 함수 수정
   const fetchRecentTransactions = async () => {
     try {
       setIsRecentTransactionsLoading(true);
@@ -741,10 +844,14 @@ const MainPage = () => {
       
       // 경기 결과 API를 호출하여 상대팀 정보 가져오기
       const resultsResponse = await api.get('/api/game/user-team-results');
+      console.log("경기 결과 API 응답:", resultsResponse.data);
+      
       const gameResults = resultsResponse.data.reduce((acc: { [key: string]: any }, result: any) => {
         acc[result.game_date] = result;
         return acc;
       }, {});
+      
+      console.log("거래 내역 API 응답:", response.data);
       
       // API 응답을 TransactionItem 형식으로 변환하고 최근 3개만 선택
       const transactions: TransactionItem[] = response.data
@@ -752,9 +859,39 @@ const MainPage = () => {
           const dateObj = new Date(item.DATE);
           const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
           
-          // 해당 날짜의 경기 결과에서 상대팀 정보 가져오기
+          // 해당 날짜의 경기 결과에서 상대팀 정보와 승패 결과 가져오기
           const gameResult = gameResults[item.DATE];
+          console.log(`${item.DATE} 날짜의 경기 결과:`, gameResult);
+          
           const opponentTeamName = gameResult?.opponent_team_name || "";
+          
+          // 경기 결과 상태 결정
+          let status: GameStatus = "upcoming";
+          
+          if (gameResult) {
+            // API 응답의 result 값에 따라 상태 결정
+            const result = gameResult.result?.toString().toLowerCase() || "";
+            
+            if (result.includes("win") || result.includes("승리")) {
+              status = "win";
+            } else if (result.includes("los") || result.includes("패배")) {
+              status = "lose";
+            } else if (result.includes("draw") || result.includes("tie") || result.includes("무승부")) {
+              status = "draw";
+            } else if (result.includes("cancel") || result.includes("취소")) {
+              status = "cancelled";
+            }
+          }
+          
+          // 한국어 결과 텍스트
+          let resultText: string;
+          switch (status) {
+            case "win": resultText = "승"; break;
+            case "lose": resultText = "패"; break;
+            case "draw": resultText = "무"; break;
+            case "cancelled": resultText = "취소"; break;
+            default: resultText = "경기전"; break;
+          }
           
           return {
             id: item.DATE,
@@ -762,17 +899,34 @@ const MainPage = () => {
             date: formattedDate,
             description: item.TEXT,
             amount: item.AMOUNT,
-            wins: 1
+            wins: 1,
+            result: resultText,
+            status: status
           };
         })
         .slice(0, 3); // 최근 3개만 선택
       
+      console.log("변환된 거래 내역:", transactions);
       setRecentTransactions(transactions);
     } catch (error) {
       console.error("최근 거래 내역 조회 실패:", error);
       setRecentTransactions([]);
     } finally {
       setIsRecentTransactionsLoading(false);
+    }
+  };
+
+  // 우대금리 정보 가져오기 함수 추가
+  const fetchInterestDetails = async () => {
+    try {
+      setIsInterestLoading(true);
+      const response = await api.get('/api/account/interest-details');
+      console.log('우대금리 정보:', response.data);
+      setInterestDetails(response.data);
+    } catch (error) {
+      console.error('우대금리 정보 가져오기 오류:', error);
+    } finally {
+      setIsInterestLoading(false);
     }
   };
 
@@ -792,12 +946,19 @@ const MainPage = () => {
         // 계좌 데이터 설정
         setTargetAmount(account.saving_goal || 0);
         setCurrentAmount(account.total_amount || 0);
-        setInterestRate(account.interest_rate || 2.5);
-
-        // 추가 금리 계산 (기본 금리 기준)
-        const baseRate = 2.5; // 기본 금리
-        const additional = account.interest_rate - baseRate;
-        setAdditionalRate(additional > 0 ? additional : 0);
+        
+        // 우대금리 정보가 있을 경우 사용, 없으면 계좌 금리 사용
+        if (interestDetails) {
+          setInterestRate(interestDetails.base_interest_rate || 2.5);
+          setAdditionalRate(interestDetails.mission_interest_rate || 0);
+        } else {
+          setInterestRate(account.interest_rate || 2.5);
+          
+          // 추가 금리 계산 (기본 금리 기준)
+          const baseRate = 2.5; // 기본 금리 
+          const additional = account.interest_rate - baseRate;
+          setAdditionalRate(additional > 0 ? additional : 0);
+        }
 
         // 목표 제목 설정 (간단한 예시)
         setSavingTitle(`${account.team_name || teamName} 적금`);
@@ -865,7 +1026,7 @@ const MainPage = () => {
       }
     };
     updateAccountData();
-  }, [accountInfo]);
+  }, [accountInfo, interestDetails]);
 
   const percentage = Math.min(
     100,
@@ -937,10 +1098,7 @@ const MainPage = () => {
             <Ionicons name="arrow-back" size={24} color="white" />
           </BackButton>
           <HeaderTitle width={width}>
-            야금야금 -{" "}
-            {accountInfo?.savings_accounts?.[0]?.team_name ||
-              teamName ||
-              "팀 정보가 불러와지지 않았습니다."}
+            야금야금
           </HeaderTitle>
           <View style={{ width: 40 }} />
         </Header>
@@ -976,10 +1134,16 @@ const MainPage = () => {
             ) : (
               <>
             <ProgressSection width={width} teamColor={teamColor.primary}>
-              <ProgressTitle width={width}>{savingTitle}</ProgressTitle>
+              <ProgressTitleContainer width={width}>
+                <ProgressTitleLogo
+                  width={width}
+                  source={getTeamLogo(accountInfo?.savings_accounts?.[0]?.team_name || teamName || "NC")}
+                  resizeMode="contain"
+                />
+                <ProgressTitle width={width}>{savingTitle}</ProgressTitle>
+              </ProgressTitleContainer>
               <ProgressAmount width={width}>
-                    {formatAmount(currentAmount)}원 /{" "}
-                    {formatAmount(targetAmount)}원
+                {formatAmount(currentAmount)}원 / {formatAmount(targetAmount)}원
               </ProgressAmount>
               <ProgressBarContainer width={width}>
                 <ProgressFill percentage={percentage} />
@@ -1097,15 +1261,23 @@ const MainPage = () => {
                       ) : recentTransactions.length > 0 ? (
                         recentTransactions.map((transaction) => (
                           <HistoryItem key={transaction.id} width={width}>
-                    <TeamLogo
-                      width={width}
-                              source={getTeamLogo(transaction.opponent)}
-                    />
-                            <HistoryText width={width}>{transaction.description}</HistoryText>
-                    <HistoryAmount width={width} teamColor={teamColor.primary}>
+                            <HistoryLeftGroup>
+                              <HistoryDate width={width}>{transaction.date}</HistoryDate>
+                              <TeamLogo
+                                width={width}
+                                source={getTeamLogo(transaction.opponent)}
+                              />
+                              <ResultText 
+                                width={width} 
+                                status={transaction.status}
+                              >
+                                {transaction.result}
+                              </ResultText>
+                            </HistoryLeftGroup>
+                            <HistoryAmount width={width} teamColor={teamColor.primary}>
                               +{transaction.amount.toLocaleString()}원
-                    </HistoryAmount>
-                  </HistoryItem>
+                            </HistoryAmount>
+                          </HistoryItem>
                         ))
                       ) : (
                         <View style={{ padding: 10, alignItems: "center" }}>
@@ -1115,35 +1287,39 @@ const MainPage = () => {
                 </CardContent>
               </Card>
 
+              {/* 다음 경기 일정 카드 */}
               <Card width={width}>
                 <CardHeader width={width}>
-                      <CardTitle width={width}>다음 경기 일정</CardTitle>
+                  <CardTitle width={width}>다음 경기 일정</CardTitle>
                   <TouchableOpacity
                     onPress={() => {
-                          tabNavigation.navigate("적금내역", {
-                            viewMode: "calendar",
+                      tabNavigation.navigate("적금내역", {
+                        viewMode: "calendar",
                       });
                     }}
                   >
-                        <ViewAllLink
-                          width={width}
-                          teamColor={teamColor.primary}
-                        >
+                    <ViewAllLink
+                      width={width}
+                      teamColor={teamColor.primary}
+                    >
                       전체 일정 &gt;
                     </ViewAllLink>
                   </TouchableOpacity>
                 </CardHeader>
                 <CardContent width={width}>
-                      {isScheduleLoading ? (
-                        <View style={{ padding: 10, alignItems: "center" }}>
-                          <Text>경기 일정 로딩 중...</Text>
-                        </View>
-                      ) : scheduleError ? (
-                        <View style={{ padding: 10, alignItems: "center" }}>
-                          <Text>경기 일정을 불러오는데 실패했습니다.</Text>
-                        </View>
-                      ) : gameSchedules.length > 0 ? (
-                        gameSchedules.map((game) => {
+                  {isScheduleLoading ? (
+                    <View style={{ padding: 10, alignItems: "center" }}>
+                      <Text>경기 일정 로딩 중...</Text>
+                    </View>
+                  ) : scheduleError ? (
+                    <View style={{ padding: 10, alignItems: "center" }}>
+                      <Text>경기 일정을 불러오는데 실패했습니다.</Text>
+                    </View>
+                  ) : gameSchedules.length > 0 ? (
+                    <SchedulesContainer>
+                      {/* 왼쪽 3개 경기 */}
+                      <SchedulesColumn>
+                        {gameSchedules.slice(0, 3).map((game) => {
                           const isHomeGame =
                             game.HOME_TEAM_ID === getTeamIdByName(teamName);
                           const opponentTeam = isHomeGame
@@ -1158,24 +1334,81 @@ const MainPage = () => {
                             <ScheduleItem
                               key={game.GAME_SCHEDULE_KEY}
                               width={width}
+                              onPress={() => {
+                                tabNavigation.navigate("적금내역", {
+                                  viewMode: "calendar",
+                                });
+                              }}
                             >
                               <ScheduleDate
                                 width={width}
                               >{`${month}/${day}`}</ScheduleDate>
-                              <ScheduleTeam
-                                width={width}
-                              >{`vs ${opponentTeam}`}</ScheduleTeam>
-                              <ScheduleTime width={width}>
-                                {location}
-                              </ScheduleTime>
+                              <TeamContainer>
+                                <VsText width={width}>vs</VsText>
+                                <TeamLogoImage 
+                                  width={width}
+                                  source={getTeamLogo(opponentTeam)}
+                                  resizeMode="contain"
+                                />
+                                <ScheduleTime width={width}>
+                                  {location}
+                                </ScheduleTime>
+                              </TeamContainer>
                             </ScheduleItem>
                           );
-                        })
-                      ) : (
-                        <View style={{ padding: 10, alignItems: "center" }}>
-                          <Text>표시할 경기 일정이 없습니다.</Text>
-                        </View>
-                      )}
+                        })}
+                      </SchedulesColumn>
+                      
+                      {/* 세로 구분선 */}
+                      <VerticalDivider width={width} />
+                      
+                      {/* 오른쪽 3개 경기 */}
+                      <SchedulesColumn>
+                        {gameSchedules.slice(3, 6).map((game) => {
+                          const isHomeGame =
+                            game.HOME_TEAM_ID === getTeamIdByName(teamName);
+                          const opponentTeam = isHomeGame
+                            ? game.away_team_name
+                            : game.home_team_name;
+                          const gameDate = new Date(game.DATE);
+                          const month = gameDate.getMonth() + 1;
+                          const day = gameDate.getDate();
+                          const location = isHomeGame ? "홈" : "원정";
+
+                          return (
+                            <ScheduleItem
+                              key={game.GAME_SCHEDULE_KEY}
+                              width={width}
+                              onPress={() => {
+                                tabNavigation.navigate("적금내역", {
+                                  viewMode: "calendar",
+                                });
+                              }}
+                            >
+                              <ScheduleDate
+                                width={width}
+                              >{`${month}/${day}`}</ScheduleDate>
+                              <TeamContainer>
+                                <VsText width={width}>vs</VsText>
+                                <TeamLogoImage 
+                                  width={width}
+                                  source={getTeamLogo(opponentTeam)}
+                                  resizeMode="contain"
+                                />
+                                <ScheduleTime width={width}>
+                                  {location}
+                                </ScheduleTime>
+                              </TeamContainer>
+                            </ScheduleItem>
+                          );
+                        })}
+                      </SchedulesColumn>
+                    </SchedulesContainer>
+                  ) : (
+                    <View style={{ padding: 10, alignItems: "center" }}>
+                      <Text>표시할 경기 일정이 없습니다.</Text>
+                    </View>
+                  )}
                 </CardContent>
               </Card>
             </View>
@@ -1189,3 +1422,5 @@ const MainPage = () => {
 };
 
 export default MainPage;
+
+

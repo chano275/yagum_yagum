@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View } from 'react-native';
 import styled from 'styled-components/native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -158,8 +158,8 @@ const CompletionScreen = () => {
   const { teamColor } = useTeam();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  // 팀 색상의 파스텔 버전 생성
-  const getPastelColor = (hexColor: string) => {
+  // 팀 색상의 파스텔 버전 생성 - useMemo로 최적화
+  const getPastelColor = useCallback((hexColor: string) => {
     // hex to rgb
     const r = parseInt(hexColor.slice(1, 3), 16);
     const g = parseInt(hexColor.slice(3, 5), 16);
@@ -175,9 +175,38 @@ const CompletionScreen = () => {
       Math.round(pastelR).toString(16).padStart(2, '0') +
       Math.round(pastelG).toString(16).padStart(2, '0') +
       Math.round(pastelB).toString(16).padStart(2, '0');
-  };
+  }, []);
 
-  const pastelTeamColor = getPastelColor(teamColor.primary);
+  const pastelTeamColor = useMemo(() => getPastelColor(teamColor.primary), [teamColor.primary, getPastelColor]);
+  
+  // 메인 페이지로 이동하는 핸들러 함수 - 로딩 없이 즉시 이동
+  const handleNavigateToMain = useCallback(() => {
+    navigation.navigate('Main');
+  }, [navigation]);
+  
+  // Matchrank 페이지로 이동하는 핸들러
+  const handleNavigateToMatchrank = useCallback(() => {
+    navigation.navigate('Matchrank');
+  }, [navigation]);
+  
+  // 팀 로고 선택 로직을 useMemo로 최적화
+  const teamLogoSource = useMemo(() => {
+    if (!joinData.selectedTeam?.name) return null;
+    
+    switch(joinData.selectedTeam.name) {
+      case 'KIA 타이거즈': return require('../../assets/kbo/tigers.png');
+      case '삼성 라이온즈': return require('../../assets/kbo/lions.png');
+      case 'LG 트윈스': return require('../../assets/kbo/twins.png');
+      case '두산 베어스': return require('../../assets/kbo/bears.png');
+      case 'KT 위즈': return require('../../assets/kbo/wiz.png');
+      case 'SSG 랜더스': return require('../../assets/kbo/landers.png');
+      case '롯데 자이언츠': return require('../../assets/kbo/giants.png');
+      case '한화 이글스': return require('../../assets/kbo/eagles.png');
+      case 'NC 다이노스': return require('../../assets/kbo/dinos.png');
+      case '키움 히어로즈': return require('../../assets/kbo/heroes.png');
+      default: return null;
+    }
+  }, [joinData.selectedTeam?.name]);
 
   return (
     <AppWrapper>
@@ -209,29 +238,23 @@ const CompletionScreen = () => {
         <Banner backgroundColor={`${teamColor.primary}15`}>
           <BannerContent>
             <BannerTitle>우리 팀 순위를 맞추면 우대금리를 드려요!</BannerTitle>
-            <PredictButton color={teamColor.primary}>
+            <PredictButton 
+              color={teamColor.primary}
+              onPress={handleNavigateToMatchrank}
+            >
               <PredictButtonText>순위 예측 바로가기</PredictButtonText>
             </PredictButton>
           </BannerContent>
           <TeamLogo 
-            source={
-              joinData.selectedTeam?.name === 'KIA 타이거즈' ? require('../../assets/kbo/tigers.png') :
-              joinData.selectedTeam?.name === '삼성 라이온즈' ? require('../../assets/kbo/lions.png') :
-              joinData.selectedTeam?.name === 'LG 트윈스' ? require('../../assets/kbo/twins.png') :
-              joinData.selectedTeam?.name === '두산 베어스' ? require('../../assets/kbo/bears.png') :
-              joinData.selectedTeam?.name === 'KT 위즈' ? require('../../assets/kbo/wiz.png') :
-              joinData.selectedTeam?.name === 'SSG 랜더스' ? require('../../assets/kbo/landers.png') :
-              joinData.selectedTeam?.name === '롯데 자이언츠' ? require('../../assets/kbo/giants.png') :
-              joinData.selectedTeam?.name === '한화 이글스' ? require('../../assets/kbo/eagles.png') :
-              joinData.selectedTeam?.name === 'NC 다이노스' ? require('../../assets/kbo/dinos.png') :
-              joinData.selectedTeam?.name === '키움 히어로즈' ? require('../../assets/kbo/heroes.png') :
-              null
-            }
+            source={teamLogoSource}
             resizeMode="contain"
           />
         </Banner>
 
-        <Button color={teamColor.primary} onPress={() => navigation.navigate('Main')}>
+        <Button 
+          color={teamColor.primary} 
+          onPress={handleNavigateToMain}
+        >
           <ButtonText>완료</ButtonText>
         </Button>
       </BottomContainer>
@@ -239,4 +262,4 @@ const CompletionScreen = () => {
   );
 };
 
-export default CompletionScreen; 
+export default React.memo(CompletionScreen); 

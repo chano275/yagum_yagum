@@ -25,6 +25,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 import axios from "axios";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
@@ -333,15 +334,33 @@ const LoadingText = styled.Text`
 `;
 
 const ErrorContainer = styled.View`
-  padding: 20px;
+  padding: 16px;
+  margin: 16px 0;
+  background-color: #FFF2F2;
+  border: 1px solid #FFCACA;
+  border-radius: 8px;
   align-items: center;
 `;
 
 const ErrorText = styled.Text`
   font-size: 14px;
-  color: #ff4444;
+  color: #D33A3A;
   text-align: center;
-  margin-top: 8px;
+  line-height: 20px;
+`;
+
+const RetryButton = styled.TouchableOpacity`
+  margin-top: 12px;
+  padding: 8px 16px;
+  background-color: #F8F8F8;
+  border-radius: 6px;
+  border: 1px solid #E0E0E0;
+`;
+
+const RetryButtonText = styled.Text`
+  font-size: 14px;
+  color: #333333;
+  font-weight: 500;
 `;
 
 const AnimatedSection = styled(Animated.View)`
@@ -513,10 +532,11 @@ const AccountSelectScreen = () => {
         // 규칙 ID 매핑을 적용
         applyRuleIdMapping();
         
-        // API 호출용 데이터 가져오기 (setTimeout 제거)
+        // API 호출용 데이터 가져오기
         const requestData = getDBData();
         
         if (!requestData) {
+          setIsSubmitting(false);
           setSubmitError('가입 정보가 완전하지 않습니다. 처음부터 다시 시도해주세요.');
           return;
         }
@@ -527,39 +547,41 @@ const AccountSelectScreen = () => {
           'Authorization': `Bearer ${token}`
         };
         
-        // API 호출 - 타임아웃 값 추가
+        // API 호출
         console.log("API 기본 URL: http://localhost:8000");
         console.log("API 요청 데이터:", JSON.stringify(requestData, null, 2));
         
         const response = await axios.post(
-          // `http://localhost:8000/api/account/create`
-          `http://3.38.183.156:8000/api/account/create`
-          , 
+          `http://localhost:8000/api/account/create`,
+          // `http://3.38.183.156:8000/api/account/create`,
           requestData,
           { 
             headers,
-            timeout: 10000 // 타임아웃 값을 10초로 설정
+            timeout: 15000
           }
         );
         
         console.log("API 응답:", response.data);
         
-        // 성공적으로 처리됐다면 Completion 화면으로 이동
+        // API 호출 성공 시 로딩 표시 제거하고 완료 화면으로 이동
+        setIsSubmitting(false);
         navigation.navigate("Completion");
+        
       } catch (error) {
         console.error("적금 가입 중 오류:", error);
-        // axios 에러 처리
-        if (axios.isAxiosError(error)) {
-          console.error('에러 응답:', error.response?.data);
-          console.error('에러 상태:', error.response?.status);
-          console.error('에러 헤더:', error.response?.headers);
-          const errorMessage = error.response?.data?.detail || '서버 오류가 발생했습니다.';
-          setSubmitError(`오류(${error.response?.status || '알 수 없음'}): ${errorMessage}`);
-        } else {
-          setSubmitError('알 수 없는 오류가 발생했습니다.');
-        }
-      } finally {
+        
+        // 오류 발생 시 로딩 표시 제거
         setIsSubmitting(false);
+        
+        // axios 에러인 경우 에러 메시지 설정
+        if (axios.isAxiosError(error) && error.response) {
+          const errorMessage = error.response.data?.message || 
+                             error.response.data?.error || 
+                             '서버에서 오류가 발생했습니다.';
+          setSubmitError(`적금 가입 처리 중 오류가 발생했습니다: ${errorMessage}`);
+        } else {
+          setSubmitError('서버 연결에 실패했습니다. 네트워크 상태를 확인하고 다시 시도해주세요.');
+        }
       }
     }
   };
@@ -732,19 +754,15 @@ const AccountSelectScreen = () => {
   };
 
   const renderSubmitStatus = () => {
-    if (isSubmitting) {
-      return (
-        <LoadingContainer>
-          <ActivityIndicator size="large" color={teamColor.primary} />
-          <LoadingText>적금 가입 처리 중입니다...</LoadingText>
-        </LoadingContainer>
-      );
-    }
-    
     if (submitError) {
       return (
         <ErrorContainer>
           <ErrorText>{submitError}</ErrorText>
+          <RetryButton onPress={() => {
+            setSubmitError(null);
+          }}>
+            <RetryButtonText>다시 시도하기</RetryButtonText>
+          </RetryButton>
         </ErrorContainer>
       );
     }
@@ -755,7 +773,7 @@ const AccountSelectScreen = () => {
   return (
     <AppWrapper>
       <MobileContainer insetsTop={insets.top}>
-        <StatusBar style="dark-content" />
+        <ExpoStatusBar style="dark" />
         <Header
           title="적금 가입"
           step={4}
@@ -861,9 +879,13 @@ const AccountSelectScreen = () => {
             disabled={!canProceed || isSubmitting}
             onPress={handleSubmit}
           >
-            <SelectButtonText disabled={!canProceed || isSubmitting}>
-              {isSubmitting ? "처리 중..." : "선택"}
-            </SelectButtonText>
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <SelectButtonText disabled={!canProceed || isSubmitting}>
+                선택
+              </SelectButtonText>
+            )}
           </SelectButton>
         </BottomSection>
       </MobileContainer>

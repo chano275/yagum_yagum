@@ -37,6 +37,8 @@ interface TransactionDetailResponse {
   unit_amount: number;
   DAILY_SAVING_AMOUNT: number;
   opponent_team_name?: string;  // 상대팀 정보 추가
+  TEXT?: string;  // 설명 텍스트 추가
+  SAVING_RULE_TYPE_ID?: number; // 규칙 타입 ID
 }
 
 // 화면에 표시할 데이터 타입
@@ -45,7 +47,20 @@ interface TransactionDetail extends TransactionDetailResponse {
     name: string;
     count: number;
     amount: number;
+    ruleType?: string; // 규칙 타입 추가
   }[];
+  // 규칙 타입별로 그룹화된 데이터
+  recordsByType: {
+    [key: string]: {
+      typeName: string;
+      records: {
+        name: string;
+        count: number;
+        amount: number;
+      }[];
+      totalAmount: number;
+    }
+  };
 }
 
 // 기본 컴포넌트 스타일
@@ -136,14 +151,14 @@ const AmountText = styled.Text`
 `;
 
 const RecordList = styled.View`
-  padding: 16px;
+  padding: 0;
 `;
 
 const RecordItem = styled.View`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
+  padding: 12px 16px;
   border-bottom-width: 1px;
   border-bottom-color: #f0f0f0;
 `;
@@ -207,6 +222,37 @@ const SuccessText = styled.Text`
   font-size: 14px;
   color: #333333;
   flex: 1;
+`;
+
+const DescriptionContainer = styled.View`
+  padding: 16px;
+  border-top-width: 1px;
+  border-top-color: #f0f0f0;
+`;
+
+const DescriptionText = styled.Text`
+  font-size: 14px;
+  color: #666666;
+`;
+
+const RuleTypeHeader = styled.View`
+  padding: 14px 16px;
+  background-color: #f8f8f8;
+  border-top-width: 1px;
+  border-top-color: #eeeeee;
+`;
+
+const RuleTypeName = styled.Text`
+  font-size: 15px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 2px;
+`;
+
+const RuleTypeAmount = styled.Text`
+  font-size: 14px;
+  color: #1588CF;
+  font-weight: bold;
 `;
 
 // 네비게이션 타입 정의 수정
@@ -316,6 +362,11 @@ const TransactionDetailScreen = () => {
           (result: any) => result.game_date === params.id
         );
 
+        // 거래 내역 조회해서 TEXT 필드 가져오기
+        const transferResponse = await api.get('/api/account/transfers_log');
+        const transfer = transferResponse.data.find((item: any) => item.DATE === params.id);
+        const description = transfer?.TEXT || "";
+
         // API 호출
         const details: TransactionDetailResponse[] = await getDailySavingDetail(params.id);
         console.log("API 응답:", details);
@@ -324,16 +375,68 @@ const TransactionDetailScreen = () => {
           const firstDetail = details[0];
           const totalAmount = details.reduce((sum: number, detail: TransactionDetailResponse) => sum + detail.DAILY_SAVING_AMOUNT, 0);
           
+          // 규칙 타입별로 그룹화
+          const recordsByType: Record<string, {
+            typeName: string;
+            records: Array<{
+              name: string;
+              count: number;
+              amount: number;
+            }>;
+            totalAmount: number;
+          }> = {};
+          
+          // 규칙 타입 매핑 (rule_type_name 필드를 기반으로 그룹화)
+          const ruleTypeMapping: Record<string, string> = {
+            "홈런": "기본 규칙",
+            "안타": "기본 규칙",
+            "승리": "기본 규칙", 
+            "득점": "기본 규칙",
+            "병살타": "상대팀",
+            "실책": "상대팀",
+            "삼진": "투수",
+            "볼넷": "투수",
+            "자책": "투수",
+            "도루": "타자"
+          };
+          
+          details.forEach(detail => {
+            // 규칙 타입 결정 (기본값 설정)
+            const typeName = ruleTypeMapping[detail.record_name] || "기본 규칙";
+            
+            // 해당 타입이 없으면 새로 생성
+            if (!recordsByType[typeName]) {
+              recordsByType[typeName] = {
+                typeName,
+                records: [],
+                totalAmount: 0
+              };
+            }
+            
+            // 해당 타입에 레코드 추가
+            recordsByType[typeName].records.push({
+              name: detail.record_name,
+              count: detail.COUNT,
+              amount: detail.DAILY_SAVING_AMOUNT
+            });
+            
+            // 해당 타입의 총액 증가
+            recordsByType[typeName].totalAmount += detail.DAILY_SAVING_AMOUNT;
+          });
+          
           // 전체 데이터를 첫 번째 항목에 포함시켜 저장
           setTransactionDetail({
             ...firstDetail,
             DAILY_SAVING_AMOUNT: totalAmount,
             opponent_team_name: gameResult?.opponent_team_name,  // 상대팀 정보 추가
+            TEXT: description,  // 설명 텍스트 추가
             records: details.map((detail: TransactionDetailResponse) => ({
               name: detail.record_name,
               count: detail.COUNT,
-              amount: detail.DAILY_SAVING_AMOUNT
-            }))
+              amount: detail.DAILY_SAVING_AMOUNT,
+              ruleType: ruleTypeMapping[detail.record_name] || "기본 규칙"
+            })),
+            recordsByType
           });
         } else {
           console.log("데이터가 없습니다.");
@@ -351,6 +454,14 @@ const TransactionDetailScreen = () => {
   // 뒤로 가기 핸들러
   const handleGoBack = () => {
     navigation.navigate("적금내역", { viewMode: "list" });
+  };
+
+  // 규칙 타입 순서 정의
+  const ruleTypeOrder = {
+    "기본 규칙": 1,
+    "투수": 2,
+    "타자": 3,
+    "상대팀": 4
   };
 
   return (
@@ -391,17 +502,42 @@ const TransactionDetailScreen = () => {
                   <AmountValue color={teamColor.primary}>
                     +{transactionDetail.DAILY_SAVING_AMOUNT.toLocaleString()}원
                   </AmountValue>
+                  
+                  {transactionDetail.TEXT && (
+                    <View style={{ marginTop: 8 }}>
+                      <Text style={{ fontSize: 14, color: '#666' }}>{transactionDetail.TEXT}</Text>
+                    </View>
+                  )}
                 </TransactionHeader>
 
                 <RecordList>
-                  {transactionDetail.records?.map((record, index) => (
-                    <RecordItem key={index}>
-                      <RecordName>
-                        {record.name} {record.count > 1 ? `${record.count}개` : ''}
-                      </RecordName>
-                      <RecordAmount>+{record.amount.toLocaleString()}원</RecordAmount>
-                    </RecordItem>
-                  ))}
+                  {Object.keys(transactionDetail.recordsByType || {})
+                    .sort((a, b) => {
+                      return (ruleTypeOrder[a as keyof typeof ruleTypeOrder] || 99) - 
+                             (ruleTypeOrder[b as keyof typeof ruleTypeOrder] || 99);
+                    })
+                    .map((typeKey) => {
+                      const typeData = transactionDetail.recordsByType[typeKey];
+                      
+                      return (
+                        <View key={typeKey}>
+                          <RuleTypeHeader>
+                            <RuleTypeName>{typeData.typeName}</RuleTypeName>
+                            <RuleTypeAmount>+{typeData.totalAmount.toLocaleString()}원</RuleTypeAmount>
+                          </RuleTypeHeader>
+                          
+                          {typeData.records.map((record, index) => (
+                            <RecordItem key={`${typeKey}-${index}`}>
+                              <RecordName>
+                                {record.name} {record.count > 1 ? `${record.count}개` : ''}
+                              </RecordName>
+                              <RecordAmount>+{record.amount.toLocaleString()}원</RecordAmount>
+                            </RecordItem>
+                          ))}
+                        </View>
+                      );
+                    })
+                  }
                 </RecordList>
               </Card>
             ) : (

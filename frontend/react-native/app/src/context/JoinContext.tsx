@@ -128,16 +128,16 @@ export const JoinProvider: React.FC<{ children: React.ReactNode }> = ({ children
       savingRules: {
         win: {
           enabled: true,
-          amount: 5000,
+          amount: 3000,
         },
         basic: {
           enabled: true,
-          hit: 500,
+          hit: 300,
           homerun: 1000,
           score: 500,
-          doublePlay: 500,
-          error: 500,
-          sweep: 2000,
+          doublePlay: 1000,
+          error: 1000,
+          sweep: 5000,
         },
         pitcher: {
           enabled: false,
@@ -147,13 +147,13 @@ export const JoinProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         batter: {
           enabled: false,
-          hit: 1000,
-          homerun: 5000,
-          steal: 2000,
+          hit: 500,
+          homerun: 1000,
+          steal: 500,
         },
         opponent: {
           enabled: false,
-          hit: 500,
+          hit: 300,
           homerun: 1000,
           doublePlay: 1000,
           error: 1000,
@@ -405,16 +405,16 @@ export const JoinProvider: React.FC<{ children: React.ReactNode }> = ({ children
       savingRules: {
         win: {
           enabled: true,
-          amount: 5000,
+          amount: 3000,
         },
         basic: {
           enabled: true,
-          hit: 500,
+          hit: 300,
           homerun: 1000,
           score: 500,
-          doublePlay: 500,
-          error: 500,
-          sweep: 2000,
+          doublePlay: 1000,
+          error: 1000,
+          sweep: 5000,
         },
         pitcher: {
           enabled: false,
@@ -424,13 +424,13 @@ export const JoinProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         batter: {
           enabled: false,
-          hit: 1000,
-          homerun: 5000,
-          steal: 2000,
+          hit: 500,
+          homerun: 1000,
+          steal: 500,
         },
         opponent: {
           enabled: false,
-          hit: 500,
+          hit: 300,
           homerun: 1000,
           doublePlay: 1000,
           error: 1000,

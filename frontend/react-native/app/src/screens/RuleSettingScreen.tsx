@@ -494,10 +494,10 @@ const RuleSettingScreen = () => {
   
   // 적금 규칙 불러오기
   const savedRules = joinData.savingRules || {
-    win: { enabled: true, amount: selectedDailyLimit },
+    win: { enabled: true, amount: 3000 },
     pitcher: { enabled: false, strikeout: 1000, walk: 500, run: 1000 },
-    batter: { enabled: false, hit: 1000, homerun: 5000, steal: 2000 },
-    opponent: { enabled: false, hit: 500, homerun: 1000, doublePlay: 1000, error: 1000 }
+    batter: { enabled: false, hit: 500, homerun: 1000, steal: 500 },
+    opponent: { enabled: false, hit: 300, homerun: 1000, doublePlay: 1000, error: 1000 }
   };
   
   // 상태 관리
@@ -506,15 +506,15 @@ const RuleSettingScreen = () => {
   // 입력 상태 관리
   const [rules, setRules] = useState({
     win: {
-      amount: savedRules?.win?.amount || 5000,
+      amount: savedRules?.win?.amount || 3000,
     },
     basic: {
-      hit: 500,
+      hit: 300,
       homerun: 1000,
       score: 500,
-      doublePlay: 500,
-      error: 500,
-      sweep: 2000,
+      doublePlay: 1000,
+      error: 1000,
+      sweep: 5000,
     },
     pitcher: {
       strikeout: savedRules?.pitcher?.strikeout || 1000,
@@ -522,12 +522,12 @@ const RuleSettingScreen = () => {
       run: savedRules?.pitcher?.run || 1000,
     },
     batter: {
-      hit: savedRules?.batter?.hit || 1000,
-      homerun: savedRules?.batter?.homerun || 5000,
-      steal: savedRules?.batter?.steal || 2000,
+      hit: savedRules?.batter?.hit || 500,
+      homerun: savedRules?.batter?.homerun || 1000,
+      steal: savedRules?.batter?.steal || 500,
     },
     opponent: {
-      hit: savedRules?.opponent?.hit || 500,
+      hit: savedRules?.opponent?.hit || 300,
       homerun: savedRules?.opponent?.homerun || 1000,
       doublePlay: savedRules?.opponent?.doublePlay || 1000,
       error: savedRules?.opponent?.error || 1000,
@@ -634,10 +634,9 @@ const RuleSettingScreen = () => {
     }
     
     try {
-      // measureInWindow를 사용하여 화면상의 절대 위치를 측정
+      // 네이티브 환경에서는 measureInWindow 사용
       iconRef.current.measureInWindow((x: number, y: number, width: number, height: number) => {
         console.log(`아이콘 화면상 위치:`, { x, y, width, height, type });
-        console.log(`화면 크기:`, { width: windowWidth, height: Dimensions.get('window').height });
         
         if (isNaN(x) || isNaN(y) || x < 0 || y < 0) {
           console.error('유효하지 않은 위치 값:', { x, y, width, height });
@@ -664,8 +663,8 @@ const RuleSettingScreen = () => {
         setTooltipVisible(true);
         setTooltipText(getTooltipContent(type));
         setTooltipPosition({
-          top: iconBottomY,
-          left: iconCenterX,
+          top: y,
+          left: x,
           width: width
         });
         
@@ -814,8 +813,8 @@ const RuleSettingScreen = () => {
         
         // 선수 ID가 있는 경우 해당 선수 기반으로 규칙 조회
         let url = 
-        // `http://localhost:8000/api/saving_rule/rules`
-        `http://3.38.183.156:8000/api/saving_rule/rules`;
+        `http://localhost:8000/api/saving_rule/rules`
+        // `http://3.38.183.156:8000/api/saving_rule/rules`;
         if (playerId) {
           url += `?player_id=${playerId}`;
         }
