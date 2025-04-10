@@ -42,6 +42,21 @@ interface WeeklyReport {
   NEWS_SUMMATION: string;
 }
 
+// 막대 차트 데이터 타입 정의
+interface BarChartData {
+  labels: string[];
+  datasets: {
+    data: number[];
+  }[];
+}
+
+// 도넛 차트 아이템 타입 정의
+interface DonutChartItem {
+  name: string;
+  population: number;
+  color: string;
+}
+
 // --- 스타일 컴포넌트 (기존과 동일) ---
 const AppWrapper = styled.View`
   flex: 1;
@@ -213,7 +228,15 @@ const NewsDate = styled.Text`
 // -----------------------------
 
 // 막대 차트 컴포넌트 (기존과 동일)
-const BarChartFallback = ({ data, width, teamColor }) => {
+const BarChartFallback = ({ 
+  data, 
+  width, 
+  teamColor 
+}: { 
+  data: BarChartData; 
+  width: number; 
+  teamColor: string 
+}) => {
   const maxValue =
     data.datasets[0].data.length > 0 ? Math.max(...data.datasets[0].data) : 1; // 데이터 없을 경우 대비
 
@@ -230,7 +253,7 @@ const BarChartFallback = ({ data, width, teamColor }) => {
           paddingBottom: 5,
         }}
       >
-        {data.labels.map((label, index) => {
+        {data.labels.map((label: string, index: number) => {
           const value = data.datasets[0].data[index] ?? 0; // 데이터 없을 경우 0
           const barHeight = maxValue > 0 ? (value / maxValue) * 160 : 0; // 0으로 나누는 것 방지
 
@@ -263,9 +286,15 @@ const BarChartFallback = ({ data, width, teamColor }) => {
 };
 
 // 커스텀 도넛 차트 (기존과 동일)
-const CustomDonutChart = ({ data, width }) => {
+const CustomDonutChart = ({ 
+  data, 
+  width 
+}: { 
+  data: DonutChartItem[]; 
+  width: number 
+}) => {
   const totalAmount = data.reduce(
-    (sum, item) => sum + Math.round((item.population / 100) * 78500),
+    (sum: number, item: DonutChartItem) => sum + Math.round((item.population / 100) * 78500),
     0
   ); // 실제 금액 합계 계산
   // const total = data.reduce((sum, item) => sum + item.population, 0); // 퍼센트 합계는 100이 아닐 수 있음
@@ -287,7 +316,7 @@ const CustomDonutChart = ({ data, width }) => {
           marginBottom: 15,
         }}
       >
-        {data.map((item, index) => {
+        {data.map((item: DonutChartItem, index: number) => {
           const amount = Math.round((item.population / 100) * 78500); // 금액 계산은 유지
 
           return (
@@ -370,7 +399,12 @@ const CustomDonutChart = ({ data, width }) => {
   );
 };
 
-const WeeklyReportScreen = ({ navigation }) => {
+// Navigation 타입 정의
+interface NavigationProps {
+  goBack: () => void;
+}
+
+const WeeklyReportScreen = ({ navigation }: { navigation: NavigationProps }) => {
   const {
     teamColor = { primary: "#007AFF" },
     teamName,
@@ -384,7 +418,7 @@ const WeeklyReportScreen = ({ navigation }) => {
 
   const [newsData, setNewsData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<Error | null>(null);
   const [weeklyData, setWeeklyData] = useState<WeeklyReport | null>(null);
 
   useEffect(() => {
@@ -410,7 +444,7 @@ const WeeklyReportScreen = ({ navigation }) => {
         }
       } catch (err) {
         console.error("Weekly report fetch failed:", err);
-        setError(err);
+        setError(err as Error);
       } finally {
         setIsLoading(false);
       }
@@ -505,14 +539,10 @@ const WeeklyReportScreen = ({ navigation }) => {
                   </SummaryValue>
                 </SummaryItem>
                 <SummaryItem style={{ borderBottomWidth: 0 }}>
-                  <SummaryLabel>이번 주 증가율</SummaryLabel>
-                  <SummaryValue positive={weeklyData?.CHANGE_PERCENTAGE > 0}>
-                    {weeklyData ? `${weeklyData.CHANGE_PERCENTAGE > 0 ? '+' : ''}${weeklyData.CHANGE_PERCENTAGE}%` : "0%"}
-                  </SummaryValue>
-                </SummaryItem>
-                <SummaryItem style={{ borderBottomWidth: 0, marginTop: 8 }}>
                   <SummaryValue style={{ fontSize: 14, color: '#666666' }}>
-                    {weeklyData?.LLM_CONTEXT || "이번 주 요약 정보가 없습니다."}
+                    {weeklyData?.LLM_CONTEXT 
+                      ? weeklyData.LLM_CONTEXT.replace(/\*(.*?)\*/g, '$1') 
+                      : "이번 주 요약 정보가 없습니다."}
                   </SummaryValue>
                 </SummaryItem>
               </CardContent>
@@ -604,8 +634,7 @@ const WeeklyReportScreen = ({ navigation }) => {
                     .filter(line => line.trim())
                     .map((line, index) => (
                       <NewsItem key={index}>
-                        <NewsTitle>• {line.trim()}</NewsTitle>
-                        <NewsDate>{weeklyData.DATE}</NewsDate>
+                        <NewsTitle>{line.trim()}</NewsTitle>
                       </NewsItem>
                     ))
                 ) : (

@@ -480,6 +480,8 @@ const TransactionDescription = styled.View`
 const DescriptionText = styled.Text`
   font-size: 14px;
   color: #333;
+  numberOfLines: 1;
+  ellipsizeMode: 'tail';
 `;
 
 const WinsText = styled.Text`
@@ -1025,8 +1027,12 @@ const SavingsScreen = () => {
     );
   };
 
-  // 날짜 셀 렌더링 함수
-  const renderDayCell = (day: CalendarDay) => {
+  // 날짜 셀 컴포넌트 (최적화를 위해 분리)
+  const DayCellComponent = React.memo(({ day, setSelectedDate, teamColor }: { 
+    day: CalendarDay, 
+    setSelectedDate: (date: string) => void, 
+    teamColor: string 
+  }) => {
     let statusLabel = "";
     let statusColor = "#333";
     let badgeBgColor = "transparent";
@@ -1075,7 +1081,7 @@ const SavingsScreen = () => {
         isSelected={day.isSelected}
         isCurrentMonth={day.isCurrentMonth}
         backgroundColor={cellBgColor}
-        teamColor={teamColor.primary}
+        teamColor={teamColor}
       >
         <View
           style={{
@@ -1149,10 +1155,50 @@ const SavingsScreen = () => {
                 height: 28,
               }}
               resizeMode="contain"
+              fadeDuration={0}
             />
           )}
         </View>
       </DayCell>
+    );
+  }, (prevProps, nextProps) => {
+    // 최적화를 위한 비교 함수
+    const prevDay = prevProps.day;
+    const nextDay = nextProps.day;
+    
+    // 날짜가 다르면 리렌더
+    if (prevDay.dateString !== nextDay.dateString) {
+      return false;
+    }
+    
+    // 선택 상태가 변경되면 리렌더
+    if (prevDay.isSelected !== nextDay.isSelected) {
+      return false;
+    }
+    
+    // 마킹 데이터가 둘 다 없으면 동일함
+    if (!prevDay.marking && !nextDay.marking) {
+      return true;
+    }
+    
+    // 마킹 데이터 중 하나만 있으면 다름
+    if (!prevDay.marking || !nextDay.marking) {
+      return false;
+    }
+    
+    // 경기 결과가 변경되면 리렌더
+    return prevDay.marking.gameResult === nextDay.marking.gameResult;
+  });
+
+  // 날짜 셀 렌더링 함수 - 최적화된 컴포넌트 사용
+  const renderDayCell = (day: CalendarDay) => {
+    return (
+      <DayCellComponent 
+        key={day.dateString}
+        day={day} 
+        setSelectedDate={setSelectedDate} 
+        teamColor={teamColor.primary}
+      />
     );
   };
 
@@ -1193,27 +1239,33 @@ const SavingsScreen = () => {
 
   // 경기 상세 정보 카드 컴포넌트
   const FixtureDetailComponent = ({ fixture }: { fixture: GameSchedule | null }) => {
-    const [gameResult, setGameResult] = useState<GameResultResponse | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    // 초기 gameResult 값을 미리 설정
+    const initialResult = fixture ? gameResults[fixture.DATE] || null : null;
+    const [resultData, setResultData] = useState<GameResultResponse | null>(initialResult);
 
     useEffect(() => {
       const fetchGameResult = async () => {
         if (!fixture) return;
         
+        // 미래 경기 체크
+        const gameDate = new Date(fixture.DATE);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        gameDate.setHours(0, 0, 0, 0);
+
+        if (gameDate > today) {
+          setResultData(null);
+          return;
+        }
+
+        // 이미 gameResults 객체에 결과가 있는지 확인
+        if (gameResults[fixture.DATE]) {
+          setResultData(gameResults[fixture.DATE]);
+          return;
+        }
+        
         try {
-          setIsLoading(true);
-          
-          // 미래 경기 체크
-          const gameDate = new Date(fixture.DATE);
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          gameDate.setHours(0, 0, 0, 0);
-
-          if (gameDate > today) {
-            setGameResult(null);
-            return;
-          }
-
+          // 필요한 경우에만 API 호출
           const response = await api.get<GameResultResponse[]>('/api/game/user-team-results', {
             params: {
               end_date: fixture.DATE
@@ -1224,22 +1276,23 @@ const SavingsScreen = () => {
             (result) => result.game_date === fixture.DATE
           );
           
-          setGameResult(result || null);
+          setResultData(result || null);
         } catch (error) {
           console.error('경기 결과 조회 실패:', error);
-          setGameResult(null);
-        } finally {
-          setIsLoading(false);
+          setResultData(null);
         }
       };
 
-      fetchGameResult();
-    }, [fixture]);
+      // 초기값이 없는 경우에만 데이터 불러오기
+      if (!initialResult) {
+        fetchGameResult();
+      }
+    }, [fixture, initialResult]);
 
     if (!fixture) return null;
 
     // 상대팀 정보만 구하기
-    const isHomeTeam = fixture.HOME_TEAM_ID === getTeamIdByName(teamName);
+    const isHomeTeam = fixture.HOME_TEAM_ID === getTeamIdByName(teamName || "");
     const opponent = isHomeTeam ? fixture.away_team_name : fixture.home_team_name;
     const opponentLogo = getTeamLogo(opponent);
     const locationText = isHomeTeam ? "홈경기" : "원정경기";
@@ -1253,15 +1306,28 @@ const SavingsScreen = () => {
 
       // 오늘 포함 미래 경기
       if (gameDate >= today) {
-        return "예정됨";
+        return "예정";
       }
 
-      // 과거 경기
-      if (gameResult) {
-        return `${gameResult.result} (${gameResult.score})`;
+      // 과거 경기 - gameResults에서 직접 확인하여 컴포넌트 상태에 의존하지 않도록 함
+      const cachedResult = gameResults[fixture.DATE] || resultData;
+      if (cachedResult) {
+        return `${cachedResult.result} (${cachedResult.score})`;
       }
 
-      return "예정됨";
+      return "예정";
+    };
+
+    // 결과에 따른 색상 가져오기
+    const getResultColor = (): string => {
+      const cachedResult = gameResults[fixture.DATE] || resultData;
+      if (!cachedResult) return "#333";
+      
+      switch (cachedResult.result) {
+        case "승리": return "#ff5555";
+        case "패배": return "#2196f3";
+        default: return "#333";
+      }
     };
 
     return (
@@ -1285,24 +1351,14 @@ const SavingsScreen = () => {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 13, color: "#888" }}>상태</Text>
-              {isLoading ? (
-                <Text style={{ fontSize: 15, fontWeight: "600", marginTop: 4 }}>로딩 중...</Text>
-              ) : (
-                <Text style={{
-                  fontSize: 15,
-                  fontWeight: "600",
-                  marginTop: 4,
-                  color: gameResult
-                    ? gameResult.result === "승리"
-                      ? "#ff5555"
-                      : gameResult.result === "패배"
-                        ? "#2196f3"
-                        : "#333"
-                    : "#333"
-                }}>
-                  {getGameStatusText()}
-                </Text>
-              )}
+              <Text style={{
+                fontSize: 15,
+                fontWeight: "600",
+                marginTop: 4,
+                color: getResultColor()
+              }}>
+                {getGameStatusText()}
+              </Text>
             </View>
           </View>
 
@@ -1404,51 +1460,7 @@ const SavingsScreen = () => {
     );
   };
 
-  // 캘린더 뷰 렌더링
-  const renderCalendarView = () => (
-    <>
-      <CalendarCard width={width}>
-        {isLoading ? (
-          <View style={{ padding: 20, alignItems: "center", justifyContent: "center" }}>
-            <Text>경기 일정 로딩 중...</Text>
-          </View>
-        ) : error ? (
-          <View style={{ padding: 20, alignItems: "center", justifyContent: "center" }}>
-            <Text>경기 일정을 불러오는데 실패했습니다.</Text>
-          </View>
-        ) : (
-          renderCustomCalendar()
-        )}
-      </CalendarCard>
-
-      {/* 선택한 날짜의 경기 상세 정보 */}
-      {selectedFixture && <FixtureDetailComponent fixture={selectedFixture} />}
-
-      {/* 3연전 일정 카드 */}
-      <Card width={width}>
-        <CardHeader width={width}>
-          <CardTitle width={width}>3연전 일정</CardTitle>
-        </CardHeader>
-        <CardContent width={width} style={{ padding: 8 }}>
-          {isSeriesLoading ? (
-            <View style={{ padding: 20, alignItems: "center" }}>
-              <Text>3연전 정보 로딩 중...</Text>
-            </View>
-          ) : seriesMatches.length > 0 ? (
-            seriesMatches.map((match) => (
-              <SeriesMatchCard key={match.id} match={match} />
-            ))
-          ) : (
-            <View style={{ padding: 20, alignItems: "center" }}>
-              <Text>표시할 3연전 정보가 없습니다.</Text>
-            </View>
-          )}
-        </CardContent>
-      </Card>
-    </>
-  );
-
-  // 리스트 뷰 렌더링 (새로 구현한 부분)
+  // 리스트 뷰 렌더링 함수
   const renderListView = () => (
     <Card width={width}>
       <CardHeader width={width}>
@@ -1493,7 +1505,7 @@ const SavingsScreen = () => {
 
               {/* 설명 텍스트 */}
               <TransactionDescription>
-                <DescriptionText>{item.description}</DescriptionText>
+                <DescriptionText numberOfLines={1} ellipsizeMode="tail">{item.description}</DescriptionText>
                 <WinsText>{item.wins}개 획득</WinsText>
               </TransactionDescription>
             </View>
@@ -1509,6 +1521,68 @@ const SavingsScreen = () => {
       />
     </Card>
   );
+
+  // 캘린더 뷰 렌더링
+  const renderCalendarView = () => (
+    <>
+      <CalendarCard width={width}>
+        {isLoading ? (
+          <View style={{ padding: 20, alignItems: "center", justifyContent: "center" }}>
+            <Text>경기 일정 로딩 중...</Text>
+          </View>
+        ) : error ? (
+          <View style={{ padding: 20, alignItems: "center", justifyContent: "center" }}>
+            <Text>경기 일정을 불러오는데 실패했습니다.</Text>
+          </View>
+        ) : (
+          renderCustomCalendar()
+        )}
+      </CalendarCard>
+
+      {/* 선택한 날짜의 경기 상세 정보 */}
+      {selectedFixture && <FixtureDetailComponent fixture={selectedFixture} />}
+
+      {/* 3연전 일정 카드 */}
+      <Card width={width}>
+        <CardHeader width={width}>
+          <CardTitle width={width}>3연전 일정</CardTitle>
+        </CardHeader>
+        <CardContent width={width} style={{ padding: 8 }}>
+          {isSeriesLoading ? (
+            <View style={{ padding: 20, alignItems: "center" }}>
+              <Text>3연전 정보 로딩 중...</Text>
+            </View>
+          ) : seriesMatches.length > 0 ? (
+            seriesMatches.map((match) => (
+              <SeriesMatchCard key={match.id} match={match} />
+            ))
+          ) : (
+            <View style={{ padding: 20, alignItems: "center" }}>
+              <Text>표시할 3연전 정보가 없습니다.</Text>
+            </View>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+
+  // 팀 로고 사전 로드 (성능 최적화)
+  useEffect(() => {
+    // 이미지 캐싱을 위한 사전 로드
+    const preloadTeamLogos = () => {
+      // 모든 팀 로고 미리 로드
+      Object.values(teamLogos).forEach(logo => {
+        if (Platform.OS !== 'web') {
+          const source = Image.resolveAssetSource(logo);
+          if (source && source.uri) {
+            Image.prefetch(source.uri).catch(() => {});
+          }
+        }
+      });
+    };
+    
+    preloadTeamLogos();
+  }, []);
 
   return (
     <AppWrapper>
