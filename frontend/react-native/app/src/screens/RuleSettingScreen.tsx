@@ -62,20 +62,22 @@ const MobileContainer = styled.View<StyledProps>`
 `;
 
 const TitleSection = styled.View`
-  padding: 16px 20px 12px 20px;
+  padding: 20px 20px 24px 20px;
 `;
 
 const MainTitle = styled.Text`
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: #333333;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const SubTitle = styled.Text`
-  font-size: 14px;
+  font-size: 15px;
   color: #666666;
   font-weight: 400;
-  margin-top: 4px;
+  margin-top: 8px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const ContentContainer = styled.ScrollView`
@@ -105,9 +107,9 @@ const TeamLogoContainer = styled.View`
 `;
 
 const TeamLogo = styled.Image`
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 26px;
   margin-right: 12px;
 `;
 
@@ -119,12 +121,14 @@ const TeamName = styled.Text`
   font-size: 16px;
   font-weight: 600;
   color: #333333;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const UniformName = styled.Text`
   font-size: 14px;
   color: #666666;
   margin-top: 2px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const GoalInfo = styled.View`
@@ -135,6 +139,7 @@ const GoalTitle = styled.Text`
   font-size: 15px;
   font-weight: 600;
   color: #333333;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const GoalValue = styled.Text`
@@ -142,6 +147,7 @@ const GoalValue = styled.Text`
   font-weight: 700;
   color: ${({ color }: { color: string }) => color};
   margin-top: 4px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const DailyLimitInfo = styled.View`
@@ -151,11 +157,13 @@ const DailyLimitInfo = styled.View`
 const DailyLimitText = styled.Text`
   font-size: 13px;
   color: #666666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const DailyLimitValue = styled.Text`
   font-weight: 600;
   color: ${({ color }: { color: string }) => color};
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 // 규칙 섹션 카드 스타일
@@ -201,6 +209,7 @@ const RuleSectionTitleText = styled.Text`
   font-weight: 600;
   color: #333333;
   padding: 4px 0;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const GoalInfoRow = styled.View`
@@ -220,6 +229,7 @@ const GoalInfoRowLast = styled(GoalInfoRow)`
 const GoalInfoLabel = styled.Text`
   font-size: 15px;
   color: #333333;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const AmountContainer = styled.View`
@@ -243,12 +253,14 @@ const AmountRowLast = styled(AmountRow)`
 const AmountLabel = styled.Text`
   font-size: 14px;
   color: #666666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const AmountValue = styled.Text<{ color: string }>`
   font-size: 15px;
   font-weight: 600;
   color: ${({ color }) => color};
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const InputContainer = styled.View`
@@ -267,12 +279,14 @@ const StyledInput = styled.TextInput`
   text-align: right;
   font-size: 15px;
   background-color: #FCFCFC;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const WonText = styled.Text`
   font-size: 15px;
   color: #333333;
   margin-right: 12px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 // 커스텀 토글 스위치 컴포넌트
@@ -299,7 +313,7 @@ const ToggleThumb = styled(Animated.View)`
 `;
 
 const BottomSection = styled.View`
-  padding: 12px 16px 24px 16px;
+  padding: 0 20px 16px 20px;
   width: 100%;
   background-color: white;
   border-top-width: 1px;
@@ -311,14 +325,17 @@ const SelectButton = styled.TouchableOpacity<{ color: string; disabled?: boolean
   padding: 16px;
   border-radius: 8px;
   align-items: center;
-  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 16px;
   opacity: ${({ disabled }) => disabled ? 0.7 : 1};
+  width: 100%;
 `;
 
 const SelectButtonText = styled.Text`
   color: white;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 900;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const AnimatedInputContainer = styled(Animated.View)`
@@ -1157,6 +1174,10 @@ const RuleSettingScreen = () => {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                     <Text style={{ fontSize: 14, color: '#666666' }}>목표 금액</Text>
                     <Text style={{ fontSize: 14, fontWeight: '600', color: '#333333' }}>{formatAmount(selectedGoalAmount)}원</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontSize: 14, color: '#666666' }}>월 한도</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#333333' }}>{formatAmount(joinData.monthLimit || selectedDailyLimit * 30)}원</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Text style={{ fontSize: 14, color: '#666666' }}>최대 일일 한도</Text>

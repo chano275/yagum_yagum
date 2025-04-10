@@ -6,6 +6,14 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { BASE_MOBILE_WIDTH, MAX_MOBILE_WIDTH } from '../constants/layout';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { checkAccountNumber, transferMoney } from '../api/account';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+type RootStackParamList = {
+  Transfer: undefined;
+  TransferComplete: undefined;
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Transfer'>;
 
 interface StyledProps {
   width: number;
@@ -13,7 +21,7 @@ interface StyledProps {
 }
 
 const TransferScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const { width: windowWidth } = useWindowDimensions();
   const [accountNumber, setAccountNumber] = useState('');
   const [amount, setAmount] = useState('');
@@ -229,12 +237,14 @@ const HeaderText = styled.Text`
   font-size: 24px;
   font-weight: 600;
   color: #000000;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const BlueText = styled.Text`
   color: #4374D9;
   font-size: 24px;
   font-weight: 600;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const ContentContainer = styled.View`
@@ -279,6 +289,7 @@ const UnderlineInput = styled.TextInput.attrs({
   width: 100%;
   line-height: 22px;
   outline: none;
+  font-family: ${({ theme }) => theme.fonts.regular};
   ${Platform.OS === 'web' && `
     outline: none;
     &:focus {
@@ -292,6 +303,7 @@ const InputLabel = styled.Text`
   color: #666666;
   margin-bottom: 8px;
   font-weight: 500;
+  font-family: ${({ theme }) => theme.fonts.medium};
 `;
 
 const BottomButtonContainer = styled.View`
@@ -314,6 +326,7 @@ const TransferText = styled.Text`
   color: white;
   font-size: 16px;
   font-weight: 600;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const AmountUnit = styled.Text`
@@ -323,6 +336,7 @@ const AmountUnit = styled.Text`
   font-size: 18px;
   color: #1A1A1A;
   line-height: 22px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 export default TransferScreen;

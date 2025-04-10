@@ -44,11 +44,13 @@ const Title = styled.Text`
   color: #1A1A1A;
   margin-bottom: 24px;
   text-align: center;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const TitleHighlight = styled.Text<{ color: string }>`
   color: ${props => props.color};
   font-weight: bold;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const TitleDivider = styled.View`
@@ -105,6 +107,7 @@ const BannerTitle = styled.Text`
   color: #1A1A1A;
   line-height: 18px;
   margin-bottom: 8px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const PredictButton = styled.TouchableOpacity<{ color: string }>`
@@ -119,6 +122,7 @@ const PredictButtonText = styled.Text`
   font-size: 14px;
   color: #FFFFFF;
   font-weight: 600;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const TeamLogo = styled.Image`
@@ -141,6 +145,7 @@ const ButtonText = styled.Text`
   color: white;
   font-size: 18px;
   font-weight: 900;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const BottomContainer = styled.View`

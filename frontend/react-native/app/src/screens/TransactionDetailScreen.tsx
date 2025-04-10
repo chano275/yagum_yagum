@@ -21,6 +21,7 @@ import { getDailySavingDetail } from "@/api/account";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { RootStackParamList } from "@/navigation/AppNavigator";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 
 // 스타일드 컴포넌트 인터페이스
 interface StyledProps {
@@ -70,7 +71,7 @@ const MAX_MOBILE_WIDTH = 430;
 const AppWrapper = styled.View`
   flex: 1;
   align-items: center;
-  background-color: ${({ theme }) => theme.colors.background};
+  background-color: white;
   width: 100%;
 `;
 
@@ -92,24 +93,32 @@ const MobileContainer = styled.View<StyledProps>`
   `}
 `;
 
+const BackButton = styled.TouchableOpacity`
+  padding: 8px;
+  z-index: 1;
+`;
+
 const Header = styled.View<StyledProps & { teamColor: string }>`
+  display: flex;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
   background-color: ${(props) => props.teamColor};
-  padding: ${({ width }) => width * 0.04}px;
-  padding-top: ${({ width }) => width * 0.1}px;
-`;
-
-const BackButton = styled.TouchableOpacity`
-  padding: 8px;
+  height: 56px;
+  padding-horizontal: 16px;
+  padding-top: ${Platform.OS === 'web' ? '0px' : '${StatusBar.currentHeight}px'};
+  position: relative;
 `;
 
 const HeaderTitle = styled.Text<StyledProps>`
+  position: absolute;
+  left: 0;
+  right: 0;
   color: white;
-  font-size: ${({ width }) => width * 0.046}px;
+  font-size: 20px;
   font-weight: bold;
   font-family: ${({ theme }) => theme.fonts.bold};
+  text-align: center;
 `;
 
 const Card = styled.View<StyledProps>`
@@ -143,11 +152,13 @@ const SectionTitle = styled.Text`
   font-size: 16px;
   font-weight: bold;
   color: #333;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const AmountText = styled.Text`
   font-weight: bold;
   color: ${({ theme }) => theme.colors.primary};
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const RecordList = styled.View`
@@ -166,12 +177,14 @@ const RecordItem = styled.View`
 const RecordName = styled.Text`
   font-size: 16px;
   color: #333333;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const RecordAmount = styled.Text`
   font-size: 16px;
   color: ${({ theme }) => theme.colors.primary};
   font-weight: bold;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const MatchInfo = styled.View<StyledProps>`
@@ -192,12 +205,14 @@ const DateText = styled.Text`
   font-size: 14px;
   color: #666666;
   margin-left: 8px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const TotalAmount = styled.Text`
   font-size: 14px;
   color: #666666;
   margin-bottom: 4px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const AmountValue = styled.Text<{ color: string }>`
@@ -205,6 +220,7 @@ const AmountValue = styled.Text<{ color: string }>`
   font-weight: bold;
   color: ${props => props.color};
   margin-bottom: 12px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const SuccessMessage = styled.View`
@@ -224,6 +240,7 @@ const SuccessText = styled.Text`
   font-size: 14px;
   color: #333333;
   flex: 1;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const DescriptionContainer = styled.View`
@@ -235,9 +252,13 @@ const DescriptionContainer = styled.View`
 const DescriptionText = styled.Text`
   font-size: 14px;
   color: #666666;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const RuleTypeHeader = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
   padding: 14px 16px;
   background-color: #f8f8f8;
   border-top-width: 1px;
@@ -249,12 +270,14 @@ const RuleTypeName = styled.Text`
   font-weight: bold;
   color: #333;
   margin-bottom: 2px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const RuleTypeAmount = styled.Text`
   font-size: 14px;
   color: #1588CF;
   font-weight: bold;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 // 네비게이션 타입 정의 수정
@@ -472,7 +495,7 @@ const TransactionDetailScreen = () => {
         <StatusBar style="light" />
         <Header width={width} teamColor={teamColor.primary}>
           <BackButton onPress={handleGoBack}>
-            <Icon name="chevron-back" size={24} color="white" />
+            <MaterialIcons name="chevron-left" size={28} color="white" />
           </BackButton>
           <HeaderTitle width={width}>적금 내역</HeaderTitle>
           <View style={{ width: 24 }} />
@@ -525,7 +548,7 @@ const TransactionDetailScreen = () => {
                         <View key={typeKey}>
                           <RuleTypeHeader>
                             <RuleTypeName>{typeData.typeName}</RuleTypeName>
-                            <RuleTypeAmount>+{typeData.totalAmount.toLocaleString()}원</RuleTypeAmount>
+                            <RuleTypeAmount>총 {typeData.totalAmount.toLocaleString()}원</RuleTypeAmount>
                           </RuleTypeHeader>
                           
                           {typeData.records.map((record, index) => (

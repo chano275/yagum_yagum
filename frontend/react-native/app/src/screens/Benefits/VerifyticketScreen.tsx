@@ -9,10 +9,11 @@ import {
   Image,
   useWindowDimensions,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useTeam } from "@/context/TeamContext";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -79,22 +80,29 @@ const MobileContainer = styled.View<StyledProps>`
 
 const Header = styled.View<{ teamColor: string }>`
   flex-direction: row;
+  justify-content: space-between;
   align-items: center;
-  background-color: ${(props) => props.teamColor || "#007AFF"};
-  padding: 20px;
-  padding-top: 60px;
-  padding-bottom: 15px;
+  background-color: ${(props) => props.teamColor};
+  height: 56px;
+  padding-horizontal: 16px;
+  padding-top: ${Platform.OS === 'web' ? '0px' : '${StatusBar.currentHeight}px'};
+  position: relative;
 `;
 
 const BackButton = styled.TouchableOpacity`
-  margin-right: 15px;
+  padding: 8px;
+  z-index: 1;
 `;
 
 const HeaderTitle = styled.Text`
+  position: absolute;
+  left: 0;
+  right: 0;
   color: white;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
   font-family: ${({ theme }) => theme.fonts.bold};
+  text-align: center;
 `;
 
 const ContentContainer = styled.View`
@@ -482,15 +490,31 @@ const TicketVerificationScreen = () => {
     }
   };
 
-  const handleConfirm = () => {
-    setModalVisible(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleConfirm = async () => {
     if (verificationStatus === "success") {
       try {
-        navigation.navigate("Main", { screen: "혜택" });
+        setIsUpdating(true); // 버튼 로딩 시작
+        
+        // 데이터 갱신
+        await Promise.all([
+          fetchInterestDetails(),
+          fetchAccountInfo()
+        ]);
+        
+        // 약간의 대기 시간
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        setModalVisible(false);
       } catch (error) {
-        console.error("Navigation error:", error);
-        navigation.goBack();
+        console.error("데이터 업데이트 실패:", error);
+        setModalVisible(false);
+      } finally {
+        setIsUpdating(false);
       }
+    } else {
+      setModalVisible(false);
     }
   };
 
@@ -505,7 +529,7 @@ const TicketVerificationScreen = () => {
         <StatusBar style="light" />
         <Header teamColor={teamColor.primary}>
           <BackButton onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <MaterialIcons name="chevron-left" size={28} color="white" />
           </BackButton>
           <HeaderTitle>경기 직관 인증</HeaderTitle>
         </Header>
@@ -513,7 +537,7 @@ const TicketVerificationScreen = () => {
           <ScrollView showsVerticalScrollIndicator={false}>
             <SectionTitle>티켓 인증으로 우대금리 받기</SectionTitle>
             <SectionSubtitle>
-              경기 티켓 사진을 업로드하여 인증하고 우대금리 혜택을 받으세요.
+              티켓 사진을 업로드하여 인증하고 우대금리 혜택을 받으세요.
             </SectionSubtitle>
 
             <ProgressContainer>
@@ -642,8 +666,13 @@ const TicketVerificationScreen = () => {
               <ModalButton
                 teamColor={teamColor.primary}
                 onPress={handleConfirm}
+                disabled={isUpdating}
               >
-                <ModalButtonText>확인</ModalButtonText>
+                {isUpdating ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <ModalButtonText>확인</ModalButtonText>
+                )}
               </ModalButton>
             </ModalContainer>
           </ModalOverlay>

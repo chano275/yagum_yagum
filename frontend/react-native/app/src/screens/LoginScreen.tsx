@@ -253,6 +253,11 @@ const LoginScreen = () => {
       fontSize: width * 0.042,
       marginLeft: width * 0.025,
       color: "#333",
+      fontFamily: Platform.select({
+        web: 'Pretendard-Regular',
+        ios: 'Pretendard-Regular',
+        android: 'Pretendard-Regular',
+      }),
       ...Platform.select({
         web: {
           outlineStyle: "none",
@@ -279,12 +284,22 @@ const LoginScreen = () => {
       marginBottom: width * 0.04,
       textAlign: "center",
       color: "#333",
+      fontFamily: Platform.select({
+        web: 'Pretendard-Bold',
+        ios: 'Pretendard-Bold',
+        android: 'Pretendard-Bold',
+      }),
     },
     buttonText: {
       color: "white",
       fontSize: width * 0.042,
       fontWeight: "bold",
       textAlign: "center",
+      fontFamily: Platform.select({
+        web: 'Pretendard-Bold',
+        ios: 'Pretendard-Bold',
+        android: 'Pretendard-Bold',
+      }),
     },
     loginErrorContainer: {
       height: width * 0.005, 
@@ -297,6 +312,11 @@ const LoginScreen = () => {
       color: "#ff4444",
       fontSize: width * 0.03,
       textAlign: "center",
+      fontFamily: Platform.select({
+        web: 'Pretendard-Regular',
+        ios: 'Pretendard-Regular',
+        android: 'Pretendard-Regular',
+      }),
     },
   });
 

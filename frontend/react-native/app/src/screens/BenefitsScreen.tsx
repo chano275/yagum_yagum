@@ -18,6 +18,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/AppNavigator";
 import { api } from "@/api/axios"; // API 클라이언트 임포트
+import { MaterialIcons } from "@expo/vector-icons";
 
 // 네비게이션 타입 정의
 type BenefitsScreenNavigationProp =
@@ -70,17 +71,32 @@ const MobileContainer = styled.View<StyledProps>`
 
 // 팀 컬러를 적용하도록 Header 컴포넌트 수정
 const Header = styled.View<{ teamColor: string }>`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
   background-color: ${(props) => props.teamColor};
-  padding: 20px;
-  padding-top: 60px;
-  padding-bottom: 15px;
+  height: 56px;
+  padding-horizontal: 16px;
+  padding-top: ${Platform.OS === 'web' ? '0px' : '${StatusBar.currentHeight}px'};
+  position: relative;
 `;
 
 const HeaderTitle = styled.Text`
+  position: absolute;
+  left: 0;
+  right: 0;
   color: white;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
   font-family: ${({ theme }) => theme.fonts.bold};
+  text-align: center;
+`;
+
+const BackButton = styled.TouchableOpacity`
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 10px;
 `;
 
 const BenefitCard = styled.View<StyledProps>`
@@ -260,7 +276,7 @@ const BenefitsScreen = () => {
       id: "2",
       title: "경기 직관 인증",
       description:
-        "홈경기 직관 티켓 인증을 3번 완료하면 우대금리 0.1%p가 추가 제공됩니다.",
+        "직관 티켓 인증을 1번 완료하면\n우대금리 0.1%p가 추가 제공됩니다.",
       icon: "ticket-outline",
       bgColor: "#FF5252",
       onPress: () => {
@@ -275,7 +291,7 @@ const BenefitsScreen = () => {
       id: "4",
       title: "팀 순위 맞추기",
       description:
-        "시즌 종료 후 예측한 순위와 실제 순위가 일치하면 우대금리가 제공됩니다.",
+        "시즌 종료 후 예측한 순위와 실제 순위가\n일치하면 우대금리가 제공됩니다.",
       icon: "trophy-outline",
       bgColor: "#FFB800",
       onPress: async () => {

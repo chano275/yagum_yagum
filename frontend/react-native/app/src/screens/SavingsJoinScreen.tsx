@@ -50,6 +50,7 @@ const Title = styled.Text`
   margin-right: 48px;
   color: #000;
   font-size: 20px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const TagContainer = styled.View`
@@ -68,6 +69,7 @@ const Tag = styled.Text`
   background-color: rgba(192, 238, 242, 0.3);
   padding: 6px 12px;
   border-radius: 16px;
+  font-family: ${({ theme }) => theme.fonts.medium};
 `;
 
 const TopSection = styled.View`
@@ -114,6 +116,7 @@ const InfoTitle = styled.Text`
   font-weight: 700;
   color: #000000;
   margin-bottom: 4px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const TopInfoValue = styled.Text`
@@ -122,12 +125,14 @@ const TopInfoValue = styled.Text`
   font-weight: 500;
   line-height: 20px;
   text-align: center;
+  font-family: ${({ theme }) => theme.fonts.medium};
 `;
 
 const TopInfoHighlight = styled.Text`
   font-size: 14px;
   color: #2D64F4;
   margin-top: 2px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const InfoItem = styled.View`
@@ -145,6 +150,7 @@ const InfoLabel = styled.Text`
   font-weight: 600;
   line-height: 20px;
   width: 70px;
+  font-family: ${({ theme }) => theme.fonts.medium};
 `;
 
 const InfoValue = styled.Text`
@@ -155,12 +161,14 @@ const InfoValue = styled.Text`
   line-height: 22px;
   text-align: right;
   margin-left: 16px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const InfoHighlight = styled.Text`
   font-size: 14px;
   color: #2D64F4;
   margin-top: 3px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const JoinButtonLight = styled.TouchableOpacity`
@@ -176,6 +184,7 @@ const JoinButtonLightText = styled.Text`
   color: #176B87;
   font-size: 18px;
   font-weight: 900;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const BottomSection = styled.View`
@@ -195,11 +204,13 @@ const PromotionText = styled.Text`
   text-align: left;
   line-height: 32px;
   margin-bottom: 8px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const HighlightText = styled(PromotionText)`
   color: #176B87;
   font-weight: 900;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const SubPromotionText = styled.Text`
@@ -207,6 +218,7 @@ const SubPromotionText = styled.Text`
   color: #666;
   line-height: 20px;
   margin-bottom: 16px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const MainImage = styled.Image`
@@ -245,6 +257,7 @@ const StepTitle = styled.Text`
   margin-bottom: 28px;
   color: #1B1D1F;
   letter-spacing: -0.4px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const StepItem = styled(Animated.View)`
@@ -269,6 +282,7 @@ const StepNumberText = styled.Text`
   color: #176B87;
   font-size: 15px;
   font-weight: 700;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const StepContent = styled.View`
@@ -282,6 +296,7 @@ const StepText = styled.Text`
   color: #1B1D1F;
   margin-bottom: 8px;
   letter-spacing: -0.3px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const StepDesc = styled.Text`
@@ -291,6 +306,7 @@ const StepDesc = styled.Text`
   letter-spacing: -0.2px;
   flex-shrink: 1;
   padding-right: 0;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const JoinButton = styled.TouchableOpacity`
@@ -307,6 +323,7 @@ const JoinButtonText = styled.Text`
   color: #fff;
   font-size: 18px;
   font-weight: 900;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const stepTexts = [

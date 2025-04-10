@@ -59,12 +59,14 @@ const MainTitle = styled.Text`
   font-weight: 600;
   color: #1B1D1F;
   margin-bottom: 8px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const SubTitle = styled.Text`
   font-size: 14px;
   color: #666666;
   font-weight: 400;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const GridContainer = styled.View`
@@ -100,6 +102,7 @@ const GoalItemTitle = styled.Text`
   font-weight: 600;
   color: #333333;
   text-align: center;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const GoalAmount = styled.Text`
@@ -107,6 +110,7 @@ const GoalAmount = styled.Text`
   font-weight: 700;
   color: #333333;
   text-align: center;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 // 상세 카드 스타일
@@ -149,6 +153,7 @@ const DetailTitle = styled.Text`
   color: #333333;
   text-align: center;
   margin-bottom: 8px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const DetailDescription = styled.Text`
@@ -156,6 +161,7 @@ const DetailDescription = styled.Text`
   color: #666666;
   text-align: center;
   margin-bottom: 20px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const AmountContainer = styled.View`
@@ -181,6 +187,7 @@ const GoalInfoLabel = styled.Text<{ isHighlighted?: boolean }>`
   font-size: ${props => props.isHighlighted ? '15px' : '14px'};
   font-weight: ${props => props.isHighlighted ? '600' : '400'};
   color: ${props => props.isHighlighted ? '#333333' : '#666666'};
+  font-family: ${({ theme, isHighlighted }) => isHighlighted ? theme.fonts.bold : theme.fonts.regular};
 `;
 
 const GoalInfoValue = styled.Text<{ isHighlighted?: boolean }>`
@@ -188,6 +195,7 @@ const GoalInfoValue = styled.Text<{ isHighlighted?: boolean }>`
   font-weight: ${props => props.isHighlighted ? '700' : '500'};
   color: ${props => props.isHighlighted ? '#D11A6F' : '#333333'};
   text-align: right;
+  font-family: ${({ theme, isHighlighted }) => isHighlighted ? theme.fonts.bold : theme.fonts.medium};
 `;
 
 const DetailButtonsContainer = styled.View`
@@ -210,6 +218,7 @@ const SelectButtonText = styled.Text<{ isPrimary?: boolean; color: string; disab
   color: ${({ isPrimary, color, disabled }) => isPrimary ? 'white' : color};
   font-size: 18px;
   font-weight: 900;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const BottomSection = styled.View`
@@ -227,6 +236,7 @@ const BottomText = styled.Text`
   color: #999999;
   font-size: 13px;
   margin-bottom: 8px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 interface SavingsGoalType {
