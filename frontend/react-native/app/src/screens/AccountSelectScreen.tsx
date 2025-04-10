@@ -545,8 +545,8 @@ const AccountSelectScreen = () => {
         };
         
         const response = await axios.post(
-          `http://localhost:8000/api/account/create`,
-          // `http://3.38.183.156:8000/api/account/create`
+          // `http://localhost:8000/api/account/create`,
+          `http://3.38.183.156:8000/api/account/create`,
           requestData,
           { 
             headers,
