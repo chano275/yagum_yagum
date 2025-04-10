@@ -328,12 +328,14 @@ async def read_weekly_personal_report(
         # 6. 뉴스 요약 조회
         news_summation = team_report.NEWS_SUMMATION if team_report else ""
         
+        this_week_monday = (datetime.now().date() - timedelta(days=days_since_monday))
+        # logger.info(f"!!!!!!!!!!{this_week_monday}")
         # 7. 지난 주 주간 보고서 기록 조회
         weekly_report = db.query(models.WeeklyReportPersonal).filter(
             models.WeeklyReportPersonal.ACCOUNT_ID == account_id,
-            models.WeeklyReportPersonal.DATE == days_since_monday
+            models.WeeklyReportPersonal.DATE == this_week_monday
         ).first()
-        
+        # logger.info(f"!!!!!!{days_since_monday}")
         # 8. 결과 딕셔너리 생성
         extended_report = {
             "DATE": last_week_monday,  # 지난 주 월요일을 기준 날짜로 설정
