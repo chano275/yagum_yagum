@@ -331,7 +331,7 @@ async def read_weekly_personal_report(
         # 7. 지난 주 주간 보고서 기록 조회
         weekly_report = db.query(models.WeeklyReportPersonal).filter(
             models.WeeklyReportPersonal.ACCOUNT_ID == account_id,
-            models.WeeklyReportPersonal.DATE == last_week_monday
+            models.WeeklyReportPersonal.DATE == days_since_monday
         ).first()
         
         # 8. 결과 딕셔너리 생성
