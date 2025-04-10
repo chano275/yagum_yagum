@@ -80,7 +80,7 @@ const IconButton = styled.TouchableOpacity<BaseStyledProps>`
 const ServiceCardWrapper = styled.TouchableOpacity<BaseStyledProps>`
   background-color: #f0f2ff;
   border-radius: ${({ width }) => width * 0.025}px;
-  padding: ${(props) => props.width * 0.045}px;
+  padding: ${(props) => props.width * 0.035}px;
   margin-bottom: ${(props) => props.width * 0.025}px;
   width: 100%;
   ${Platform.select({
@@ -845,7 +845,7 @@ const HomeScreen = () => {
                         {/* 컨텐츠 */}
                         <View style={{ 
                           zIndex: 1,
-                          padding: width * 0.045
+                          padding: 0
                         }}>
                           <Text
                             style={{
@@ -853,13 +853,16 @@ const HomeScreen = () => {
                               fontWeight: "700",
                               color: "#2D5BFF",
                               marginBottom: 16,
+                              paddingHorizontal: width * 0.045,
+                              paddingTop: width * 0.045
                             }}
                           >
                             야금야금
                           </Text>
 
                           <View style={{ 
-                            marginBottom: 24
+                            marginBottom: 24,
+                            paddingHorizontal: width * 0.045
                           }}>
                             {/* 왼쪽: 정보 영역 */}
                             <View style={{ flex: 1 }}>
