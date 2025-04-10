@@ -364,7 +364,7 @@ async def read_weekly_personal_report(
         )
     
 # 주간 개인 보고서 조회 (최신순)
-@router.get("/weekly-test", response_model=report_schema.WeeklyReportPersonalResponseExtendedTest)
+@router.get("/weekly-advanced", response_model=report_schema.WeeklyReportPersonalResponseExtendedTest)
 async def read_weekly_personal_report(
     report_index: Optional[int] = Query(None, description="보고서 인덱스 (1:최신, 2:두번째, ...)", ge=1),
     db: Session = Depends(get_db),
@@ -469,7 +469,7 @@ async def read_weekly_personal_report(
             if week_num == 0:
                 return f"{month_name} 시작주"
             else:
-                week_name = ["", "첫째주", "둘째주", "셋째주", "넷째주", "다섯째주", "여섯째주"][min(week_num, 6)]
+                week_name = ["", "1주차", "2주차", "3주차", "4주차", "5주차", "6주차"][min(week_num, 6)]
                 return f"{month_name} {week_name}"
         
         # 해당 보고서 주의 월요일과 일요일 계산
