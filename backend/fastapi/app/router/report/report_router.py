@@ -364,7 +364,7 @@ async def read_weekly_personal_report(
         )
     
 # 주간 개인 보고서 조회 (최신순)
-@router.get("/weekly-test", response_model=report_schema.WeeklyReportPersonalResponseExtended)
+@router.get("/weekly-test", response_model=report_schema.WeeklyReportPersonalResponseExtendedTest)
 async def read_weekly_personal_report(
     report_index: Optional[int] = Query(None, description="보고서 인덱스 (1:최신, 2:두번째, ...)", ge=1),
     db: Session = Depends(get_db),
@@ -373,6 +373,7 @@ async def read_weekly_personal_report(
     try:
         # 일반적인 임포트
         from datetime import datetime, timedelta
+        import calendar
 
         # 현재 사용자의 계정 정보 조회
         account = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).first()
@@ -434,12 +435,52 @@ async def read_weekly_personal_report(
                 logger.warning(f"보고서의 DATE 필드가 None: 계정 ID {account_id}, 인덱스: {report_index}")
                 report_date = datetime.now().date()
         
+        # 해당 주의 월과 주차 계산
+        def get_month_week(date):
+            """
+            날짜가 해당 월의 몇 번째 주인지 계산 (월요일 시작 기준)
+            """
+            # 해당 월의 첫날
+            first_day = date.replace(day=1)
+            
+            # 해당 월의 첫 번째 월요일 찾기
+            if first_day.weekday() == 0:  # 첫날이 월요일인 경우
+                first_monday = first_day
+            else:
+                # 첫날 이후 첫 월요일 찾기
+                first_monday = first_day + timedelta(days=(7 - first_day.weekday()) % 7)
+            
+            if date < first_monday:
+                # 첫 월요일 이전 날짜는 월 시작부 불완전 주로 0주차 처리
+                return 0
+            else:
+                # 첫 월요일 이후부터는 주차 계산
+                days_since_first_monday = (date - first_monday).days
+                return days_since_first_monday // 7 + 1
+
+        def get_week_display(date):
+            """
+            날짜의 월과 주차를 사용자 친화적으로 표시
+            """
+            week_num = get_month_week(date)
+            month_name = ["", "1월", "2월", "3월", "4월", "5월", "6월", 
+                        "7월", "8월", "9월", "10월", "11월", "12월"][date.month]
+            
+            if week_num == 0:
+                return f"{month_name} 시작주"
+            else:
+                week_name = ["", "첫째주", "둘째주", "셋째주", "넷째주", "다섯째주", "여섯째주"][min(week_num, 6)]
+                return f"{month_name} {week_name}"
+        
         # 해당 보고서 주의 월요일과 일요일 계산
         # 해당 날짜의 요일 확인 (0: 월요일, 1: 화요일, ... 6: 일요일)
         weekday = report_date.weekday()
         # 해당 주의 월요일 계산
         report_monday = report_date - timedelta(days=weekday)
         report_sunday = report_monday + timedelta(days=6)
+        
+        # 주 정보 계산
+        week_info = get_week_display(report_monday)
         
         # 이전 주의 월요일과 일요일 계산
         prev_week_monday = report_monday - timedelta(days=7)
@@ -521,7 +562,7 @@ async def read_weekly_personal_report(
             if day_iso not in daily_savings:
                 logger.warning(f"일별 적금액에 요일 누락: {day_iso}")
                 daily_savings[day_iso] = 0
-            
+        
         # 5. 해당 주와 이전 주 적금액 비교
         # 해당 주 적금액 (해당 주 월요일부터 일요일까지의 합)
         this_week_transfers = db.query(models.DailyTransfer).filter(
@@ -547,8 +588,9 @@ async def read_weekly_personal_report(
         # 7. 결과 딕셔너리 생성
         extended_report = {
             "DATE": report_monday,  # 해당 주 월요일을 기준 날짜로 설정
+            "WEEK_INFO": week_info,  # 예: "4월 첫째주"
             "WEEKLY_AMOUNT": this_week_amount,  # 해당 주 적금액
-            "LLM_CONTEXT": weekly_report.LLM_CONTEXT if has_reports and weekly_report else None,
+            "LLM_CONTEXT": weekly_report.LLM_CONTEXT if has_reports and weekly_report and weekly_report.LLM_CONTEXT else "",
             "TEAM_RECORD": {
                 "WIN": team_win,
                 "LOSE": team_lose,
@@ -557,12 +599,12 @@ async def read_weekly_personal_report(
             "PREVIOUS_WEEK": prev_week_amount,  # 이전 주 금액
             "CHANGE_PERCENTAGE": round(((this_week_amount - prev_week_amount) / prev_week_amount * 100) if prev_week_amount > 0 else (100 if this_week_amount > 0 else 0), 2),
             "DAILY_SAVINGS": daily_savings,
-            "NEWS_SUMMATION": news_summation
+            "NEWS_SUMMATION": news_summation,
         }
         
         # 주간 리포트가 없는 경우 메시지 추가
         if not has_reports:
-            extended_report["message"] = "주간 리포트가 없습니다"
+            extended_report["LLM_CONTEXT"] = "주간 리포트가 없습니다"
         
         return extended_report
         
