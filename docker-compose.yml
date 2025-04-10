@@ -36,15 +36,6 @@ services:
       - "${FRONTEND_EXPO_PORT}:${FRONTEND_EXPO_PORT}"
     entrypoint: ["/bin/sh", "-c", "npx expo start --web"]
 
-  # nginx:
-  #   build:
-  #     context: ./nginx
-  #     dockerfile: Dockerfile
-  #   depends_on:
-  #     - fastapi
-  #   ports:
-  #     - "${NGINX_PORT}:${NGINX_PORT}"
-
   nginx:
     build:
       context: ./nginx
@@ -52,7 +43,4 @@ services:
     depends_on:
       - fastapi
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /home/ubuntu/nginx-certs:/etc/nginx/ssl:ro  # 🔥 이거 추가
+      - "${NGINX_PORT}:${NGINX_PORT}"
