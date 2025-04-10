@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useTeam } from '../context/TeamContext';
 import styled from 'styled-components/native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useJoin } from '../context/JoinContext';
 import Header from '../components/Header';
@@ -25,19 +25,31 @@ import type { RootStackParamList } from '../navigation/AppNavigator';
 import Tooltip from '../components/Tooltip';
 import axios from 'axios';
 import { useStore } from '../store/useStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 모바일 기준 너비 설정
 const BASE_MOBILE_WIDTH = 390;
 const MAX_MOBILE_WIDTH = 430;
 
+// BaseStyledProps 정의 (width는 필수로 변경)
+interface BaseStyledProps {
+  width: number;
+}
+
+// 확장된 StyledProps (insetsTop 포함)
+interface StyledProps extends BaseStyledProps {
+  insetsTop?: number;
+  // 다른 필요한 프롭들 (예: color, isActive)
+  color?: string;
+  isActive?: boolean;
+}
+
 const AppWrapper = styled.View`
   flex: 1;
-  align-items: center;
-  width: 100%;
-  background-color: white;
+  background-color: ${({ theme }) => theme.colors.background};
 `;
 
-const MobileContainer = styled.View<{ width: number }>`
+const MobileContainer = styled.View<StyledProps>`
   width: ${({ width }) => {
     const isWeb = Platform.OS === "web";
     const deviceWidth = Math.min(width, MAX_MOBILE_WIDTH);
@@ -47,6 +59,7 @@ const MobileContainer = styled.View<{ width: number }>`
   flex: 1;
   align-self: center;
   position: relative;
+  padding-top: ${props => props.insetsTop || 0}px;
 `;
 
 const TitleSection = styled.View`
@@ -371,10 +384,12 @@ type ToggleKeys = 'win' | 'basicHit' | 'basicHomerun' | 'basicScore' | 'basicDou
 
 const RuleSettingScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute();
   const { width: windowWidth } = useWindowDimensions();
   const { teamColor } = useTeam();
   const { joinData, updateSavingRules, updateLimits, applyRuleIdMapping, updateSavingRulesForAPI } = useJoin();
   const { token } = useStore();
+  const insets = useSafeAreaInsets();
   
   // 스크롤 위치 추적을 위한 ref와 타임아웃 ref
   const scrollViewRef = useRef(null);
@@ -404,15 +419,54 @@ const RuleSettingScreen = () => {
   const primaryColor = typeof teamColor === 'object' && teamColor.primary ? teamColor.primary : "#D11A6F";
   
   // 적금 목표와 한도 불러오기
-  const selectedGoalAmount = joinData.savingGoal || 300000;
+  const selectedGoalAmount = joinData.savingGoal || 500000;
   const selectedDailyLimit = joinData.dailyLimit || 5000;
   
   // 팀 정보 가져오기 (없으면 기본값 사용)
   // 로컬 assets 이미지 사용 (require는 상수 경로여야 함)
   const getTeamLogo = () => {
-    // 실제 앱에서는 joinData.selectedTeam?.id 등으로 동적 선택 처리 가능
-    // 여기서는 로고 예시로 자이언츠 이미지 사용
-    return require('../../assets/kbo/giants.png');
+    // 목표 이미지 매핑
+    const goalImages: {[key: string]: any} = {
+      '500000': require('../../assets/kbo/uniform/giants.png'),
+      '1000000': require('../../assets/nextseason.png'),
+      '1500000': require('../../assets/season_ticket.png'),
+      '3000000': require('../../assets/springcamp.png'),
+    };
+    
+    // 선택한 팀에 맞는 유니폼 이미지 설정
+    if (joinData.selectedTeam?.name && joinData.savingGoal === 500000) {
+      try {
+        if (joinData.selectedTeam.name === 'KIA 타이거즈') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/tigers.png');
+        } else if (joinData.selectedTeam.name === '삼성 라이온즈') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/lions.png');
+        } else if (joinData.selectedTeam.name === 'LG 트윈스') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/twins.png');
+        } else if (joinData.selectedTeam.name === '두산 베어스') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/bears.png');
+        } else if (joinData.selectedTeam.name === 'KT 위즈') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/wiz.png');
+        } else if (joinData.selectedTeam.name === 'SSG 랜더스') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/landers.png');
+        } else if (joinData.selectedTeam.name === '롯데 자이언츠') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/giants.png');
+        } else if (joinData.selectedTeam.name === '한화 이글스') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/eagles.png');
+        } else if (joinData.selectedTeam.name === 'NC 다이노스') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/dinos.png');
+        } else if (joinData.selectedTeam.name === '키움 히어로즈') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/heroes.png');
+        }
+      } catch (error) {
+        console.log('유니폼 이미지 로딩 오류:', error);
+      }
+    }
+    
+    // 선택한 적금 목표 금액 가져오기
+    const selectedGoalAmount = String(joinData.savingGoal || 500000);
+    
+    // 선택한 목표 금액에 해당하는 이미지 반환
+    return goalImages[selectedGoalAmount] || require('../../assets/kbo/uniform/giants.png');
   };
   
   const getPlayerImage = () => {
@@ -423,6 +477,20 @@ const RuleSettingScreen = () => {
   const teamLogo = getTeamLogo();
   const teamName = joinData.selectedTeam?.name || '자이언츠';
   const uniformName = joinData.selectedPlayer?.name || '선수 이름';
+  
+  // 목표 제목 가져오기
+  const getGoalTitle = () => {
+    const goalAmount = joinData.savingGoal || 500000;
+    const goalTitles: { [key: string]: string } = {
+      '500000': '유니폼',
+      '1000000': '다음 시즌 직관',
+      '1500000': '시즌권',
+      '3000000': '스프링캠프'
+    };
+    return goalTitles[String(goalAmount)] || '유니폼';
+  };
+  
+  const goalTitle = getGoalTitle();
   
   // 적금 규칙 불러오기
   const savedRules = joinData.savingRules || {
@@ -746,8 +814,8 @@ const RuleSettingScreen = () => {
         
         // 선수 ID가 있는 경우 해당 선수 기반으로 규칙 조회
         let url = 
-        `http://localhost:8000/api/saving_rule/rules`
-        // `http://3.38.183.156:8000/api/saving_rule/rules`;
+        // `http://localhost:8000/api/saving_rule/rules`
+        `http://3.38.183.156:8000/api/saving_rule/rules`;
         if (playerId) {
           url += `?player_id=${playerId}`;
         }
@@ -1143,10 +1211,21 @@ const RuleSettingScreen = () => {
     );
   };
 
+  // 일일한도 입력 처리 함수 추가
+  const handleDailyInputChange = (text: string) => {
+    const inputValue = parseInt(text) || 0;
+    // 선택된 목표의 일일한도를 넘지 않도록 제한
+    if (inputValue > selectedDailyLimit) {
+      setDailyInput(selectedDailyLimit.toString());
+    } else {
+      setDailyInput(text);
+    }
+  };
+
   return (
     <AppWrapper>
       <StatusBar backgroundColor='transparent' translucent={Platform.OS === 'android'} />
-      <MobileContainer width={windowWidth}>
+      <MobileContainer width={windowWidth} insetsTop={insets.top}>
         <Header
           title="적금 규칙 설정"
           step={3}
@@ -1178,7 +1257,7 @@ const RuleSettingScreen = () => {
             <TeamLogoContainer>
               <TeamLogo source={teamLogo} />
               <TeamInfoContainer>
-                <TeamName>유니폼</TeamName>
+                <TeamName>{goalTitle}</TeamName>
                 <View style={{ marginTop: 8 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                     <Text style={{ fontSize: 14, color: '#666666' }}>목표 금액</Text>
@@ -1207,9 +1286,10 @@ const RuleSettingScreen = () => {
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <StyledInput
                     value={dailyInput}
-                    onChangeText={setDailyInput}
+                    onChangeText={handleDailyInputChange}
                     keyboardType="numeric"
                     maxLength={8}
+                    placeholder={`${selectedDailyLimit.toLocaleString()}원`}
                     style={{ 
                       width: 120, 
                       height: 40, 
@@ -1321,7 +1401,7 @@ const RuleSettingScreen = () => {
                   </GoalInfoRow>
                   
                   <GoalInfoRow>
-                    <GoalInfoLabel>홈런 1개당</GoalInfoLabel>
+                    <GoalInfoLabel>홈런</GoalInfoLabel>
                     <InputContainer>
                       <StyledInput
                         value={rules.basic.homerun.toString()}

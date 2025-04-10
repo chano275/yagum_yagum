@@ -16,9 +16,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   AppWrapper,
-  MobileContainer,
+  MobileContainer as BaseMobileContainer,
   getAdjustedWidth,
-  StyledProps,
+  StyledProps as BaseStyledProps,
+  BASE_MOBILE_WIDTH,
 } from "../constants/layout";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -27,6 +28,8 @@ import { useStore } from "../store/useStore";
 import { AuthState } from "../store/useStore";
 import { useTeam } from "../context/TeamContext";
 import { api } from "../api/axios";
+import styled from "styled-components/native";
+import { Ionicons } from "@expo/vector-icons";
 
 type RootStackParamList = {
   Home: undefined;
@@ -34,6 +37,47 @@ type RootStackParamList = {
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Login">;
+
+interface MobileContainerProps extends BaseStyledProps {
+  insetsTop?: number;
+}
+
+const Container = styled.View<BaseStyledProps>`
+  flex: 1;
+  width: 100%;
+  padding: ${({ width }) => {
+    const baseWidth = Platform.OS === "web" ? BASE_MOBILE_WIDTH : width;
+    return baseWidth * 0.045;
+  }}px;
+  padding-top: ${Platform.OS === "web" ? "8px" : "0px"};
+  display: flex;
+  flex-direction: column;
+`;
+
+const MainContent = styled.View`
+  flex: 1;
+  justify-content: center;
+  align-items: center;
+`;
+
+const Header = styled.View<BaseStyledProps>`
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: ${(props) => props.width * 0.04}px;
+  padding-left: 0;
+  margin-top: ${Platform.OS === "web" ? "16px" : "8px"};
+`;
+
+const MobileContainer = styled(BaseMobileContainer)<MobileContainerProps>`
+  padding-top: ${props => Platform.OS === "web" ? "12px" : `${props.insetsTop || 0}px`};
+`;
+
+const BackButton = styled.TouchableOpacity`
+  padding: 10px 8px 10px 0;
+  justify-content: center;
+  align-items: center;
+`;
 
 const LoginScreen = () => {
   const [id, setId] = useState("");
@@ -133,6 +177,7 @@ const LoginScreen = () => {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
+      paddingBottom: Platform.OS === "web" ? width * 0.1 : 0,
     },
     loginCard: {
       backgroundColor: "white",
@@ -141,6 +186,7 @@ const LoginScreen = () => {
       width: "100%",
       maxWidth: 420,
       alignSelf: "center",
+      transform: [{ translateY: Platform.OS === "web" ? -width * 0.08 : 0 }],
       ...Platform.select({
         ios: {
           shadowColor: "#000",
@@ -262,19 +308,13 @@ const LoginScreen = () => {
           locations={[0.19, 1.0]}
           style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
         />
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => {
-                navigation.goBack();
-                // 또는 아래 방법을 시도해볼 수 있습니다
-                // navigation.pop();
-              }}
-            >
-              <MaterialIcons name="arrow-back" size={iconSize} color="black" />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.contentContainer}>
+        <Container width={width}>
+          <Header width={width}>
+            <BackButton onPress={() => navigation.goBack()}>
+              <Ionicons name="chevron-back" size={24} color="#000" />
+            </BackButton>
+          </Header>
+          <MainContent>
             <View style={styles.loginCard}>
               <Image
                 source={require("../../assets/verification.png")}
@@ -376,8 +416,8 @@ const LoginScreen = () => {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </MainContent>
+        </Container>
       </MobileContainer>
     </AppWrapper>
   );

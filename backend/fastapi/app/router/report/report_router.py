@@ -65,7 +65,7 @@ async def read_daily_reports_by_team(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="존재하지 않는 팀입니다"
             )
-            
+
         reports = report_crud.get_daily_reports_by_team(db, team_id, skip, limit)
         return reports
     except HTTPException:

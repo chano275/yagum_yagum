@@ -6,7 +6,7 @@ from datetime import date, datetime
 class DailyReportBase(BaseModel):
     TEAM_ID: int
     DATE: date
-    LLM_CONTEXT: str
+    LLM_CONTEXT: Optional[str] = None
     TEAM_AVG_AMOUNT: Optional[int] = None
 
 # 일일 보고서 생성 모델 (요청)
@@ -48,7 +48,7 @@ class WeeklyReportPersonalBase(BaseModel):
     ACCOUNT_ID: int
     DATE: date
     WEEKLY_AMOUNT: int
-    LLM_CONTEXT: str
+    LLM_CONTEXT: Optional[str] = None
 
 # 주간 개인 보고서 생성 모델 (요청)
 class WeeklyReportPersonalCreate(WeeklyReportPersonalBase):
@@ -233,7 +233,7 @@ class AllTeamsDailySavingResponse(BaseModel):
 class DailyTeamReportRequest(BaseModel):
     team_id: int
     date: str  # YYYY-MM-DD 형식
-    llm_context: str
+    llm_context: Optional[str] = None
 
 # 배치 일일 팀 보고서 요청 모델
 class BatchDailyTeamReportRequest(BaseModel):
@@ -269,7 +269,7 @@ class TeamRecordInfo(BaseModel):
 class WeeklyReportPersonalResponseExtended(BaseModel):
     DATE: date
     WEEKLY_AMOUNT: int
-    LLM_CONTEXT: str
+    LLM_CONTEXT: Optional[str] = None
     TEAM_RECORD: TeamRecordInfo
     # savings_comparison: SavingsComparisonInfo
     PREVIOUS_WEEK: int

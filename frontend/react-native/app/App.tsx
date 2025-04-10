@@ -11,15 +11,16 @@ import { theme } from "./src/styles/theme";
 import { DimensionProvider } from "./src/context/DimensionContext";
 import { TeamProvider } from "./src/context/TeamContext";
 import { JoinProvider } from "./src/context/JoinContext";
+import { AccountProvider } from "./src/context/AccountContext";
 import AppNavigator from "./src/navigation/AppNavigator";
 import axios from "axios";
 import { useStore } from "./src/store/useStore";
 
 // API 기본 URL 설정
-const BASE_URL = 'http://localhost:8000';  // 개발 환경
+// const BASE_URL = 'http://localhost:8000';  // 개발 환경
 
 // 배포 환경용
-// const BASE_URL = 'http://3.38.183.156:8000';  // 배포 환경
+const BASE_URL = 'http://3.38.183.156:8000';  // 배포 환경
 
 axios.defaults.baseURL = BASE_URL;
 
@@ -63,8 +64,10 @@ export default function App() {
           <DimensionProvider>
             <TeamProvider>
               <JoinProvider>
-                <StatusBar style="auto" />
-                <AppNavigator />
+                <AccountProvider>
+                  <StatusBar style="auto" />
+                  <AppNavigator />
+                </AccountProvider>
               </JoinProvider>
             </TeamProvider>
           </DimensionProvider>
