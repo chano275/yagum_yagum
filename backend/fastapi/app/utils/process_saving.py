@@ -33,6 +33,7 @@ def process_savings_for_date(game_date=None, session=None):
     """
     특정 날짜의 게임 기록을 기반으로 사용자 적금 규칙에 따라 적립금을 처리합니다.
     하루에 계정별로 한 번만 DailyTransfer에 총합을 저장합니다.
+    중복 레코드 추가를 방지합니다.
     
     Args:
         game_date (date, optional): 처리할 게임 날짜. 기본값은 오늘.
@@ -68,6 +69,7 @@ def process_savings_for_date(game_date=None, session=None):
         total_saved = 0
         processed_accounts = 0
         savings_count = 0
+        skipped_count = 0  # 중복으로 건너뛴 건수
         
         # 1. 팀별 기록 통계 조회
         team_stats = {}
@@ -102,6 +104,22 @@ def process_savings_for_date(game_date=None, session=None):
         # 계정별 일일 총액을 저장할 딕셔너리
         account_daily_totals = {}
 
+        # 해당 날짜에 이미 처리된 규칙 목록 조회 (중복 방지용)
+        existing_savings = session.query(
+            models.DailySaving.ACCOUNT_ID, 
+            models.DailySaving.SAVING_RULED_DETAIL_ID,
+            models.DailySaving.SAVING_RULED_TYPE_ID
+        ).filter(
+            models.DailySaving.DATE == game_date
+        ).all()
+        
+        # 중복 체크를 위한 집합 생성 (account_id, rule_detail_id, rule_type_id)
+        processed_rules = set()
+        for saving in existing_savings:
+            processed_rules.add((saving.ACCOUNT_ID, saving.SAVING_RULED_DETAIL_ID, saving.SAVING_RULED_TYPE_ID))
+        
+        logger.info(f"[{game_date}] 이미 처리된 규칙 수: {len(processed_rules)}")
+
         for account in accounts:
             account_total_saved = 0  # 이 계정에 적립된 총액
             account_savings_count = 0  # 이 계정의 적립 건수
@@ -130,6 +148,13 @@ def process_savings_for_date(game_date=None, session=None):
             ).all()
             
             for rule in team_rules:
+                # 중복 체크: 이미 처리된 규칙이면 건너뜀
+                rule_key = (account.ACCOUNT_ID, rule.SAVING_RULE_DETAIL_ID, rule.SAVING_RULE_TYPE_ID)
+                if rule_key in processed_rules:
+                    logger.info(f"계정 ID {account.ACCOUNT_ID}: 규칙 {rule.SAVING_RULE_DETAIL_ID}는 이미 처리되었으므로 건너뜁니다.")
+                    skipped_count += 1
+                    continue
+                
                 # 규칙 상세 정보 조회
                 rule_detail = session.query(models.SavingRuleDetail).filter(
                     models.SavingRuleDetail.SAVING_RULE_DETAIL_ID == rule.SAVING_RULE_DETAIL_ID
@@ -226,7 +251,7 @@ def process_savings_for_date(game_date=None, session=None):
                                 logger.info(f"계정 ID {account.ACCOUNT_ID}: 이체 금액이 0원 이하여서 이체를 건너뜁니다.")
                                 continue
                             
-                            # 누적 변수 업데이트 (중요: 이 부분이 누락되어 있었음)
+                            # 누적 변수 업데이트
                             daily_accumulated += saving_amount
                             monthly_accumulated += saving_amount
                             
@@ -241,6 +266,9 @@ def process_savings_for_date(game_date=None, session=None):
                                 created_at=datetime.now()
                             )
                             session.add(daily_saving)
+                            
+                            # 처리된 규칙 집합에 추가 (중복 방지)
+                            processed_rules.add(rule_key)
                             
                             # 계정 통계 업데이트
                             account_total_saved += saving_amount
@@ -280,7 +308,7 @@ def process_savings_for_date(game_date=None, session=None):
                             logger.info(f"계정 ID {account.ACCOUNT_ID}: 이체 금액이 0원 이하여서 이체를 건너뜁니다.")
                             continue
                         
-                        # 누적 변수 업데이트 (중요: 이 부분이 누락되어 있었음)
+                        # 누적 변수 업데이트
                         daily_accumulated += saving_amount
                         monthly_accumulated += saving_amount
                         
@@ -295,6 +323,9 @@ def process_savings_for_date(game_date=None, session=None):
                             created_at=datetime.now()
                         )
                         session.add(daily_saving)
+                        
+                        # 처리된 규칙 집합에 추가 (중복 방지)
+                        processed_rules.add(rule_key)
                         
                         # 계정 통계 업데이트
                         account_total_saved += saving_amount
@@ -355,7 +386,7 @@ def process_savings_for_date(game_date=None, session=None):
                                 logger.info(f"계정 ID {account.ACCOUNT_ID}: 이체 금액이 0원 이하여서 이체를 건너뜁니다.")
                                 continue
                             
-                            # 누적 변수 업데이트 (중요: 이 부분이 누락되어 있었음)
+                            # 누적 변수 업데이트
                             daily_accumulated += saving_amount
                             monthly_accumulated += saving_amount
                             
@@ -370,6 +401,9 @@ def process_savings_for_date(game_date=None, session=None):
                                 created_at=datetime.now()
                             )
                             session.add(daily_saving)
+                            
+                            # 처리된 규칙 집합에 추가 (중복 방지)
+                            processed_rules.add(rule_key)
                             
                             # 계정 통계 업데이트
                             account_total_saved += saving_amount
@@ -400,6 +434,13 @@ def process_savings_for_date(game_date=None, session=None):
             ).all()
             
             for rule in player_rules:
+                # 중복 체크: 이미 처리된 규칙이면 건너뜀
+                rule_key = (account.ACCOUNT_ID, rule.SAVING_RULE_DETAIL_ID, rule.SAVING_RULE_TYPE_ID)
+                if rule_key in processed_rules:
+                    logger.info(f"계정 ID {account.ACCOUNT_ID}: 규칙 {rule.SAVING_RULE_DETAIL_ID}는 이미 처리되었으므로 건너뜁니다.")
+                    skipped_count += 1
+                    continue
+                
                 # 이 선수의 기록이 있는지 확인
                 if rule.PLAYER_ID not in player_stats:
                     continue
@@ -447,7 +488,7 @@ def process_savings_for_date(game_date=None, session=None):
                         logger.info(f"계정 ID {account.ACCOUNT_ID}: 이체 금액이 0원 이하여서 이체를 건너뜁니다.")
                         continue
                     
-                    # 누적 변수 업데이트 (중요: 이 부분이 누락되어 있었음)
+                    # 누적 변수 업데이트
                     daily_accumulated += saving_amount
                     monthly_accumulated += saving_amount
                     
@@ -462,6 +503,9 @@ def process_savings_for_date(game_date=None, session=None):
                         created_at=datetime.now()
                     )
                     session.add(daily_saving)
+                    
+                    # 처리된 규칙 집합에 추가 (중복 방지)
+                    processed_rules.add(rule_key)
                     
                     # 계정 통계 업데이트
                     account_total_saved += saving_amount
