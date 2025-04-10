@@ -8,6 +8,8 @@ import {
   Text,
   useWindowDimensions,
   Modal,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
@@ -16,6 +18,7 @@ import { useTeam } from "@/context/TeamContext";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "@/navigation/AppNavigator";
+import { api } from "@/api/axios"; // API 클라이언트 임포트
 
 // 네비게이션 타입 정의
 type MatchrankScreenNavigationProp =
@@ -24,6 +27,17 @@ type MatchrankScreenNavigationProp =
 // 동적 스타일링을 위한 인터페이스
 interface StyledProps {
   width: number;
+}
+
+// 예측 결과 인터페이스
+interface PredictionResult {
+  PREDICTION_ID: number;
+  ACCOUNT_ID: number;
+  TEAM_ID: number;
+  PREDICTED_RANK: number;
+  SEASON_YEAR: number;
+  IS_CORRECT: number;
+  team_name: string;
 }
 
 // 모바일 기준 너비 설정
@@ -140,20 +154,22 @@ const TeamCard = styled.View<{ teamColor: string }>`
 const TeamInfo = styled.View`
   flex-direction: row;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 `;
 
 const TeamLogo = styled.Image`
-  width: 60px;
-  height: 60px;
-  margin-right: 15px;
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+  margin-top: 5px;
 `;
 
 const TeamName = styled.Text`
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
   color: #333;
-  font-family: ${({ theme }) => theme.fonts.bold};
+  line-height: 36px;
+  padding-top: 2px;
 `;
 
 const RankTitle = styled.Text`
@@ -192,8 +208,12 @@ const RankButtonText = styled.Text<{ selected: boolean }>`
   font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
-const SubmitButton = styled.TouchableOpacity<{ teamColor: string }>`
-  background-color: ${(props) => props.teamColor};
+const SubmitButton = styled.TouchableOpacity<{
+  teamColor: string;
+  disabled?: boolean;
+}>`
+  background-color: ${(props) =>
+    props.disabled ? "#CCCCCC" : props.teamColor};
   border-radius: 8px;
   padding: 16px;
   align-items: center;
@@ -206,6 +226,19 @@ const SubmitButtonText = styled.Text`
   font-size: 16px;
   font-weight: bold;
   font-family: ${({ theme }) => theme.fonts.bold};
+`;
+
+// 로딩 인디케이터 스타일
+const LoadingContainer = styled.View`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.7);
+  z-index: 10;
 `;
 
 // 모달 관련 스타일 컴포넌트 추가
@@ -278,7 +311,7 @@ const ModalButtonText = styled.Text`
 `;
 
 const MatchrankScreen = () => {
-  const { teamColor, teamName } = useTeam();
+  const { teamColor, teamName, teamId } = useTeam();
   const { width: windowWidth } = useWindowDimensions();
   const width =
     Platform.OS === "web"
@@ -290,17 +323,95 @@ const MatchrankScreen = () => {
   const [selectedRank, setSelectedRank] = useState<number | null>(null);
   // 모달 표시 상태
   const [modalVisible, setModalVisible] = useState(false);
+  // 로딩 상태 추가
+  const [isLoading, setIsLoading] = useState(false);
+  // 예측 결과 저장
+  const [predictionResult, setPredictionResult] =
+    useState<PredictionResult | null>(null);
 
-  // 팀 로고 (예시)
-  const teamLogo = require("../../../assets/icon.png"); // 실제 구현시 팀에 맞는 로고로 변경
+  // 팀 로고 임포트
+  const teamLogos = {
+    KIA: require("../../../assets/kbo/tigers.png"),
+    SAMSUNG: require("../../../assets/kbo/lions.png"),
+    LG: require("../../../assets/kbo/twins.png"),
+    DOOSAN: require("../../../assets/kbo/bears.png"),
+    KT: require("../../../assets/kbo/wiz.png"),
+    SSG: require("../../../assets/kbo/landers.png"),
+    LOTTE: require("../../../assets/kbo/giants.png"),
+    HANWHA: require("../../../assets/kbo/eagles.png"),
+    NC: require("../../../assets/kbo/dinos.png"),
+    KIWOOM: require("../../../assets/kbo/heroes.png"),
+  };
+
+  // 팀 로고 가져오기 함수
+  const getTeamLogo = () => {
+    switch (teamId) {
+      case 1:
+        return teamLogos.KIA;
+      case 2:
+        return teamLogos.SAMSUNG;
+      case 3:
+        return teamLogos.LG;
+      case 4:
+        return teamLogos.DOOSAN;
+      case 5:
+        return teamLogos.KT;
+      case 6:
+        return teamLogos.SSG;
+      case 7:
+        return teamLogos.LOTTE;
+      case 8:
+        return teamLogos.HANWHA;
+      case 9:
+        return teamLogos.NC;
+      case 10:
+        return teamLogos.KIWOOM;
+      default:
+        return teamLogos.NC;
+    }
+  };
 
   // 순위 버튼 생성 (1~10)
   const rankButtons = Array.from({ length: 10 }, (_, i) => i + 1);
 
-  // 제출 버튼 클릭 핸들러
-  const handleSubmit = () => {
+  // 순위 예측 제출 핸들러
+  const handleSubmit = async () => {
     if (selectedRank !== null) {
-      setModalVisible(true);
+      try {
+        setIsLoading(true);
+
+        // API 요청 데이터 구성
+        const payload = {
+          TEAM_ID: teamId,
+          PREDICTED_RANK: selectedRank,
+          SEASON_YEAR: 2025,
+        };
+
+        console.log("순위 예측 요청:", payload);
+
+        // API 호출
+        const response = await api.post(
+          "/api/mission/rank-predictions",
+          payload
+        );
+
+        console.log("순위 예측 성공:", response.data);
+        setPredictionResult(response.data);
+
+        // 모달 표시
+        setModalVisible(true);
+      } catch (error) {
+        console.error("순위 예측 API 오류:", error);
+
+        // 오류 알림
+        Alert.alert(
+          "오류 발생",
+          "순위 예측을 저장하는 중 문제가 발생했습니다. 다시 시도해주세요.",
+          [{ text: "확인" }]
+        );
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -317,6 +428,25 @@ const MatchrankScreen = () => {
       // 오류 발생 시 뒤로 가기로 대체
       navigation.goBack();
     }
+  };
+
+  // 모달 메시지 업데이트 (API 응답 반영)
+  const getModalMessage = () => {
+    if (predictionResult) {
+      return (
+        `${
+          teamName || "선택된 팀"
+        }의 예상 순위 ${selectedRank}위가 저장되었습니다.\n\n` +
+        `우대금리 혜택은 2025 KBO 리그 종료 후 적용됩니다.`
+      );
+    }
+
+    return (
+      `${
+        teamName || "선택된 팀"
+      }의 예상 순위 ${selectedRank}위가 제출되었습니다.\n\n` +
+      `우대금리 혜택은 2025 KBO 리그 종료 후 적용됩니다.`
+    );
   };
 
   return (
@@ -365,8 +495,8 @@ const MatchrankScreen = () => {
             {/* 팀 정보 및 순위 선택 */}
             <TeamCard teamColor={teamColor.primary}>
               <TeamInfo>
-                <TeamLogo source={teamLogo} />
-                <TeamName>{teamName || "NC 다이노스"}</TeamName>
+                <TeamLogo source={getTeamLogo()} resizeMode="contain" />
+                <TeamName>{teamName}</TeamName>
               </TeamInfo>
               <RankTitle>예상 순위를 선택해주세요</RankTitle>
               <RankButtonsContainer>
@@ -388,15 +518,24 @@ const MatchrankScreen = () => {
             {/* 제출 버튼 */}
             <SubmitButton
               teamColor={teamColor.primary}
-              disabled={selectedRank === null}
+              disabled={selectedRank === null || isLoading}
               onPress={handleSubmit}
             >
-              <SubmitButtonText>예측 순위 제출하기</SubmitButtonText>
+              <SubmitButtonText>
+                {isLoading ? "예측 저장 중..." : "예측 순위 제출하기"}
+              </SubmitButtonText>
             </SubmitButton>
           </ScrollView>
         </ContentContainer>
 
-        {/* 커스텀 모달 */}
+        {/* 로딩 인디케이터 */}
+        {isLoading && (
+          <LoadingContainer>
+            <ActivityIndicator size="large" color={teamColor.primary} />
+          </LoadingContainer>
+        )}
+
+        {/* 모달 */}
         <Modal
           animationType="fade"
           transparent={true}
@@ -413,12 +552,7 @@ const MatchrankScreen = () => {
           <ModalOverlay>
             <ModalContainer>
               <ModalTitle>순위 예측 완료</ModalTitle>
-              <ModalMessage>
-                {teamName || "NC 다이노스"}의 예상 순위 {selectedRank}위가
-                제출되었습니다.
-                {"\n\n"}
-                우대금리 혜택은 2025 KBO 리그 종료 후 적용됩니다.
-              </ModalMessage>
+              <ModalMessage>{getModalMessage()}</ModalMessage>
               <ModalButton
                 teamColor={teamColor.primary}
                 onPress={handleConfirm}
