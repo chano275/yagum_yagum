@@ -364,7 +364,7 @@ async def read_weekly_personal_report(
         )
     
 # 주간 개인 보고서 조회 (최신순)
-@router.get("/weekly-test", response_model=report_schema.WeeklyReportPersonalResponseExtendedTest)
+@router.get("/weekly-advanced", response_model=report_schema.WeeklyReportPersonalResponseExtendedTest)
 async def read_weekly_personal_report(
     report_index: Optional[int] = Query(None, description="보고서 인덱스 (1:최신, 2:두번째, ...)", ge=1),
     db: Session = Depends(get_db),
