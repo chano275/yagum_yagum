@@ -185,7 +185,7 @@ def run_crawler():
         
         # 모듈 임포트 확인
         try:
-            from baseball_data.def_crawl_gamelog import crawl_gamelog
+            from baseball_data.def_crawl_gamelog_with_pitcher import crawl_gamelog
         except ImportError as e:
             logger.error(f"crawl_gamelog 모듈 임포트 실패: {str(e)}")
             return False
