@@ -82,104 +82,128 @@ def generate_daily_message(team_data, report_date):
 def main():
     # 예시 데이터 설정
     input_data = {
-        "date": "2025-03-23",
-        "teams_data": [
-            {
-                "team_id": 1,
-                "team": "KIA 타이거즈",
-                "opponent": "NC 다이노스",
-                "game_record": "무승부",
-                "total_daily_saving": 9000000,
-                "opponent_total_daily_saving": 6000000
-            },
-            {
-                "team_id": 2,
-                "team": "삼성 라이온즈",
-                "opponent": "키움 히어로즈",
-                "game_record": "승리",
-                "total_daily_saving": 3000000,
-                "opponent_total_daily_saving": 7500000
-            },
-            {
-                "team_id": 3,
-                "team": "LG 트윈스",
-                "opponent": "롯데 자이언츠",
-                "game_record": "승리",
-                "total_daily_saving": 1000000,
-                "opponent_total_daily_saving": 5000000
-            },
-            {
-                "team_id": 4,
-                "team": "두산 베어스",
-                "opponent": "SSG 랜더스",
-                "game_record": "패배",
-                "total_daily_saving": 6500000,
-                "opponent_total_daily_saving": 2000000
-            },
-            {
-                "team_id": 5,
-                "team": "KT 위즈",
-                "opponent": "한화 이글스",
-                "game_record": "승리",
-                "total_daily_saving": 4000000,
-                "opponent_total_daily_saving": 1500000
-            },
-            {
-                "team_id": 6,
-                "team": "SSG 랜더스",
-                "opponent": "두산 베어스",
-                "game_record": "승리",
-                "total_daily_saving": 2000000,
-                "opponent_total_daily_saving": 6500000
-            },
-            {
-                "team_id": 7,
-                "team": "롯데 자이언츠",
-                "opponent": "LG 트윈스",
-                "game_record": "패배",
-                "total_daily_saving": 5000000,
-                "opponent_total_daily_saving": 1000000
-            },
-            {
-                "team_id": 8,
-                "team": "한화 이글스",
-                "opponent": "KT 위즈",
-                "game_record": "패배",
-                "total_daily_saving": 1500000,
-                "opponent_total_daily_saving": 4000000
-            },
-            {
-                "team_id": 9,
-                "team": "NC 다이노스",
-                "opponent": "KIA 타이거즈",
-                "game_record": "무승부",
-                "total_daily_saving": 6000000,
-                "opponent_total_daily_saving": 9000000
-            },
-            {
-                "team_id": 10,
-                "team": "키움 히어로즈",
-                "opponent": "삼성 라이온즈",
-                "game_record": "패배",
-                "total_daily_saving": 7500000,
-                "opponent_total_daily_saving": 3000000
+        "date": "2025-03-24",
+        "teams_data": []
+    }   
+
+    # input_data = {
+    #     "date": "2025-03-23",
+    #     "teams_data": [
+    #         {
+    #             "team_id": 1,
+    #             "team": "KIA 타이거즈",
+    #             "opponent": "NC 다이노스",
+    #             "game_record": "무승부",
+    #             "total_daily_saving": 9000000,
+    #             "opponent_total_daily_saving": 6000000
+    #         },
+    #         {
+    #             "team_id": 2,
+    #             "team": "삼성 라이온즈",
+    #             "opponent": "키움 히어로즈",
+    #             "game_record": "승리",
+    #             "total_daily_saving": 3000000,
+    #             "opponent_total_daily_saving": 7500000
+    #         },
+    #         {
+    #             "team_id": 3,
+    #             "team": "LG 트윈스",
+    #             "opponent": "롯데 자이언츠",
+    #             "game_record": "승리",
+    #             "total_daily_saving": 1000000,
+    #             "opponent_total_daily_saving": 5000000
+    #         },
+    #         {
+    #             "team_id": 4,
+    #             "team": "두산 베어스",
+    #             "opponent": "SSG 랜더스",
+    #             "game_record": "패배",
+    #             "total_daily_saving": 6500000,
+    #             "opponent_total_daily_saving": 2000000
+    #         },
+    #         {
+    #             "team_id": 5,
+    #             "team": "KT 위즈",
+    #             "opponent": "한화 이글스",
+    #             "game_record": "승리",
+    #             "total_daily_saving": 4000000,
+    #             "opponent_total_daily_saving": 1500000
+    #         },
+    #         {
+    #             "team_id": 6,
+    #             "team": "SSG 랜더스",
+    #             "opponent": "두산 베어스",
+    #             "game_record": "승리",
+    #             "total_daily_saving": 2000000,
+    #             "opponent_total_daily_saving": 6500000
+    #         },
+    #         {
+    #             "team_id": 7,
+    #             "team": "롯데 자이언츠",
+    #             "opponent": "LG 트윈스",
+    #             "game_record": "패배",
+    #             "total_daily_saving": 5000000,
+    #             "opponent_total_daily_saving": 1000000
+    #         },
+    #         {
+    #             "team_id": 8,
+    #             "team": "한화 이글스",
+    #             "opponent": "KT 위즈",
+    #             "game_record": "패배",
+    #             "total_daily_saving": 1500000,
+    #             "opponent_total_daily_saving": 4000000
+    #         },
+    #         {
+    #             "team_id": 9,
+    #             "team": "NC 다이노스",
+    #             "opponent": "KIA 타이거즈",
+    #             "game_record": "무승부",
+    #             "total_daily_saving": 6000000,
+    #             "opponent_total_daily_saving": 9000000
+    #         },
+    #         {
+    #             "team_id": 10,
+    #             "team": "키움 히어로즈",
+    #             "opponent": "삼성 라이온즈",
+    #             "game_record": "패배",
+    #             "total_daily_saving": 7500000,
+    #             "opponent_total_daily_saving": 3000000
+    #         }
+    #     ]
+    # }
+
+    if input_data["teams_data"]:
+        data_list = input_data["teams_data"]
+        report_date = input_data["date"]   
+
+        reports = []
+        for account in data_list:
+            # 각 팀의 정보를 기반으로 데일리 메시지 생성
+            daily_message_output = generate_daily_message(account, report_date)
+            reports.append(daily_message_output)
+
+        output_json = {"reports": reports}
+        with open("test_json/daily_message_output.json", "w", encoding="utf-8") as f:
+            json.dump(output_json, f, ensure_ascii=False, indent=4)
+    else:
+        # 데이터가 없는 월요일 데이터를 입력받았을 경우
+        report_date = input_data["date"]
+
+        reports = []
+        for i in range(1, 11):
+            team_id = i
+            date = report_date
+            daily_text = "경기가 없는 하루였지만, 팬 여러분 덕분에 우리 팀은 또 다른 승리를 준비하고 있습니다. 계속 함께 달려볼까요?"
+            daily_message_output = {
+                "team_id": team_id,
+                "date": date,
+                "llm_context": daily_text
             }
-        ]
-    }
-
-    data_list = input_data["teams_data"]
-    report_date = input_data["date"]
-
-    reports = []
-    for account in data_list:
-        # 각 팀의 정보를 기반으로 데일리 메시지 생성
-        daily_message_output = generate_daily_message(account, report_date)
-        reports.append(daily_message_output)
-        print(daily_message_output)
-
-    output_json = {"reports": reports}
-    with open("test_json/daily_message_output.json", "w", encoding="utf-8") as f:
-        json.dump(output_json, f, ensure_ascii=False, indent=4)
+            reports.append(daily_message_output)
+        
+        output_json = {"reports": reports}
+        with open("test_json/daily_message_output.json", "w", encoding="utf-8") as f:
+            json.dump(output_json, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     main()
