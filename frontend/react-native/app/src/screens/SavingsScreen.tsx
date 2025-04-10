@@ -780,51 +780,51 @@ const SavingsScreen = () => {
   const fetchTransactionsForMonth = async (month: Date) => {
     try {
       setIsLoading(true);
+      // 데이터 요청 전에 기존 데이터 초기화
+      setTransactionItems([]);
       
       // 현재 월 가져오기 (1-12)
       const currentMonth = month.getMonth() + 1;
       
-      // API 호출
-      const response = await api.get('/api/account/transfers_log', {
+      // 1. 거래 내역 API 호출
+      const transferResponse = await api.get('/api/account/transfers_log', {
         params: { month: currentMonth }
       });
+
+      // 2. 해당 월의 모든 날짜에 대한 경기 결과 가져오기
+      const resultsResponse = await api.get('/api/game/user-team-results');
+      const gameResults = resultsResponse.data.reduce((acc: { [key: string]: any }, result: any) => {
+        acc[result.game_date] = result;
+        return acc;
+      }, {});
       
-      // API 응답을 TransactionItem 형식으로 변환
-      const transactions: TransactionItem[] = response.data.map((item: any) => {
-        // 날짜 형식 변환 (YYYY-MM-DD -> M/D)
-        const dateObj = new Date(item.DATE);
-        const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
-        
-        // 상대팀 이름 추출 (TEXT에서 추출 또는 기본값 사용)
-        let opponent = "TEAM";
-        if (item.TEXT.includes("트윈스")) opponent = "TWINS";
-        else if (item.TEXT.includes("베어스")) opponent = "BEARS";
-        else if (item.TEXT.includes("타이거즈")) opponent = "TIGERS";
-        else if (item.TEXT.includes("라이온즈")) opponent = "LIONS";
-        else if (item.TEXT.includes("위즈")) opponent = "WIZ";
-        else if (item.TEXT.includes("랜더스")) opponent = "LANDERS";
-        else if (item.TEXT.includes("자이언츠")) opponent = "GIANTS";
-        else if (item.TEXT.includes("이글스")) opponent = "EAGLES";
-        else if (item.TEXT.includes("다이노스")) opponent = "DINOS";
-        else if (item.TEXT.includes("히어로즈")) opponent = "HEROES";
-        
-        // 승리 횟수 추출 (기본값 1)
-        const wins = 1;
-        
-        return {
-          id: item.DATE, // DAILY_TRANSFER_ID 대신 DATE를 id로 사용
-          opponent,
-          date: formattedDate,
-          description: item.TEXT,
-          amount: item.AMOUNT,
-          wins
-        };
-      });
+      // 3. API 응답을 TransactionItem 형식으로 변환
+      const transactions: TransactionItem[] = transferResponse.data
+        .filter((item: any) => {
+          const dateObj = new Date(item.DATE);
+          return dateObj.getMonth() + 1 === currentMonth;
+        })
+        .map((item: any) => {
+          const dateObj = new Date(item.DATE);
+          const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+          
+          // 해당 날짜의 경기 결과에서 상대팀 정보 가져오기
+          const gameResult = gameResults[item.DATE];
+          const opponentTeamName = gameResult?.opponent_team_name || "";
+          
+          return {
+            id: item.DATE,
+            opponent: opponentTeamName,
+            date: formattedDate,
+            description: item.TEXT,
+            amount: item.AMOUNT,
+            wins: 1
+          };
+        });
       
       setTransactionItems(transactions);
     } catch (error) {
       console.error("월별 거래 내역 조회 실패:", error);
-      // 에러 발생 시 빈 배열 설정
       setTransactionItems([]);
     } finally {
       setIsLoading(false);

@@ -328,12 +328,14 @@ async def read_weekly_personal_report(
         # 6. 뉴스 요약 조회
         news_summation = team_report.NEWS_SUMMATION if team_report else ""
         
+        this_week_monday = (datetime.now().date() - timedelta(days=days_since_monday))
+        # logger.info(f"!!!!!!!!!!{this_week_monday}")
         # 7. 지난 주 주간 보고서 기록 조회
         weekly_report = db.query(models.WeeklyReportPersonal).filter(
             models.WeeklyReportPersonal.ACCOUNT_ID == account_id,
-            models.WeeklyReportPersonal.DATE == last_week_monday
+            models.WeeklyReportPersonal.DATE == this_week_monday
         ).first()
-        
+        # logger.info(f"!!!!!!{days_since_monday}")
         # 8. 결과 딕셔너리 생성
         extended_report = {
             "DATE": last_week_monday,  # 지난 주 월요일을 기준 날짜로 설정
@@ -361,6 +363,260 @@ async def read_weekly_personal_report(
             detail=f"주간 개인 보고서 조회 중 오류 발생: {str(e)}"
         )
     
+# 주간 개인 보고서 조회 (최신순)
+@router.get("/weekly-advanced", response_model=report_schema.WeeklyReportPersonalResponseExtendedTest)
+async def read_weekly_personal_report(
+    report_index: Optional[int] = Query(None, description="보고서 인덱스 (1:최신, 2:두번째, ...)", ge=1),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        # 일반적인 임포트
+        from datetime import datetime, timedelta
+        import calendar
+
+        # 현재 사용자의 계정 정보 조회
+        account = db.query(models.Account).filter(models.Account.USER_ID == current_user.USER_ID).first()
+        if not account:
+            logger.warning(f"계정 정보 없음: 사용자 ID {current_user.USER_ID}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="계정 정보가 없습니다"
+            )
+            
+        account_id = account.ACCOUNT_ID
+        logger.info(f"주간 개인 보고서 조회: 계정 ID {account_id}, 인덱스: {report_index}")
+            
+        # 팀 ID 가져오기
+        team_id = account.TEAM_ID
+        if not team_id:
+            logger.warning(f"계정에 연결된 팀이 없음: 계정 ID {account_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="계정에 연결된 팀 정보가 없습니다"
+            )
+        
+        # 이 계정의 모든 주간 보고서를 최신순으로 가져오기
+        weekly_reports = db.query(models.WeeklyReportPersonal).filter(
+            models.WeeklyReportPersonal.ACCOUNT_ID == account_id
+        ).order_by(models.WeeklyReportPersonal.DATE.desc()).all()
+        
+        # 보고서가 없는 경우 처리 - 404 대신 200으로 응답하고 다른 정보는 초기화하여 포함
+        has_reports = True
+        if not weekly_reports:
+            logger.warning(f"주간 보고서가 없음: 계정 ID {account_id}")
+            has_reports = False
+            # 현재 날짜를 기준으로 월요일 계산 (기본값 설정)
+            today = datetime.now().date()
+            # 현재 요일 (0: 월요일, 6: 일요일)
+            weekday = today.weekday()
+            # 이번주 월요일 계산
+            report_monday = today - timedelta(days=weekday)
+            report_date = report_monday
+        else:
+            # report_index가 지정되지 않은 경우 최신 보고서(인덱스 1)로 설정
+            if report_index is None:
+                report_index = 1
+            
+            # 인덱스 범위 검증
+            if report_index > len(weekly_reports):
+                logger.warning(f"유효하지 않은 인덱스: {report_index}, 전체 보고서 수: {len(weekly_reports)}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"요청한 인덱스({report_index})에 해당하는 보고서가 없습니다. 현재 보고서 수: {len(weekly_reports)}"
+                )
+            
+            # 요청한 인덱스에 해당하는 보고서 가져오기 (0-기반 인덱스로 변환)
+            weekly_report = weekly_reports[report_index - 1]
+            report_date = weekly_report.DATE
+            
+            # DATE 필드가 None인 경우 현재 날짜 사용
+            if report_date is None:
+                logger.warning(f"보고서의 DATE 필드가 None: 계정 ID {account_id}, 인덱스: {report_index}")
+                report_date = datetime.now().date()
+        
+        # 해당 주의 월과 주차 계산
+        def get_month_week(date):
+            """
+            날짜가 해당 월의 몇 번째 주인지 계산 (월요일 시작 기준)
+            """
+            # 해당 월의 첫날
+            first_day = date.replace(day=1)
+            
+            # 해당 월의 첫 번째 월요일 찾기
+            if first_day.weekday() == 0:  # 첫날이 월요일인 경우
+                first_monday = first_day
+            else:
+                # 첫날 이후 첫 월요일 찾기
+                first_monday = first_day + timedelta(days=(7 - first_day.weekday()) % 7)
+            
+            if date < first_monday:
+                # 첫 월요일 이전 날짜는 월 시작부 불완전 주로 0주차 처리
+                return 0
+            else:
+                # 첫 월요일 이후부터는 주차 계산
+                days_since_first_monday = (date - first_monday).days
+                return days_since_first_monday // 7 + 1
+
+        def get_week_display(date):
+            """
+            날짜의 월과 주차를 사용자 친화적으로 표시
+            """
+            week_num = get_month_week(date)
+            month_name = ["", "1월", "2월", "3월", "4월", "5월", "6월", 
+                        "7월", "8월", "9월", "10월", "11월", "12월"][date.month]
+            
+            if week_num == 0:
+                return f"{month_name} 시작주"
+            else:
+                week_name = ["", "1주차", "2주차", "3주차", "4주차", "5주차", "6주차"][min(week_num, 6)]
+                return f"{month_name} {week_name}"
+        
+        # 해당 보고서 주의 월요일과 일요일 계산
+        # 해당 날짜의 요일 확인 (0: 월요일, 1: 화요일, ... 6: 일요일)
+        weekday = report_date.weekday()
+        # 해당 주의 월요일 계산
+        report_monday = report_date - timedelta(days=weekday)
+        report_sunday = report_monday + timedelta(days=6)
+        
+        # 주 정보 계산
+        week_info = get_week_display(report_monday)
+        
+        # 이전 주의 월요일과 일요일 계산
+        prev_week_monday = report_monday - timedelta(days=7)
+        prev_week_sunday = report_sunday - timedelta(days=7)
+        
+        # 1. 해당 주의 팀 주간 보고서 조회
+        team_report = db.query(models.WeeklyReportTeam).filter(
+            models.WeeklyReportTeam.TEAM_ID == team_id,
+            models.WeeklyReportTeam.DATE >= report_monday,
+            models.WeeklyReportTeam.DATE <= report_sunday
+        ).first()
+        
+        # 팀 승, 패, 무승부 정보 초기화
+        team_win = 0
+        team_lose = 0
+        team_draw = 0
+        
+        # 2. 팀 보고서가 있고 승패 정보가 모두 있는지 확인
+        if team_report and team_report.TEAM_WIN is not None and team_report.TEAM_LOSE is not None and team_report.TEAM_DRAW is not None:
+            # 팀 보고서에서 승패 정보 가져오기
+            team_win = team_report.TEAM_WIN
+            team_lose = team_report.TEAM_LOSE
+            team_draw = team_report.TEAM_DRAW
+            logger.info(f"Weekly_report_team에서 승패 정보 조회: 승 {team_win}, 패 {team_lose}, 무 {team_draw}")
+        else:
+            # 없으면 GameLog에서 계산
+            team_win = db.query(func.count(models.GameLog.GAME_LOG_ID)).filter(
+                models.GameLog.TEAM_ID == team_id,
+                models.GameLog.RECORD_TYPE_ID == 1,  # 승리
+                models.GameLog.DATE >= report_monday,
+                models.GameLog.DATE <= report_sunday
+            ).scalar() or 0
+            
+            team_lose = db.query(func.count(models.GameLog.GAME_LOG_ID)).filter(
+                models.GameLog.TEAM_ID == team_id,
+                models.GameLog.RECORD_TYPE_ID == 2,  # 패배
+                models.GameLog.DATE >= report_monday,
+                models.GameLog.DATE <= report_sunday
+            ).scalar() or 0
+            
+            team_draw = db.query(func.count(models.GameLog.GAME_LOG_ID)).filter(
+                models.GameLog.TEAM_ID == team_id,
+                models.GameLog.RECORD_TYPE_ID == 3,  # 무승부
+                models.GameLog.DATE >= report_monday,
+                models.GameLog.DATE <= report_sunday
+            ).scalar() or 0
+            
+            logger.info(f"GameLog에서 승패 정보 계산: 승 {team_win}, 패 {team_lose}, 무 {team_draw}")
+        
+        # 4. 일별 적금액 계산 (해당 주 데이터)
+        daily_savings = {}
+        
+        # 해당 주의 모든 DailyTransfer 한 번에 조회
+        week_transfers = db.query(models.DailyTransfer).filter(
+            models.DailyTransfer.ACCOUNT_ID == account_id,
+            models.DailyTransfer.DATE >= report_monday,
+            models.DailyTransfer.DATE <= report_sunday
+        ).all()
+        
+        # 날짜별 적금액 매핑 생성
+        transfer_dict = {transfer.DATE.isoformat(): transfer.AMOUNT for transfer in week_transfers}
+        
+        # 일별 적금액 계산 및 저장 (월요일부터 일요일까지)
+        for day_offset in range(7):
+            day_date = report_monday + timedelta(days=day_offset)
+            day_iso = day_date.isoformat()
+            
+            # 해당 날짜에 적금액이 있으면 사용, 없으면 0으로 설정
+            day_amount = transfer_dict.get(day_iso, 0)
+            daily_savings[day_iso] = day_amount
+            
+        # 로깅 추가
+        logger.info(f"일별 적금액 계산 완료: {daily_savings}, 주 시작일: {report_monday}")
+        
+        # 일관성 검사: 모든 요일(월~일)이 있는지 확인
+        weekdays = [report_monday + timedelta(days=i) for i in range(7)]
+        weekday_isos = [d.isoformat() for d in weekdays]
+        for day_iso in weekday_isos:
+            if day_iso not in daily_savings:
+                logger.warning(f"일별 적금액에 요일 누락: {day_iso}")
+                daily_savings[day_iso] = 0
+        
+        # 5. 해당 주와 이전 주 적금액 비교
+        # 해당 주 적금액 (해당 주 월요일부터 일요일까지의 합)
+        this_week_transfers = db.query(models.DailyTransfer).filter(
+            models.DailyTransfer.ACCOUNT_ID == account_id,
+            models.DailyTransfer.DATE >= report_monday,
+            models.DailyTransfer.DATE <= report_sunday
+        ).all()
+        
+        this_week_amount = sum(transfer.AMOUNT for transfer in this_week_transfers) if this_week_transfers else 0
+        
+        # 이전 주 적금액 조회 (이전 주 월요일부터 일요일까지)
+        prev_week_transfers = db.query(models.DailyTransfer).filter(
+            models.DailyTransfer.ACCOUNT_ID == account_id,
+            models.DailyTransfer.DATE >= prev_week_monday,
+            models.DailyTransfer.DATE <= prev_week_sunday
+        ).all()
+        
+        prev_week_amount = sum(transfer.AMOUNT for transfer in prev_week_transfers) if prev_week_transfers else 0
+        
+        # 6. 뉴스 요약 조회
+        news_summation = team_report.NEWS_SUMMATION if team_report else ""
+        
+        # 7. 결과 딕셔너리 생성
+        extended_report = {
+            "DATE": report_monday,  # 해당 주 월요일을 기준 날짜로 설정
+            "WEEK_INFO": week_info,  # 예: "4월 첫째주"
+            "WEEKLY_AMOUNT": this_week_amount,  # 해당 주 적금액
+            "LLM_CONTEXT": weekly_report.LLM_CONTEXT if has_reports and weekly_report and weekly_report.LLM_CONTEXT else "",
+            "TEAM_RECORD": {
+                "WIN": team_win,
+                "LOSE": team_lose,
+                "DRAW": team_draw
+            },
+            "PREVIOUS_WEEK": prev_week_amount,  # 이전 주 금액
+            "CHANGE_PERCENTAGE": round(((this_week_amount - prev_week_amount) / prev_week_amount * 100) if prev_week_amount > 0 else (100 if this_week_amount > 0 else 0), 2),
+            "DAILY_SAVINGS": daily_savings,
+            "NEWS_SUMMATION": news_summation,
+        }
+        
+        # 주간 리포트가 없는 경우 메시지 추가
+        if not has_reports:
+            extended_report["LLM_CONTEXT"] = "주간 리포트가 없습니다"
+        
+        return extended_report
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"주간 개인 보고서 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"주간 개인 보고서 조회 중 오류 발생: {str(e)}"
+        )
+
 # 특정 계정과 날짜의 주간 개인 보고서 조회
 @router.get("/weekly/account/{account_id}/date/{date}", response_model=report_schema.WeeklyReportPersonalResponse)
 async def read_weekly_personal_report_by_date(

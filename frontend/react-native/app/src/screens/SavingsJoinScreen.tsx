@@ -39,14 +39,15 @@ const TitleContainer = styled.View`
 
 const BackButton = styled.TouchableOpacity`
   padding: 8px;
-  padding-left: 12px;
+  padding-left: 16px;
+  margin-left: 4px;
 `;
 
 const Title = styled.Text`
   font-weight: bold;
   flex: 1;
   text-align: center;
-  margin-right: 32px;
+  margin-right: 48px;
   color: #000;
   font-size: 20px;
 `;
@@ -143,6 +144,7 @@ const InfoLabel = styled.Text`
   color: #999999;
   font-weight: 600;
   line-height: 20px;
+  width: 70px;
 `;
 
 const InfoValue = styled.Text`
@@ -152,6 +154,7 @@ const InfoValue = styled.Text`
   font-weight: 600;
   line-height: 22px;
   text-align: right;
+  margin-left: 16px;
 `;
 
 const InfoHighlight = styled.Text`
@@ -163,9 +166,10 @@ const InfoHighlight = styled.Text`
 const JoinButtonLight = styled.TouchableOpacity`
   background-color: #C0EEF2;
   padding: 16px;
-  borderRadius: 8px;
+  border-radius: 8px;
   align-items: center;
   margin-bottom: 32px;
+  width: 100%;
 `;
 
 const JoinButtonLightText = styled.Text`
@@ -195,7 +199,6 @@ const PromotionText = styled.Text`
 
 const HighlightText = styled(PromotionText)`
   color: #176B87;
-  font-size: 26px;
   font-weight: 900;
 `;
 
@@ -233,7 +236,7 @@ const InfoContainer = styled.View`
 
 const StepContainer = styled.View`
   margin-top: 32px;
-  padding-bottom: 32px;
+  padding-bottom: 16px;
 `;
 
 const StepTitle = styled.Text`
@@ -248,7 +251,8 @@ const StepItem = styled(Animated.View)`
   flex-direction: row;
   align-items: flex-start;
   margin-bottom: 24px;
-  padding-right: 20px;
+  padding-right: 0;
+  width: 100%;
 `;
 
 const StepNumber = styled.View`
@@ -269,6 +273,7 @@ const StepNumberText = styled.Text`
 
 const StepContent = styled.View`
   flex: 1;
+  padding-right: 0;
 `;
 
 const StepText = styled.Text`
@@ -284,6 +289,8 @@ const StepDesc = styled.Text`
   color: #64666B;
   line-height: 22px;
   letter-spacing: -0.2px;
+  flex-shrink: 1;
+  padding-right: 0;
 `;
 
 const JoinButton = styled.TouchableOpacity`
@@ -291,8 +298,9 @@ const JoinButton = styled.TouchableOpacity`
   padding: 16px;
   border-radius: 8px;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 0px;
   margin-bottom: 16px;
+  width: 100%;
 `;
 
 const JoinButtonText = styled.Text`
@@ -303,24 +311,28 @@ const JoinButtonText = styled.Text`
 
 const stepTexts = [
   {
-    title: '동의서 선택',
-    desc: 'KBO 자유 적금 등 동의하는 단계'
+    title: '팀 선택',
+    desc: '응원하고 싶은 구단을 선택하는 단계'
   },
   {
     title: '최애 선수 선택',
-    desc: '계좌 정보와 적금 선수를 선택'
+    desc: '선택한 구단의 선수를 선택하는 단계'
   },
   {
-    title: '적금 목표 설정',
-    desc: '납입금, 시즌 목표를 설정하는 단계'
+    title: '적금 목표 선택',
+    desc: '시즌 동안의 적금 목표를 설정하는 단계'
   },
   {
     title: '적금 규칙 설정',
-    desc: '경기 결과에 따른 적금 규칙을 설정'
+    desc: '경기 결과에 따른 적립 규칙을 설정하는 단계'
   },
   {
-    title: '계좌 개설 확인',
-    desc: '설정한 내용을 확인하고 계좌 개설'
+    title: '약관 동의 및 출금 계좌 선택',
+    desc: '필수 약관 동의와 출금 계좌를 설정하는 단계'
+  },
+  {
+    title: '가입 완료',
+    desc: '설정한 내용을 확인하고 가입 완료'
   }
 ];
 
@@ -406,15 +418,15 @@ const SavingsJoinScreen = () => {
                       <IconImage source={require('../../assets/rate.png')} />
                     </IconContainer>
                     <InfoTitle>이자율</InfoTitle>
-                    <TopInfoValue>기본 2.00%</TopInfoValue>
-                    <TopInfoHighlight>최대 4.00%</TopInfoHighlight>
+                    <TopInfoValue>기본 2.50%</TopInfoValue>
+                    <TopInfoHighlight>최대 3.80%</TopInfoHighlight>
                   </InfoColumn>
                   <InfoColumn>
                     <IconContainer>
                       <IconImage source={require('../../assets/saving.png')} />
                     </IconContainer>
                     <InfoTitle>납입 금액</InfoTitle>
-                    <TopInfoValue>월 70만원 이내</TopInfoValue>
+                    <TopInfoValue>월 50만원 이내</TopInfoValue>
                   </InfoColumn>
                 </InfoBox>
 
@@ -452,7 +464,7 @@ const SavingsJoinScreen = () => {
                   </InfoItem>
                   <InfoItem>
                     <InfoLabel>금리</InfoLabel>
-                    <InfoValue>기본 2.00% (최대 4.00%)</InfoValue>
+                    <InfoValue>기본 2.50% (최대 3.80%)</InfoValue>
                   </InfoItem>
                 </InfoContainer>
 
@@ -530,7 +542,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
-    marginRight: 32,
+    marginRight: 48,
     color: '#000',
   },
   tagContainer: {
