@@ -594,46 +594,46 @@ def error_listener(event):
 # 오류 리스너 등록
 scheduler.add_listener(error_listener, EVENT_JOB_ERROR)
 
-# # 매일 ??시에 게임 데이터 파이프라인 실행 (전날 경기 데이터)
-# try:
-#     scheduler.add_job(
-#         run_game_data_pipeline,
-#         trigger=CronTrigger(hour=15, minute=30, timezone=seoul_timezone),
-#         id='game_data_pipeline',
-#         name='게임 데이터 파이프라인',
-#         replace_existing=True,
-#         misfire_grace_time=3600  # 1시간의 미스파이어 허용 시간
-#     )
-#     logger.info("게임 데이터 파이프라인 작업이 스케줄러에 추가되었습니다.")
-# except Exception as e:
-#     logger.error(f"게임 데이터 파이프라인 작업 추가 중 오류 발생: {str(e)}")
+# 매일 ??시에 게임 데이터 파이프라인 실행 (전날 경기 데이터)
+try:
+    scheduler.add_job(
+        run_game_data_pipeline,
+        trigger=CronTrigger(hour=2, minute=30, timezone=seoul_timezone),
+        id='game_data_pipeline',
+        name='게임 데이터 파이프라인',
+        replace_existing=True,
+        misfire_grace_time=3600  # 1시간의 미스파이어 허용 시간
+    )
+    logger.info("게임 데이터 파이프라인 작업이 스케줄러에 추가되었습니다.")
+except Exception as e:
+    logger.error(f"게임 데이터 파이프라인 작업 추가 중 오류 발생: {str(e)}")
 
-# try:
-#     scheduler.add_job(
-#         run_user_saving_pipeline,
-#         trigger=CronTrigger(hour=15, minute=35, timezone=seoul_timezone),
-#         id='user_saving_pipeline',
-#         name="경기 기록 및 사용자별 적금 금액 파이프라인",
-#         replace_existing=True,
-#         misfire_grace_time=3600  # 1시간의 미스파이어 허용 시간
-#     )
-#     logger.info("경기 기록 및 사용자별 적금 금액 파이프라인 작업이 스케줄러에 추가되었습니다.")
-# except Exception as e:
-#     logger.error(f"경기 기록 및 사용자별 적금 금액 파이프라인 작업 추가 중 오류 발생: {str(e)}")
+try:
+    scheduler.add_job(
+        run_user_saving_pipeline,
+        trigger=CronTrigger(hour=2, minute=40, timezone=seoul_timezone),
+        id='user_saving_pipeline',
+        name="경기 기록 및 사용자별 적금 금액 파이프라인",
+        replace_existing=True,
+        misfire_grace_time=3600  # 1시간의 미스파이어 허용 시간
+    )
+    logger.info("경기 기록 및 사용자별 적금 금액 파이프라인 작업이 스케줄러에 추가되었습니다.")
+except Exception as e:
+    logger.error(f"경기 기록 및 사용자별 적금 금액 파이프라인 작업 추가 중 오류 발생: {str(e)}")
 
-# # 적금 이체 스케줄러 필요시 주석처리리
-# try:
-#     scheduler.add_job(
-#         sync_run_trsnfer,
-#         trigger = CronTrigger(hour=20, minute=45, timezone=seoul_timezone),
-#         id='transfer',
-#         name="적금 이체",
-#         replace_existing=True,
-#         misfire_grace_time=3600
-#     )
-#     logger.info("적금 이체 작업이 스케줄러에 추가되었습니다.")
-# except Exception as e:
-#     logger.error
+# 적금 이체 스케줄러 필요시 주석처리리
+try:
+    scheduler.add_job(
+        sync_run_trsnfer,
+        trigger = CronTrigger(hour=5, minute=0, timezone=seoul_timezone),
+        id='transfer',
+        name="적금 이체",
+        replace_existing=True,
+        misfire_grace_time=3600
+    )
+    logger.info("적금 이체 작업이 스케줄러에 추가되었습니다.")
+except Exception as e:
+    logger.error
 
 @app.get("/")
 async def root():

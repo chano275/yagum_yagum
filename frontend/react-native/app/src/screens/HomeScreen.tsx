@@ -80,7 +80,7 @@ const IconButton = styled.TouchableOpacity<BaseStyledProps>`
 const ServiceCardWrapper = styled.TouchableOpacity<BaseStyledProps>`
   background-color: #f0f2ff;
   border-radius: ${({ width }) => width * 0.025}px;
-  padding: ${(props) => props.width * 0.045}px;
+  padding: ${(props) => props.width * 0.035}px;
   margin-bottom: ${(props) => props.width * 0.025}px;
   width: 100%;
   ${Platform.select({
@@ -816,169 +816,203 @@ const HomeScreen = () => {
                     ]}
                     onPress={onRecommendCardPress}
                     activeOpacity={1}
-                >
-                  <SectionTitle
-                    width={width}
-                    style={{ marginBottom: width * 0.005 }}
                   >
-                    추천
-                  </SectionTitle>
-                  {isLoggedIn &&
-                  accountInfo?.savings_accounts &&
-                  accountInfo.savings_accounts.length > 0 ? (
-                    <View style={{ padding: 10 }}>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          marginBottom: 10,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: width * 0.045,
-                            fontWeight: "bold",
-                            color: "#333",
-                          }}
-                        >
-                          {accountInfo.savings_accounts[0].team_name} 적금
-                        </Text>
-                        <Text
-                          style={{ fontSize: width * 0.04, color: "#666" }}
-                        >
-                          {accountInfo.savings_accounts[0].account_num}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          marginBottom: 10,
-                        }}
-                      >
-                        <Text
-                          style={{ fontSize: width * 0.04, color: "#666" }}
-                        >
-                          현재 적립액
-                        </Text>
-                        <Text
-                          style={{
-                            fontSize: width * 0.04,
-                            fontWeight: "bold",
-                            color: "#333",
-                          }}
-                        >
-                          {accountInfo.savings_accounts[0].total_amount.toLocaleString()}
-                          원
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          marginBottom: 10,
-                        }}
-                      >
-                        <Text
-                          style={{ fontSize: width * 0.04, color: "#666" }}
-                        >
-                          목표 금액
-                        </Text>
-                        <Text
-                          style={{
-                            fontSize: width * 0.04,
-                            fontWeight: "bold",
-                            color: "#333",
-                          }}
-                        >
-                          {accountInfo.savings_accounts[0].saving_goal.toLocaleString()}
-                          원
-                        </Text>
-                      </View>
-
-                      <View style={{ marginBottom: 5 }}>
-                        <Text
-                          style={{
-                            fontSize: width * 0.035,
-                            color: "#666",
-                            marginBottom: 5,
-                          }}
-                        >
-                          목표 달성률:{" "}
-                          {
-                            accountInfo.savings_accounts[0]
-                              .progress_percentage
-                          }
-                          %
-                        </Text>
-                        <View
-                          style={{
-                            height: 10,
-                            backgroundColor: "#EEEEEE",
-                            borderRadius: 5,
-                            overflow: "hidden",
-                          }}
-                        >
-                          <View
+                    {isLoggedIn &&
+                    accountInfo?.savings_accounts &&
+                    accountInfo.savings_accounts.length > 0 ? (
+                      <View style={{ 
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}>
+                        {/* 배경 워터마크 이미지 */}
+                        <View style={{
+                          position: 'absolute',
+                          right: -width * 0.05,
+                          bottom: -width * 0.05,
+                          opacity: 0.4,
+                          zIndex: 0
+                        }}>
+                          <Image
+                            source={require("../../assets/yageum.png")}
                             style={{
-                              width: `${accountInfo.savings_accounts[0].progress_percentage}%`,
-                              height: "100%",
-                              backgroundColor: "#2D5BFF",
+                              width: width * 0.5,
+                              height: width * 0.5,
+                              resizeMode: 'contain'
                             }}
                           />
                         </View>
-                      </View>
-                    </View>
-                  ) : (
-                    <ServiceTitleContainer>
-                      <ServiceTextContainer width={width}>
-                        <ServiceTitle
-                          width={width}
-                          style={{ marginBottom: 4 }}
-                        >
-                          <ColoredText style={{ fontWeight: "700" }}>
+
+                        {/* 컨텐츠 */}
+                        <View style={{ 
+                          zIndex: 1,
+                          padding: 0
+                        }}>
+                          <Text
+                            style={{
+                              fontSize: width * 0.045,
+                              fontWeight: "700",
+                              color: "#2D5BFF",
+                              marginBottom: 16,
+                              paddingHorizontal: width * 0.045,
+                              paddingTop: width * 0.045
+                            }}
+                          >
                             야금야금
-                          </ColoredText>
-                        </ServiceTitle>
-                        <ServiceDescription width={width}>
-                          지루했던 금융에
-                          {"\n"}
-                          야구의 재미를 더하다!
-                        </ServiceDescription>
-                      </ServiceTextContainer>
-                      <ServiceIcon
-                        source={require("../../assets/recommend.png")}
-                        resizeMode="contain"
-                        style={{
-                          width: 170,
-                          height: 170,
-                          marginLeft: "auto",
-                          marginRight: -10,
-                        }}
-                      />
-                    </ServiceTitleContainer>
-                  )}
+                          </Text>
+
+                          <View style={{ 
+                            marginBottom: 24,
+                            paddingHorizontal: width * 0.045
+                          }}>
+                            {/* 왼쪽: 정보 영역 */}
+                            <View style={{ flex: 1 }}>
+                              <Text
+                                style={{
+                                  fontSize: width * 0.042,
+                                  fontWeight: "bold",
+                                  color: "#333",
+                                  marginBottom: 16
+                                }}
+                              >
+                                {accountInfo.savings_accounts[0].team_name}
+                              </Text>
+
+                              <View style={{ gap: 12 }}>
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <Text
+                                    style={{ 
+                                      fontSize: width * 0.036, 
+                                      color: "#666",
+                                      fontWeight: "600"
+                                    }}
+                                  >
+                                    현재 적립액
+                                  </Text>
+                                  <Text
+                                    style={{
+                                      fontSize: width * 0.038,
+                                      fontWeight: "700",
+                                      color: "#333",
+                                    }}
+                                  >
+                                    {accountInfo.savings_accounts[0].total_amount.toLocaleString()}원
+                                  </Text>
+                                </View>
+
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <Text
+                                    style={{ 
+                                      fontSize: width * 0.036, 
+                                      color: "#666",
+                                      fontWeight: "600"
+                                    }}
+                                  >
+                                    목표 금액
+                                  </Text>
+                                  <Text
+                                    style={{
+                                      fontSize: width * 0.038,
+                                      fontWeight: "700",
+                                      color: "#333",
+                                    }}
+                                  >
+                                    {accountInfo.savings_accounts[0].saving_goal.toLocaleString()}원
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                          </View>
+
+                          {/* 하단: 프로그레스 바 영역 */}
+                          <View>
+                            <View style={{ 
+                              flexDirection: "row", 
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              marginBottom: 8
+                            }}>
+                              <Text
+                                style={{
+                                  fontSize: width * 0.034,
+                                  color: "#2D5BFF",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                목표 달성률
+                              </Text>
+                              <Text
+                                style={{
+                                  fontSize: width * 0.034,
+                                  color: "#2D5BFF",
+                                  fontWeight: "700",
+                                }}
+                              >
+                                {accountInfo.savings_accounts[0].progress_percentage}%
+                              </Text>
+                            </View>
+                            <View
+                              style={{
+                                height: 8,
+                                backgroundColor: "#F0F2FF",
+                                borderRadius: 4,
+                                overflow: "hidden",
+                                width: '100%'
+                              }}
+                            >
+                              <View
+                                style={{
+                                  width: `${accountInfo.savings_accounts[0].progress_percentage}%`,
+                                  height: "100%",
+                                  backgroundColor: "#2D5BFF",
+                                }}
+                              />
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    ) : (
+                      <ServiceTitleContainer>
+                        <ServiceTextContainer width={width}>
+                          <ServiceTitle
+                            width={width}
+                            style={{ marginBottom: 4 }}
+                          >
+                            <ColoredText style={{ fontWeight: "700" }}>
+                              야금야금
+                            </ColoredText>
+                          </ServiceTitle>
+                          <ServiceDescription width={width}>
+                            지루했던 금융에
+                            {"\n"}
+                            야구의 재미를 더하다!
+                          </ServiceDescription>
+                        </ServiceTextContainer>
+                        <ServiceIcon
+                          source={require("../../assets/recommend.png")}
+                          resizeMode="contain"
+                          style={{
+                            width: 170,
+                            height: 170,
+                            marginLeft: "auto",
+                            marginRight: -10,
+                          }}
+                        />
+                      </ServiceTitleContainer>
+                    )}
                   </AnimatedServiceCard>
                 </RecommendSection>
-                {isLoggedIn && (
-                  <TouchableOpacity 
-                    style={{ 
-                    backgroundColor: "#2D5BFF",
-                      padding: width * 0.03,
-                      borderRadius: width * 0.02,
-                    marginTop: width * 0.03,
-                    }}
-                    onPress={() => {
-                    navigation.navigate("Service");
-                    }}
-                  >
-                    <ButtonLabel width={width} style={{ color: "#FFFFFF" }}>
-                      서비스 보기
-                    </ButtonLabel>
-                  </TouchableOpacity>
-                )}
               </Container>
             </AnimatedScrollView>
         </MobileContainer>

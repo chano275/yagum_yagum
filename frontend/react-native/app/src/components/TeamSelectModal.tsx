@@ -53,18 +53,12 @@ interface StyledProps {
 const ModalContainer = styled(Animated.View)<StyledProps>`
   position: absolute;
   bottom: 0;
-  left: ${props => (Dimensions.get('window').width - props.width) / 2}px;
+    left: ${props => (Dimensions.get('window').width - props.width) / 2}px;
   width: ${props => props.width}px;
   background-color: white;
   border-top-left-radius: 24px;
   border-top-right-radius: 24px;
-  padding: 20px;
-  padding-bottom: 32px;
-  shadow-color: #000;
-  shadow-offset: 0px -2px;
-  shadow-opacity: 0.1;
-  shadow-radius: 8px;
-  elevation: 5;
+  padding: 20px 0px;
   max-height: 92%;
 `;
 
@@ -72,7 +66,8 @@ const Header = styled.View`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 4px;
+  padding-horizontal: 20px;
 `;
 
 const Title = styled.Text`
@@ -85,12 +80,20 @@ const CloseButton = styled.TouchableOpacity`
   padding: 8px;
 `;
 
+const SubTitle = styled.Text`
+  font-size: 15px;
+  color: #666666;
+  margin-bottom: 12px;
+  margin-top: -4px;
+  padding-horizontal: 20px;
+`;
+
 const TeamGrid = styled.View`
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: space-between;
-  padding-horizontal: 4px;
-  margin-top: 8px;
+  padding-horizontal: 20px;
+  margin-top: 0px;
 `;
 
 const TeamButton = styled.TouchableOpacity<ButtonProps>`
@@ -134,12 +137,13 @@ const SelectButton = styled.TouchableOpacity<{ teamColor?: string }>`
   padding: 16px;
   border-radius: 12px;
   align-items: center;
-  margin-top: 16px;
+  margin: 12px 20px 0px 20px;
   elevation: 3;
   shadow-color: ${props => props.teamColor || '#000'};
   shadow-offset: 0px 4px;
   shadow-opacity: 0.15;
   shadow-radius: 8px;
+  opacity: ${props => props.disabled ? 0.5 : 1};
 `;
 
 const SelectButtonText = styled.Text`
@@ -155,6 +159,7 @@ const TeamSelectModal: React.FC<TeamSelectModalProps> = ({ visible, onClose, onS
   const navigation = useNavigation();
   const slideAnim = useRef(new Animated.Value(0)).current;
   const { height } = Dimensions.get('window');
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // 선택된 팀의 색상 가져오기
   const getSelectedTeamColor = () => {
@@ -186,6 +191,10 @@ const TeamSelectModal: React.FC<TeamSelectModalProps> = ({ visible, onClose, onS
 
   const handleTeamSelect = (teamId: number) => {
     setSelectedTeamId(teamId);
+    // 팀 선택 시 자동으로 선택하기 버튼으로 스크롤
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
   const handleConfirm = () => {
@@ -237,7 +246,11 @@ const TeamSelectModal: React.FC<TeamSelectModalProps> = ({ visible, onClose, onS
             <Text style={{ fontSize: 24, color: '#666' }}>×</Text>
           </CloseButton>
         </Header>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <SubTitle>나의 최애 구단을 선택해주세요 ⚾</SubTitle>
+        <ScrollView 
+          ref={scrollViewRef}
+          showsVerticalScrollIndicator={false}
+        >
           <TeamGrid>
             {teams.map((team) => {
               const isSelected = selectedTeamId === team.id;
@@ -261,7 +274,7 @@ const TeamSelectModal: React.FC<TeamSelectModalProps> = ({ visible, onClose, onS
           <SelectButton 
             onPress={handleConfirm} 
             disabled={!selectedTeamId}
-            teamColor={selectedTeamColor || undefined}
+            teamColor={selectedTeamColor || '#E5E5E5'}
           >
             <SelectButtonText>선택하기</SelectButtonText>
           </SelectButton>

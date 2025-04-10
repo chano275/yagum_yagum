@@ -51,13 +51,13 @@ const ContentContainer = styled.View`
 `;
 
 const TitleSection = styled.View`
-  padding: 20px 20px 16px 20px;
+  padding: 20px 20px 24px 20px;
 `;
 
 const MainTitle = styled.Text`
   font-size: 20px;
-  font-weight: 700;
-  color: #333333;
+  font-weight: 600;
+  color: #1B1D1F;
   margin-bottom: 8px;
 `;
 
@@ -90,8 +90,8 @@ const GoalGridItem = styled.TouchableOpacity<{ teamColor: string, isSelected: bo
 `;
 
 const GridItemImage = styled.Image`
-  width: 60px;
-  height: 60px;
+  width: 120px;
+  height: 120px;
   margin-bottom: 12px;
 `;
 
@@ -248,7 +248,7 @@ const savingsGoals: SavingsGoalType[] = [
     goalAmount: 500000,
     monthlyLimit: 100000,
     dailyLimit: 5000,
-    image: require('../../assets/kbo/tigers.png'),
+    image: require('../../assets/kbo/uniform/tigers.png'),
   },
   {
     id: 2,
@@ -257,7 +257,7 @@ const savingsGoals: SavingsGoalType[] = [
     goalAmount: 1000000,
     monthlyLimit: 200000,
     dailyLimit: 10000,
-    image: require('../../assets/kbo/lions.png'),
+    image: require('../../assets/nextseason.png'),
   },
   {
     id: 3,
@@ -266,7 +266,7 @@ const savingsGoals: SavingsGoalType[] = [
     goalAmount: 1500000,
     monthlyLimit: 300000,
     dailyLimit: 15000,
-    image: require('../../assets/kbo/twins.png'),
+    image: require('../../assets/season_ticket.png'),
   },
   {
     id: 4,
@@ -275,7 +275,7 @@ const savingsGoals: SavingsGoalType[] = [
     goalAmount: 3000000,
     monthlyLimit: 500000,
     dailyLimit: 25000,
-    image: require('../../assets/kbo/bears.png'),
+    image: require('../../assets/springcamp.png'),
   },
 ];
 
@@ -286,8 +286,31 @@ const formatAmount = (amount: number) => {
 const SavingsGoalScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width: windowWidth } = useWindowDimensions();
-  const { teamColor } = useTeam();
+  const { teamColor, teamName } = useTeam();
   const { updateSavingGoal, updateLimits } = useJoin();
+  
+  // 팀별 유니폼 이미지 매핑
+  const uniformImages: { [key: string]: any } = {
+    'KIA 타이거즈': require('../../assets/kbo/uniform/tigers.png'),
+    '삼성 라이온즈': require('../../assets/kbo/uniform/lions.png'),
+    'LG 트윈스': require('../../assets/kbo/uniform/twins.png'),
+    '두산 베어스': require('../../assets/kbo/uniform/bears.png'),
+    'KT 위즈': require('../../assets/kbo/uniform/wiz.png'),
+    'SSG 랜더스': require('../../assets/kbo/uniform/landers.png'),
+    '롯데 자이언츠': require('../../assets/kbo/uniform/giants.png'),
+    '한화 이글스': require('../../assets/kbo/uniform/eagles.png'),
+    'NC 다이노스': require('../../assets/kbo/uniform/dinos.png'),
+    '키움 히어로즈': require('../../assets/kbo/uniform/heroes.png'),
+  };
+
+  // 선택된 팀의 유니폼 이미지로 업데이트된 목표 배열
+  const updatedSavingsGoals = [...savingsGoals];
+  if (teamName && uniformImages[teamName]) {
+    updatedSavingsGoals[0] = {
+      ...updatedSavingsGoals[0],
+      image: uniformImages[teamName]
+    };
+  }
   
   const [selectedGoalId, setSelectedGoalId] = useState<number | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
@@ -335,11 +358,11 @@ const SavingsGoalScreen = () => {
   const handleSelect = () => {
     if (selectedGoalId === null) return;
     
-    const selectedGoal = savingsGoals.find(goal => goal.id === selectedGoalId);
+    const selectedGoal = updatedSavingsGoals.find(goal => goal.id === selectedGoalId);
     if (selectedGoal) {
       updateSavingGoal(selectedGoal.goalAmount);
       updateLimits(selectedGoal.dailyLimit, selectedGoal.monthlyLimit);
-      navigation.navigate('RuleSetting' as keyof RootStackParamList);
+      navigation.navigate('RuleSetting');
     }
   };
 
@@ -350,7 +373,7 @@ const SavingsGoalScreen = () => {
       onPress={() => showDetailCard(item.id)}
       activeOpacity={0.7}
     >
-      <GridItemImage source={item.image} resizeMode="contain" />
+      <GridItemImage source={item.id === 1 && teamName && uniformImages[teamName] ? uniformImages[teamName] : item.image} resizeMode="contain" />
       <GoalItemTitle>{item.title}</GoalItemTitle>
       <GoalAmount>{formatAmount(item.goalAmount)}원</GoalAmount>
     </GoalGridItem>
@@ -375,7 +398,7 @@ const SavingsGoalScreen = () => {
         <ContentContainer>
           <GridContainer>
             <FlatList
-              data={savingsGoals}
+              data={updatedSavingsGoals}
               renderItem={renderGridItem}
               keyExtractor={(item) => item.id.toString()}
               numColumns={2}
@@ -395,7 +418,7 @@ const SavingsGoalScreen = () => {
           >
             <DetailCard teamColor={teamColor.primary}>
               {(() => {
-                const selectedGoal = savingsGoals.find(goal => goal.id === selectedGoalId);
+                const selectedGoal = updatedSavingsGoals.find(goal => goal.id === selectedGoalId);
                 if (!selectedGoal) return null;
                 
                 return (
