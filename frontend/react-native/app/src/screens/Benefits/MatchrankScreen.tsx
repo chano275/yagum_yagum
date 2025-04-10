@@ -154,20 +154,22 @@ const TeamCard = styled.View<{ teamColor: string }>`
 const TeamInfo = styled.View`
   flex-direction: row;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 `;
 
 const TeamLogo = styled.Image`
-  width: 60px;
-  height: 60px;
-  margin-right: 15px;
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+  margin-top: 5px;
 `;
 
 const TeamName = styled.Text`
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
   color: #333;
-  font-family: ${({ theme }) => theme.fonts.bold};
+  line-height: 36px;
+  padding-top: 2px;
 `;
 
 const RankTitle = styled.Text`
@@ -327,8 +329,47 @@ const MatchrankScreen = () => {
   const [predictionResult, setPredictionResult] =
     useState<PredictionResult | null>(null);
 
-  // 팀 로고 (예시)
-  const teamLogo = require("../../../assets/icon.png"); // 실제 구현시 팀에 맞는 로고로 변경
+  // 팀 로고 임포트
+  const teamLogos = {
+    KIA: require("../../../assets/kbo/tigers.png"),
+    SAMSUNG: require("../../../assets/kbo/lions.png"),
+    LG: require("../../../assets/kbo/twins.png"),
+    DOOSAN: require("../../../assets/kbo/bears.png"),
+    KT: require("../../../assets/kbo/wiz.png"),
+    SSG: require("../../../assets/kbo/landers.png"),
+    LOTTE: require("../../../assets/kbo/giants.png"),
+    HANWHA: require("../../../assets/kbo/eagles.png"),
+    NC: require("../../../assets/kbo/dinos.png"),
+    KIWOOM: require("../../../assets/kbo/heroes.png"),
+  };
+
+  // 팀 로고 가져오기 함수
+  const getTeamLogo = () => {
+    switch (teamId) {
+      case 1:
+        return teamLogos.KIA;
+      case 2:
+        return teamLogos.SAMSUNG;
+      case 3:
+        return teamLogos.LG;
+      case 4:
+        return teamLogos.DOOSAN;
+      case 5:
+        return teamLogos.KT;
+      case 6:
+        return teamLogos.SSG;
+      case 7:
+        return teamLogos.LOTTE;
+      case 8:
+        return teamLogos.HANWHA;
+      case 9:
+        return teamLogos.NC;
+      case 10:
+        return teamLogos.KIWOOM;
+      default:
+        return teamLogos.NC;
+    }
+  };
 
   // 순위 버튼 생성 (1~10)
   const rankButtons = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -454,8 +495,8 @@ const MatchrankScreen = () => {
             {/* 팀 정보 및 순위 선택 */}
             <TeamCard teamColor={teamColor.primary}>
               <TeamInfo>
-                <TeamLogo source={teamLogo} />
-                <TeamName>{teamName || "NC 다이노스"}</TeamName>
+                <TeamLogo source={getTeamLogo()} resizeMode="contain" />
+                <TeamName>{teamName}</TeamName>
               </TeamInfo>
               <RankTitle>예상 순위를 선택해주세요</RankTitle>
               <RankButtonsContainer>

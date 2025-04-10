@@ -761,8 +761,8 @@ const RuleSettingScreen = () => {
         
         // 선수 ID가 있는 경우 해당 선수 기반으로 규칙 조회
         let url = 
-        // `http://localhost:8000/api/saving_rule/rules`
-        `http://3.38.183.156:8000/api/saving_rule/rules`;
+        `http://localhost:8000/api/saving_rule/rules`
+        // `http://3.38.183.156:8000/api/saving_rule/rules`;
         if (playerId) {
           url += `?player_id=${playerId}`;
         }
@@ -1158,6 +1158,17 @@ const RuleSettingScreen = () => {
     );
   };
 
+  // 일일한도 입력 처리 함수 추가
+  const handleDailyInputChange = (text: string) => {
+    const inputValue = parseInt(text) || 0;
+    // 선택된 목표의 일일한도를 넘지 않도록 제한
+    if (inputValue > selectedDailyLimit) {
+      setDailyInput(selectedDailyLimit.toString());
+    } else {
+      setDailyInput(text);
+    }
+  };
+
   return (
     <AppWrapper>
       <StatusBar backgroundColor='transparent' translucent={Platform.OS === 'android'} />
@@ -1222,9 +1233,10 @@ const RuleSettingScreen = () => {
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <StyledInput
                     value={dailyInput}
-                    onChangeText={setDailyInput}
+                    onChangeText={handleDailyInputChange}
                     keyboardType="numeric"
                     maxLength={8}
+                    placeholder={`${selectedDailyLimit.toLocaleString()}원`}
                     style={{ 
                       width: 120, 
                       height: 40, 

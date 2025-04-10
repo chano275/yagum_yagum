@@ -25,6 +25,7 @@ import {
 } from "expo-image-picker";
 import { api } from "@/api/axios";
 import axios from "axios";
+import { useAccountStore } from "@/store/useStore";
 
 // 네비게이션 타입 정의
 type TicketVerificationScreenNavigationProp =
@@ -226,61 +227,6 @@ const SelectedImage = styled.Image`
   border-radius: 12px;
 `;
 
-const HistoryCard = styled.View`
-  background-color: white;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
-  border: 1px solid #eaeaea;
-`;
-
-const HistoryTitle = styled.Text`
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 15px;
-  color: #333;
-  font-family: ${({ theme }) => theme.fonts.bold};
-`;
-
-const HistoryItem = styled.View`
-  flex-direction: row;
-  padding: 12px 0;
-  border-bottom-width: 1px;
-  border-bottom-color: #f0f0f0;
-  align-items: center;
-`;
-
-const HistoryImage = styled.Image`
-  width: 60px;
-  height: 40px;
-  border-radius: 6px;
-  margin-right: 12px;
-`;
-
-const HistoryInfo = styled.View`
-  flex: 1;
-`;
-
-const HistoryTeam = styled.Text`
-  font-size: 14px;
-  font-weight: bold;
-  color: #333;
-  font-family: ${({ theme }) => theme.fonts.medium};
-`;
-
-const HistoryDate = styled.Text`
-  font-size: 12px;
-  color: #666;
-  font-family: ${({ theme }) => theme.fonts.regular};
-`;
-
-const HistoryStatus = styled.Text<{ teamColor: string }>`
-  font-size: 12px;
-  color: ${(props) => props.teamColor || "#007AFF"};
-  font-weight: bold;
-  font-family: ${({ theme }) => theme.fonts.bold};
-`;
-
 const SubmitButton = styled.TouchableOpacity<{
   teamColor: string;
   disabled?: boolean;
@@ -368,6 +314,7 @@ const TicketVerificationScreen = () => {
       ? BASE_MOBILE_WIDTH
       : Math.min(windowWidth, MAX_MOBILE_WIDTH);
   const navigation = useNavigation<TicketVerificationScreenNavigationProp>();
+  const { fetchAccountInfo } = useAccountStore();
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedAssetInfo, setSelectedAssetInfo] =
@@ -383,16 +330,6 @@ const TicketVerificationScreen = () => {
   const [interestDetails, setInterestDetails] =
     useState<InterestDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const verificationHistory = [
-    {
-      id: 1,
-      team: "NC 다이노스 vs 두산 베어스",
-      date: "2025-03-15",
-      image: require("../../../assets/icon.png"),
-      status: "인증 완료",
-    },
-  ];
 
   // 현재 티켓 인증 횟수와 최대 인증 횟수
   const ticketMission = interestDetails?.mission_details.find(
@@ -477,9 +414,8 @@ const TicketVerificationScreen = () => {
         const response = await fetch(selectedImage);
         const blob = await response.blob();
         formData.append("file", blob, fileName);
-        for (let pair of formData.entries()) {
-          console.log("Web FormData 항목:", pair[0], pair[1]);
-        }
+        // Web 환경에서 FormData 로깅
+        console.log("Web FormData 파일 추가됨");
       } else {
         const fileObject = {
           uri: selectedImage,
@@ -495,6 +431,8 @@ const TicketVerificationScreen = () => {
         setVerificationStatus("success");
         // 인증 성공 후 우대금리 정보 다시 가져오기
         await fetchInterestDetails();
+        // 계좌 정보도 갱신
+        await fetchAccountInfo();
       } else {
         setVerificationStatus("failed");
         setFailedReason(
@@ -648,28 +586,6 @@ const TicketVerificationScreen = () => {
                 </InfoContent>
               )}
             </UploadCard>
-
-            <HistoryCard>
-              <HistoryTitle>인증 내역 (API 연결)</HistoryTitle>
-              {verificationHistory.length > 0 ? (
-                verificationHistory.map((item) => (
-                  <HistoryItem key={item.id}>
-                    <HistoryImage source={item.image} />
-                    <HistoryInfo>
-                      <HistoryTeam>{item.team}</HistoryTeam>
-                      <HistoryDate>{item.date}</HistoryDate>
-                    </HistoryInfo>
-                    <HistoryStatus teamColor={teamColor.primary}>
-                      {item.status}
-                    </HistoryStatus>
-                  </HistoryItem>
-                ))
-              ) : (
-                <UploadPlaceholderText>
-                  인증 내역이 없습니다.
-                </UploadPlaceholderText>
-              )}
-            </HistoryCard>
 
             <SubmitButton
               teamColor={teamColor.primary}

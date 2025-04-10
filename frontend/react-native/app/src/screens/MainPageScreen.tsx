@@ -684,21 +684,50 @@ const MainPage = () => {
     return organizedRules;
   };
 
-  // 팀 로고 가져오기 함수
+  // 팀 로고 임포트
+  const teamLogos = {
+    KIA: require("../../assets/kbo/tigers.png"),
+    SAMSUNG: require("../../assets/kbo/lions.png"),
+    LG: require("../../assets/kbo/twins.png"),
+    DOOSAN: require("../../assets/kbo/bears.png"),
+    KT: require("../../assets/kbo/wiz.png"),
+    SSG: require("../../assets/kbo/landers.png"),
+    LOTTE: require("../../assets/kbo/giants.png"),
+    HANWHA: require("../../assets/kbo/eagles.png"),
+    NC: require("../../assets/kbo/dinos.png"),
+    KIWOOM: require("../../assets/kbo/heroes.png"),
+  };
+
+  // 팀명으로 팀 로고 가져오기
   const getTeamLogo = (teamName: string) => {
+    // 전체 팀명과 약칭 모두 매핑
     const logoMap: { [key: string]: any } = {
-      TWINS: require("../../assets/kbo/twins.png"),
-      BEARS: require("../../assets/kbo/bears.png"),
-      TIGERS: require("../../assets/kbo/tigers.png"),
-      LIONS: require("../../assets/kbo/lions.png"),
-      WIZ: require("../../assets/kbo/wiz.png"),
-      LANDERS: require("../../assets/kbo/landers.png"),
-      GIANTS: require("../../assets/kbo/giants.png"),
-      EAGLES: require("../../assets/kbo/eagles.png"),
-      DINOS: require("../../assets/kbo/dinos.png"),
-      HEROES: require("../../assets/kbo/heroes.png"),
+      // 전체 팀명 매핑
+      "KIA 타이거즈": teamLogos.KIA,
+      "삼성 라이온즈": teamLogos.SAMSUNG,
+      "LG 트윈스": teamLogos.LG,
+      "두산 베어스": teamLogos.DOOSAN,
+      "KT 위즈": teamLogos.KT,
+      "SSG 랜더스": teamLogos.SSG,
+      "롯데 자이언츠": teamLogos.LOTTE,
+      "한화 이글스": teamLogos.HANWHA,
+      "NC 다이노스": teamLogos.NC,
+      "키움 히어로즈": teamLogos.KIWOOM,
+
+      // 약칭 매핑
+      KIA: teamLogos.KIA,
+      삼성: teamLogos.SAMSUNG,
+      LG: teamLogos.LG,
+      두산: teamLogos.DOOSAN,
+      KT: teamLogos.KT,
+      SSG: teamLogos.SSG,
+      롯데: teamLogos.LOTTE,
+      한화: teamLogos.HANWHA,
+      NC: teamLogos.NC,
+      키움: teamLogos.KIWOOM,
     };
-    return logoMap[teamName] || require("../../assets/icon.png");
+
+    return logoMap[teamName] || teamLogos.NC; // 매칭 실패 시 NC 로고를 기본값으로 사용
   };
 
   // 최근 거래 내역 가져오기
@@ -709,27 +738,26 @@ const MainPage = () => {
         params: { month: new Date().getMonth() + 1 }
       });
       
+      // 경기 결과 API를 호출하여 상대팀 정보 가져오기
+      const resultsResponse = await api.get('/api/game/user-team-results');
+      const gameResults = resultsResponse.data.reduce((acc: { [key: string]: any }, result: any) => {
+        acc[result.game_date] = result;
+        return acc;
+      }, {});
+      
       // API 응답을 TransactionItem 형식으로 변환하고 최근 3개만 선택
       const transactions: TransactionItem[] = response.data
         .map((item: any) => {
           const dateObj = new Date(item.DATE);
           const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
           
-          let opponent = "TEAM";
-          if (item.TEXT.includes("트윈스")) opponent = "TWINS";
-          else if (item.TEXT.includes("베어스")) opponent = "BEARS";
-          else if (item.TEXT.includes("타이거즈")) opponent = "TIGERS";
-          else if (item.TEXT.includes("라이온즈")) opponent = "LIONS";
-          else if (item.TEXT.includes("위즈")) opponent = "WIZ";
-          else if (item.TEXT.includes("랜더스")) opponent = "LANDERS";
-          else if (item.TEXT.includes("자이언츠")) opponent = "GIANTS";
-          else if (item.TEXT.includes("이글스")) opponent = "EAGLES";
-          else if (item.TEXT.includes("다이노스")) opponent = "DINOS";
-          else if (item.TEXT.includes("히어로즈")) opponent = "HEROES";
+          // 해당 날짜의 경기 결과에서 상대팀 정보 가져오기
+          const gameResult = gameResults[item.DATE];
+          const opponentTeamName = gameResult?.opponent_team_name || "";
           
           return {
             id: item.DATE,
-            opponent,
+            opponent: opponentTeamName,
             date: formattedDate,
             description: item.TEXT,
             amount: item.AMOUNT,
@@ -1127,9 +1155,7 @@ const MainPage = () => {
                           const gameDate = new Date(game.DATE);
                           const month = gameDate.getMonth() + 1;
                           const day = gameDate.getDate();
-                          const location = getTeamHomeCity(
-                            isHomeGame ? game.HOME_TEAM_ID : game.AWAY_TEAM_ID
-                          );
+                          const location = isHomeGame ? "홈" : "원정";
 
                           return (
                             <ScheduleItem
@@ -1143,10 +1169,9 @@ const MainPage = () => {
                                 width={width}
                               >{`vs ${opponentTeam}`}</ScheduleTeam>
                               <ScheduleTime width={width}>
-                                {location}{" "}
-                                <Text>({isHomeGame ? "홈" : "원정"})</Text>
+                                {location}
                               </ScheduleTime>
-                  </ScheduleItem>
+                            </ScheduleItem>
                           );
                         })
                       ) : (
