@@ -280,3 +280,10 @@ class WeeklyReportPersonalResponseExtended(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+
+class WeeklyReportPersonalResponseExtendedTest(WeeklyReportPersonalResponseExtended):
+    WEEK_INFO: str
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True
