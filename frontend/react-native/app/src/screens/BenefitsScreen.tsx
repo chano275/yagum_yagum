@@ -277,7 +277,7 @@ const BenefitsScreen = () => {
       description:
         "시즌 종료 후 예측한 순위와 실제 순위가 일치하면 우대금리가 제공됩니다.",
       icon: "trophy-outline",
-      bgColor: teamColor.secondary,
+      bgColor: "#FFB800",
       onPress: async () => {
         // 사용자가 이미 예측했는지 확인
         const hasPrediction = await checkExistingPrediction();

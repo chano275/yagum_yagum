@@ -98,7 +98,7 @@ const BackButton = styled.TouchableOpacity`
 `;
 
 const HeaderTitle = styled.Text`
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   color: #1A1A1A;
 `;
@@ -123,9 +123,9 @@ const TitleArea = styled.View`
 `;
 
 const MainTitle = styled.Text`
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
-  color: #333333;
+  color: #1B1D1F;
   margin-bottom: 8px;
 `;
 
@@ -135,54 +135,27 @@ const SubTitle = styled.Text`
   font-weight: 400;
 `;
 
-const SearchOverlay = styled(Animated.View)`
-  position: absolute;
-  top: 44px;
-  right: 20px;
-  height: 36px;
-  background-color: #F5F5F5;
-  border-radius: 18px;
+const SearchContainer = styled.View`
+  margin: 0 20px;
+  margin-bottom: 16px;
+  background-color: #F7F7FA;
+  border-radius: 12px;
   flex-direction: row;
   align-items: center;
-  overflow: hidden;
-  z-index: 10;
-  margin-bottom: 8px;
+  padding: 0 16px;
+  height: 44px;
 `;
 
 const SearchInput = styled.TextInput`
   flex: 1;
-  height: 36px;
-  padding: 0 16px;
   font-size: 15px;
-  color: #333333;
-  outline-width: 0;
-  outline-color: transparent;
-  outline-style: none;
+  color: #1B1D1F;
+  padding-left: 8px;
 `;
 
-const SearchIconBackground = styled.View`
-  width: 48px;
-  height: 48px;
-  background-color: #F5F5F5;
-  border-radius: 24px;
+const SearchIcon = styled.View`
   justify-content: center;
   align-items: center;
-`;
-
-const SearchButton = styled.TouchableOpacity`
-  width: 48px;
-  height: 48px;
-  justify-content: center;
-  align-items: center;
-`;
-
-const SearchBackdrop = styled.TouchableOpacity`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 9;
 `;
 
 const TabContainer = styled.View`
@@ -221,19 +194,19 @@ interface PlayerCardProps {
 
 const PlayerCard = styled.TouchableOpacity<PlayerCardProps>`
   width: 47%;
-  backgroundColor: white;
+  backgroundColor: ${props => props.isSelected ? `${props.teamColor}10` : 'white'};
   borderRadius: 12px;
   padding: 12px;
   alignItems: center;
-  borderWidth: 1px;
+  borderWidth: ${props => props.isSelected ? '1.5px' : '1px'};
   borderColor: ${props => props.isSelected ? props.teamColor : '#EEEEEE'};
   marginBottom: 8px;
   ${props => props.isSelected && `
     shadowColor: ${props.teamColor};
-    shadowOffset: { width: 0, height: 2 };
-    shadowOpacity: 0.3;
-    shadowRadius: 4;
-    elevation: 4;
+    shadowOffset: { width: 0, height: 4 };
+    shadowOpacity: 0.2;
+    shadowRadius: 8;
+    elevation: 6;
   `}
 `;
 
@@ -258,10 +231,10 @@ interface PlayerNumberProps {
 }
 
 const PlayerNumber = styled.Text<PlayerNumberProps>`
-  color: ${props => props.textColor};
-  fontSize: 14px;
-  fontWeight: ${props => props.isSelected ? '700' : '600'};
-  marginRight: 4px;
+  font-size: 15px;
+  font-weight: ${props => props.isSelected ? '700' : '600'};
+  color: ${props => props.isSelected ? props.textColor : '#666666'};
+  margin-right: 4px;
 `;
 
 interface PlayerNameProps {
@@ -269,9 +242,9 @@ interface PlayerNameProps {
 }
 
 const PlayerName = styled.Text<PlayerNameProps>`
-  color: ${props => props.isSelected ? '#000000' : '#333333'};
-  fontSize: 15px;
-  fontWeight: ${props => props.isSelected ? '700' : '600'};
+  font-size: 16px;
+  font-weight: ${props => props.isSelected ? '700' : '600'};
+  color: ${props => props.isSelected ? '#000000' : '#1B1D1F'};
 `;
 
 const PlayerPosition = styled.Text`
@@ -378,11 +351,12 @@ const PlayerSelectScreen = () => {
 
   // 필터링된 선수 목록
   const filteredPlayers = players.filter(player => {
-    const isMatchingType = player.player_type_name === selectedTab;
-    const isMatchingSearch = searchText
-      ? player.PLAYER_NAME.toLowerCase().includes(searchText.toLowerCase())
-      : true;
-    return isMatchingType && isMatchingSearch;
+    // 검색어가 있을 때는 탭 구분 없이 모든 선수 중에서 검색
+    if (searchText) {
+      return player.PLAYER_NAME.toLowerCase().includes(searchText.toLowerCase());
+    }
+    // 검색어가 없을 때는 선택된 탭의 선수만 표시
+    return player.player_type_name === selectedTab;
   });
 
   const toggleSearch = () => {
@@ -489,32 +463,26 @@ const PlayerSelectScreen = () => {
         <TitleSection>
           <TitleArea>
             <MainTitle>최애 선수 선택</MainTitle>
-            <SubTitle>응원하는 선수를 선택하세요.</SubTitle>
+            <SubTitle>응원하는 선수를 선택하세요 🏃</SubTitle>
           </TitleArea>
-          {isSearchOpen && <SearchBackdrop onPress={toggleSearch} />}
-          <SearchOverlay style={{ width: searchWidth }}>
-            {isSearchOpen && (
-              <SearchInput
-                placeholder="최애 선수를 검색하세요"
-                placeholderTextColor="#999"
-                selectionColor="#999"
-                underlineColorAndroid="transparent"
-                value={searchText}
-                onChangeText={setSearchText}
-                autoFocus
-              />
-            )}
-            <SearchButton onPress={toggleSearch}>
-              <SearchIconBackground>
-                <MaterialIcons 
-                  name={isSearchOpen ? "close" : "search"} 
-                  size={24} 
-                  color="#666" 
-                />
-              </SearchIconBackground>
-            </SearchButton>
-          </SearchOverlay>
         </TitleSection>
+
+        <SearchContainer>
+          <SearchIcon>
+            <MaterialIcons name="search" size={20} color="#666666" />
+          </SearchIcon>
+          <SearchInput
+            placeholder="선수 이름으로 검색하세요"
+            placeholderTextColor="#999999"
+            value={searchText}
+            onChangeText={setSearchText}
+          />
+          {searchText !== '' && (
+            <TouchableOpacity onPress={() => setSearchText('')}>
+              <MaterialIcons name="close" size={20} color="#666666" />
+            </TouchableOpacity>
+          )}
+        </SearchContainer>
 
         <TabContainer>
           {tabs.map(tab => (
