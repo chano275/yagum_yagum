@@ -7,7 +7,7 @@ import google.generativeai as genai
 
 # 환경변수 로드 및 GEMINI_API_KEY 가져오기
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY_2")
 
 # Gemini API 키 설정
 genai.configure(api_key=GEMINI_API_KEY)

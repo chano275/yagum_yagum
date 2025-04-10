@@ -7,7 +7,7 @@ import google.generativeai as genai
 
 # 환경변수 로드 및 GEMINI_API_KEY 가져오기
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY_2")
 
 # Gemini API 설정
 genai.configure(api_key=GEMINI_API_KEY)
@@ -137,7 +137,7 @@ def main():
 
     # 모든 팀의 뉴스 요약 결과를 JSON 구조로 생성
     final_json = generate_daily_summary_json(date)
-    json_path = os.path.join("news_daily_highlight", date)
+    json_path = "news_daily_highlight"
     makedirs(json_path)
     file_path = os.path.join(json_path, f"news_daily_highlight_{date}.json")
     
