@@ -307,8 +307,8 @@ const HistoryItem = styled.View<StyledProps>`
 const TeamLogo = styled.Image<StyledProps>`
   width: ${({ width }) => width * 0.06}px;
   height: ${({ width }) => width * 0.06}px;
-  margin-right: ${({ width }) => width * 0.015}px;
-  margin-left: ${({ width }) => width * 0.0}px;
+  margin-horizontal: ${({ width }) => width * 0.015}px;
+  resize-mode: contain;
 `;
 const HistoryDate = styled.Text<StyledProps>`
   font-size: ${({ width }) => width * 0.035}px;
@@ -373,12 +373,14 @@ const TeamContainer = styled.View`
   align-items: center;
   justify-content: center;
   flex: 1;
+  padding-horizontal: ${({ width }) => width * 0.01}px;
 `;
 
 // 팀 로고 이미지
 const TeamLogoImage = styled.Image<StyledProps>`
   width: ${({ width }) => width * 0.06}px;
   height: ${({ width }) => width * 0.06}px;
+  margin-horizontal: ${({ width }) => width * 0.01}px;
 `;
 const ScheduleTime = styled.Text<StyledProps>`
   font-size: ${({ width }) => width * 0.035}px;
@@ -1154,13 +1156,12 @@ const MainPage = () => {
             </ProgressSection>
 
             <StatsRow width={width}>
-              <StatText width={width}>
+              <StatText width={width} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
                 현재 금리: {interestRate.toFixed(1)}%
                 {additionalRate > 0 && (
-                      <StatHighlight>
-                        {" "}
-                        +{additionalRate.toFixed(1)}%
-                      </StatHighlight>
+                  <StatHighlight status="up" style={{ marginLeft: 4 }}>
+                    ↗ +{additionalRate.toFixed(1)}%
+                  </StatHighlight>
                 )}
               </StatText>
 
