@@ -174,16 +174,18 @@ const RecordAmount = styled.Text`
   font-weight: bold;
 `;
 
-const MatchInfo = styled.View`
+const MatchInfo = styled.View<StyledProps>`
   flex-direction: row;
   align-items: center;
   margin-bottom: 16px;
-  gap: 8px;
+  padding: 4px ${({ width }) => width * 0.01}px;
 `;
 
-const TeamLogo = styled.Image`
-  width: 24px;
-  height: 24px;
+const TeamLogo = styled.Image<StyledProps>`
+  width: ${({ width }) => width * 0.07}px;
+  height: ${({ width }) => width * 0.07}px;
+  margin-horizontal: ${({ width }) => width * 0.015}px;
+  resize-mode: contain;
 `;
 
 const DateText = styled.Text`
@@ -492,9 +494,9 @@ const TransactionDetailScreen = () => {
             ) : transactionDetail ? (
               <Card width={width}>
                 <TransactionHeader>
-                  <MatchInfo>
+                  <MatchInfo width={width}>
                     <Text style={{ fontSize: 14, color: '#333333', fontWeight: 'bold' }}>vs</Text>
-                    <TeamLogo source={getTeamLogo(transactionDetail.opponent_team_name)} />
+                    <TeamLogo width={width} source={getTeamLogo(transactionDetail.opponent_team_name)} />
                     <DateText>{transactionDetail.DATE} 경기</DateText>
                   </MatchInfo>
 

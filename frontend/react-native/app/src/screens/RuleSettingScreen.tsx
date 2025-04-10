@@ -19,10 +19,9 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useJoin } from '../context/JoinContext';
 import Header from '../components/Header';
-import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/AppNavigator';
-import Tooltip from '../components/Tooltip';
 import axios from 'axios';
 import { useStore } from '../store/useStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -202,15 +201,6 @@ const RuleSectionTitleText = styled.Text`
   font-weight: 600;
   color: #333333;
   padding: 4px 0;
-`;
-
-const InfoIcon = styled.TouchableOpacity`
-  margin-left: 8px;
-  padding: 5px;  /* 터치 영역 확장 */
-  min-width: 30px;
-  min-height: 30px;
-  justify-content: center;
-  align-items: center;
 `;
 
 const GoalInfoRow = styled.View`
@@ -401,11 +391,6 @@ const RuleSettingScreen = () => {
   const [isRulesLoading, setIsRulesLoading] = useState(false);
   const [rulesError, setRulesError] = useState<string | null>(null);
   
-  // 툴팁 관련 상태
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipText, setTooltipText] = useState('');
-  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0, width: 0 });
-  
   // 각 아이콘의 refs 저장
   const iconRefs = useRef<{[key: string]: React.RefObject<any>}>({
     daily: React.createRef(),
@@ -593,101 +578,12 @@ const RuleSettingScreen = () => {
   }, []);
   
   // 아이콘 레이아웃 변경 이벤트 핸들러
-  const handleIconLayout = useCallback((type: string, event: any) => {
-    const { x, y, width, height } = event.nativeEvent.layout;
-    
-    // 아이콘의 절대 위치 저장 (스크롤 오프셋은 handleShowTooltip에서 적용)
-    setIconPositions(prev => ({
-      ...prev,
-      [type]: { x, y, width, height }
-    }));
-    
-    console.log(`아이콘 ${type} 레이아웃:`, { x, y, width, height });
-  }, []);
-  
-  // 툴팁 표시 핸들러 (아이콘의 measureInWindow 사용)
-  const handleShowTooltip = (type: string) => {
-    console.log(`${type} 툴팁 표시 요청`);
-    
-    // 이미 활성화된 툴팁이 있으면 닫기
-    if (tooltipVisible) {
-      setTooltipVisible(false);
-      
-      // 약간의 딜레이 후에 새 툴팁 표시
-      setTimeout(() => {
-        showTooltipForType(type);
-      }, 100);
-      return;
-    }
-    
-    showTooltipForType(type);
+  const handleIconLayout = (key: string, event: LayoutChangeEvent) => {
+    // 함수 제거 또는 비워두기
   };
-  
-  // 특정 타입의 툴팁 표시 함수
-  const showTooltipForType = (type: string) => {
-    // 해당 아이콘의 ref 가져오기
-    const iconRef = iconRefs.current[type];
-    
-    if (!iconRef || !iconRef.current) {
-      console.log(`아이콘 ref가 없습니다: ${type}`);
-      return;
-    }
-    
-    try {
-      // 네이티브 환경에서는 measureInWindow 사용
-      iconRef.current.measureInWindow((x: number, y: number, width: number, height: number) => {
-        console.log(`아이콘 화면상 위치:`, { x, y, width, height, type });
-        
-        if (isNaN(x) || isNaN(y) || x < 0 || y < 0) {
-          console.error('유효하지 않은 위치 값:', { x, y, width, height });
-          // 기본 위치 설정
-          const defaultY = 300;
-          const defaultX = windowWidth / 2;
-          
-          setTooltipVisible(true);
-          setTooltipText(getTooltipContent(type));
-          setTooltipPosition({
-            top: defaultY,
-            left: defaultX,
-            width: 30
-          });
-          return;
-        }
-        
-        // 아이콘 중앙 위치 계산 (화살표가 가리킬 위치)
-        const iconCenterX = x + (width / 2);
-        const iconBottomY = y + height;
-        
-        console.log(`계산된 아이콘 중앙:`, { iconCenterX, iconBottomY });
-        
-        setTooltipVisible(true);
-        setTooltipText(getTooltipContent(type));
-        setTooltipPosition({
-          top: y,
-          left: x,
-          width: width
-        });
-        
-        // 5초 후 자동으로 닫기
-        if (tooltipTimeoutRef.current) {
-          clearTimeout(tooltipTimeoutRef.current);
-        }
-        
-        tooltipTimeoutRef.current = setTimeout(() => {
-          setTooltipVisible(false);
-        }, 5000);
-      });
-    } catch (error) {
-      console.error('툴팁 위치 측정 오류:', error);
-      // 오류 발생 시 기본 위치에 표시
-      setTooltipVisible(true);
-      setTooltipText(getTooltipContent(type));
-      setTooltipPosition({
-        top: 300,
-        left: windowWidth / 2,
-        width: 30
-      });
-    }
+
+  const handleShowTooltip = (key: string) => {
+    // 함수 제거 또는 비워두기
   };
   
   // 토글 애니메이션 관련 코드 수정
@@ -1301,17 +1197,6 @@ const RuleSettingScreen = () => {
                     }}
                   />
                   <Text style={{ marginLeft: 8, fontSize: 15 }}>원</Text>
-                  <InfoIcon 
-                    onPress={() => {
-                      console.log('Daily icon pressed');
-                      handleShowTooltip('daily');
-                    }}
-                    onLayout={(event) => handleIconLayout('daily', event)}
-                    ref={iconRefs.current.daily}
-                    style={{ marginLeft: 8 }}
-                  >
-                    <Ionicons name="information-circle-outline" size={20} color="#999999" />
-                  </InfoIcon>
                 </View>
               </View>
             </View>
@@ -1327,24 +1212,11 @@ const RuleSettingScreen = () => {
               >
                 <RuleSectionTitle isExpanded={expandedSections.basic}>
                   <RuleSectionTitleText>기본 규칙 설정</RuleSectionTitleText>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <InfoIcon 
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleShowTooltip('basic');
-                      }}
-                      onLayout={(event) => handleIconLayout('basic', event)}
-                      ref={iconRefs.current.basic}
-                    >
-                      <Ionicons name="information-circle-outline" size={20} color="#999999" />
-                    </InfoIcon>
-                    <MaterialIcons 
-                      name={expandedSections.basic ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
-                      size={24} 
-                      color="#666666"
-                      style={{ marginLeft: 8 }}
-                    />
-                  </View>
+                  <MaterialIcons 
+                    name={expandedSections.basic ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
+                    size={24} 
+                    color="#666666"
+                  />
                 </RuleSectionTitle>
               </TouchableOpacity>
               
@@ -1504,24 +1376,11 @@ const RuleSettingScreen = () => {
                 >
                   <RuleSectionTitle isExpanded={expandedSections.pitcher}>
                     <RuleSectionTitleText>투수 규칙 설정</RuleSectionTitleText>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <InfoIcon 
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleShowTooltip('pitcher');
-                        }}
-                        onLayout={(event) => handleIconLayout('pitcher', event)}
-                        ref={iconRefs.current.pitcher}
-                      >
-                        <Ionicons name="information-circle-outline" size={20} color="#999999" />
-                      </InfoIcon>
-                      <MaterialIcons 
-                        name={expandedSections.pitcher ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
-                        size={24} 
-                        color="#666666"
-                        style={{ marginLeft: 8 }}
-                      />
-                    </View>
+                    <MaterialIcons 
+                      name={expandedSections.pitcher ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
+                      size={24} 
+                      color="#666666"
+                    />
                   </RuleSectionTitle>
                 </TouchableOpacity>
                 
@@ -1610,24 +1469,11 @@ const RuleSettingScreen = () => {
                 >
                   <RuleSectionTitle isExpanded={expandedSections.batter}>
                     <RuleSectionTitleText>타자 규칙 설정</RuleSectionTitleText>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <InfoIcon 
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleShowTooltip('batter');
-                        }}
-                        onLayout={(event) => handleIconLayout('batter', event)}
-                        ref={iconRefs.current.batter}
-                      >
-                        <Ionicons name="information-circle-outline" size={20} color="#999999" />
-                      </InfoIcon>
-                      <MaterialIcons 
-                        name={expandedSections.batter ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
-                        size={24} 
-                        color="#666666"
-                        style={{ marginLeft: 8 }}
-                      />
-                    </View>
+                    <MaterialIcons 
+                      name={expandedSections.batter ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
+                      size={24} 
+                      color="#666666"
+                    />
                   </RuleSectionTitle>
                 </TouchableOpacity>
                 
@@ -1715,24 +1561,11 @@ const RuleSettingScreen = () => {
               >
                 <RuleSectionTitle isExpanded={expandedSections.opponent}>
                   <RuleSectionTitleText>상대팀 규칙 설정</RuleSectionTitleText>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <InfoIcon 
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleShowTooltip('opponent');
-                      }}
-                      onLayout={(event) => handleIconLayout('opponent', event)}
-                      ref={iconRefs.current.opponent}
-                    >
-                      <Ionicons name="information-circle-outline" size={20} color="#999999" />
-                    </InfoIcon>
-                    <MaterialIcons 
-                      name={expandedSections.opponent ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
-                      size={24} 
-                      color="#666666"
-                      style={{ marginLeft: 8 }}
-                    />
-                  </View>
+                  <MaterialIcons 
+                    name={expandedSections.opponent ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
+                    size={24} 
+                    color="#666666"
+                  />
                 </RuleSectionTitle>
               </TouchableOpacity>
               
@@ -1837,16 +1670,6 @@ const RuleSettingScreen = () => {
             <SelectButtonText>선택</SelectButtonText>
           </SelectButton>
         </BottomSection>
-        
-        {/* 툴팁 컴포넌트 */}
-        <Tooltip
-          isVisible={tooltipVisible}
-          position={tooltipPosition}
-          text={tooltipText}
-          onClose={() => setTooltipVisible(false)}
-          color={primaryColor}
-          autoCloseDelay={5000}
-        />
       </MobileContainer>
     </AppWrapper>
   );

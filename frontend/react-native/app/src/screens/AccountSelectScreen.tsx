@@ -524,7 +524,6 @@ const AccountSelectScreen = () => {
     if (canProceed && selectedAccount) {
       try {
         setIsSubmitting(true);
-        setSubmitError(null);
         
         // 선택된 계좌 정보를 JoinContext에 저장
         updateSourceAccount(selectedAccount);
@@ -536,8 +535,6 @@ const AccountSelectScreen = () => {
         const requestData = getDBData();
         
         if (!requestData) {
-          setIsSubmitting(false);
-          setSubmitError('가입 정보가 완전하지 않습니다. 처음부터 다시 시도해주세요.');
           return;
         }
         
@@ -546,10 +543,6 @@ const AccountSelectScreen = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         };
-        
-        // API 호출
-        console.log("API 기본 URL: http://localhost:8000");
-        console.log("API 요청 데이터:", JSON.stringify(requestData, null, 2));
         
         const response = await axios.post(
           // `http://localhost:8000/api/account/create`,
@@ -561,27 +554,13 @@ const AccountSelectScreen = () => {
           }
         );
         
-        console.log("API 응답:", response.data);
-        
-        // API 호출 성공 시 로딩 표시 제거하고 완료 화면으로 이동
-        setIsSubmitting(false);
+        // API 호출 성공 시 완료 페이지로 이동
         navigation.navigate("Completion");
         
       } catch (error) {
         console.error("적금 가입 중 오류:", error);
-        
-        // 오류 발생 시 로딩 표시 제거
+      } finally {
         setIsSubmitting(false);
-        
-        // axios 에러인 경우 에러 메시지 설정
-        if (axios.isAxiosError(error) && error.response) {
-          const errorMessage = error.response.data?.message || 
-                             error.response.data?.error || 
-                             '서버에서 오류가 발생했습니다.';
-          setSubmitError(`적금 가입 처리 중 오류가 발생했습니다: ${errorMessage}`);
-        } else {
-          setSubmitError('서버 연결에 실패했습니다. 네트워크 상태를 확인하고 다시 시도해주세요.');
-        }
       }
     }
   };

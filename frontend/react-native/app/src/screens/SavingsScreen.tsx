@@ -96,7 +96,6 @@ interface TransactionItem {
   date: string;
   description: string;
   amount: number;
-  wins: number;
 }
 
 // 경기 결과 응답 타입 정의
@@ -352,10 +351,16 @@ const TeamVsContainer = styled.View`
   align-items: center;
 `;
 
-const TeamLogo = styled.Image`
-  width: 30px;
-  height: 30px;
-  border-radius: 15px;
+const TeamLogo = styled.Image<StyledProps>`
+  width: ${({ width }) => width * 0.06}px;
+  height: ${({ width }) => width * 0.06}px;
+  margin-horizontal: ${({ width }) => width * 0.015}px;
+  resize-mode: contain;
+`;
+
+const LogoContainer = styled.View`
+  align-items: center;
+  justify-content: center;
 `;
 
 const VsText = styled.Text`
@@ -446,8 +451,15 @@ const ListMonthTitle = styled.Text`
 `;
 
 const TransactionItem = styled.View`
-  border-bottom-width: 1px;
-  border-bottom-color: #f0f0f0;
+  background-color: white;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border-width: 1px;
+  border-color: #eeeeee;
+  ${Platform.OS === "web" &&
+  `
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.06);
+  `}
 `;
 
 const TransactionHeader = styled.View`
@@ -470,18 +482,26 @@ const TransactionAmountText = styled.Text`
 `;
 
 const TransactionDescription = styled.View`
-  padding: 12px;
-  padding-top: 0;
-  background-color: #f9f9f9;
-  border-bottom-width: 1px;
-  border-bottom-color: #f0f0f0;
+  padding: 0 16px 16px 16px;
 `;
 
 const DescriptionText = styled.Text`
   font-size: 14px;
   color: #333;
-  numberOfLines: 1;
-  ellipsizeMode: 'tail';
+`;
+
+const DateContainer = styled.View`
+  background-color: #f9f9f9;
+  padding: 12px 16px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border-top-width: 1px;
+  border-top-color: #eeeeee;
+`;
+
+const DateText = styled.Text`
+  font-size: 13px;
+  color: #666;
 `;
 
 const WinsText = styled.Text`
@@ -489,6 +509,18 @@ const WinsText = styled.Text`
   color: #888;
   margin-top: 4px;
 `;
+
+type RootStackParamList = {
+  TransactionDetail: { id: string };
+  적금내역: { viewMode?: ViewMode };
+};
+
+interface RouteParams {
+  viewMode?: ViewMode;
+  params?: {
+    viewMode?: ViewMode;
+  };
+}
 
 const SavingsScreen = () => {
   const { teamColor, teamName } = useTeam();
@@ -520,10 +552,10 @@ const SavingsScreen = () => {
   // 네비게이션 파라미터 처리
   useFocusEffect(
     React.useCallback(() => {
-      const params = route.params;
+      const params = route.params as RouteParams;
       let mode: ViewMode = "calendar";
 
-      if (params && typeof params === "object") {
+      if (params) {
         if ("viewMode" in params) {
           mode = params.viewMode as ViewMode;
         } else if (params.params && "viewMode" in params.params) {
@@ -565,7 +597,8 @@ const SavingsScreen = () => {
   }, []);
 
   // 팀 ID 가져오기 함수
-  const getTeamIdByName = (name: string): number => {
+  const getTeamIdByName = (name: string | undefined): number => {
+    if (!name) return 1; // 기본값으로 1 반환
     const teamMapping: { [key: string]: number } = {
       "KIA 타이거즈": 1,
       "삼성 라이온즈": 2,
@@ -578,7 +611,7 @@ const SavingsScreen = () => {
       "NC 다이노스": 9,
       "키움 히어로즈": 10,
     };
-    return teamMapping[name] || 1; // 기본값 1
+    return teamMapping[name] || 1;
   };
 
   // 팀명으로 팀 로고 가져오기
@@ -627,7 +660,6 @@ const SavingsScreen = () => {
 
   // 거래 상세 내역 페이지로 이동하는 함수
   const handleTransactionPress = (id: string) => {
-    // id는 이미 YYYY-MM-DD 형식이므로 그대로 사용
     navigation.navigate("TransactionDetail", { id });
   };
 
@@ -808,9 +840,9 @@ const SavingsScreen = () => {
         })
         .map((item: any) => {
           const dateObj = new Date(item.DATE);
-          const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+          dateObj.setDate(dateObj.getDate() + 1);  // 날짜 +1
+          const formattedDate = `적립일: ${dateObj.getFullYear()}.${dateObj.getMonth() + 1}.${dateObj.getDate()}`;
           
-          // 해당 날짜의 경기 결과에서 상대팀 정보 가져오기
           const gameResult = gameResults[item.DATE];
           const opponentTeamName = gameResult?.opponent_team_name || "";
           
@@ -819,8 +851,7 @@ const SavingsScreen = () => {
             opponent: opponentTeamName,
             date: formattedDate,
             description: item.TEXT,
-            amount: item.AMOUNT,
-            wins: 1
+            amount: item.AMOUNT
           };
         });
       
@@ -1375,6 +1406,7 @@ const SavingsScreen = () => {
 
   // 3연전 시리즈 카드 컴포넌트
   const SeriesMatchCard = ({ match }: { match: SeriesMatch }) => {
+    const { width } = useWindowDimensions();
     const formatAmount = (amount: number | null): string => {
       if (amount === null) return "-";
       return `${amount.toLocaleString()}원`;
@@ -1413,7 +1445,12 @@ const SavingsScreen = () => {
       <SeriesCard style={{ borderRadius: 16, marginBottom: 16, borderColor: "#eeeeee" }}>
         <SeriesHeader style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: "#f5f5f5" }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <TeamLogo source={opponentTeam.logo} resizeMode="contain" style={{ width: 32, height: 32 }} />
+            <TeamLogo 
+              source={opponentTeam.logo} 
+              width={width}
+              resizeMode="contain" 
+              style={{ width: 32, height: 32 }} 
+            />
             <View style={{ marginLeft: 12 }}>
               <Text style={{ fontSize: 16, fontWeight: "bold", color: "#333" }}>vs {opponentTeam.name}</Text>
               <Text style={{ fontSize: 13, color: "#666", marginTop: 2 }}>{match.dateRange} ({locationText})</Text>
@@ -1462,11 +1499,7 @@ const SavingsScreen = () => {
 
   // 리스트 뷰 렌더링 함수
   const renderListView = () => (
-    <Card width={width}>
-      <CardHeader width={width}>
-        <CardTitle width={width}>적금 상세 내역</CardTitle>
-      </CardHeader>
-
+    <>
       {/* 월 이동 네비게이션 */}
       <ListMonthNavigator>
         <TouchableOpacity onPress={() => moveMonth(-1)}>
@@ -1488,30 +1521,34 @@ const SavingsScreen = () => {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => handleTransactionPress(item.id)}>
-            <View>
-              <TransactionHeader>
-                {/* 좌측: 팀 정보와 날짜 */}
-                <TeamInfoContainer>
-                  <Text style={{ fontWeight: "bold", marginRight: 5 }}>vs</Text>
-                  <Image source={getTeamLogo(item.opponent)} style={{ width: 28, height: 28, marginRight: 10 }} />
-                  <Text style={{ color: "#666", fontSize: 14 }}>{item.date}</Text>
-                </TeamInfoContainer>
-
-                {/* 우측: 금액 */}
-                <TransactionAmountText>
-                  +{item.amount.toLocaleString()}원
-                </TransactionAmountText>
-              </TransactionHeader>
-
-              {/* 설명 텍스트 */}
-              <TransactionDescription>
-                <DescriptionText numberOfLines={1} ellipsizeMode="tail">{item.description}</DescriptionText>
-                <WinsText>{item.wins}개 획득</WinsText>
-              </TransactionDescription>
-            </View>
+            <TransactionItem>
+              <View>
+                <TransactionHeader>
+                  <TeamInfoContainer>
+                    <Text style={{ fontWeight: "bold", marginRight: 5 }}>vs</Text>
+                    <Image 
+                      source={getTeamLogo(item.opponent)} 
+                      style={{ width: 32, height: 32, marginRight: 10 }} 
+                      resizeMode="contain"
+                    />
+                  </TeamInfoContainer>
+                  <TransactionAmountText>
+                    +{item.amount.toLocaleString()}원
+                  </TransactionAmountText>
+                </TransactionHeader>
+                <TransactionDescription>
+                  <DescriptionText numberOfLines={1} ellipsizeMode="tail">
+                    {item.description}
+                  </DescriptionText>
+                </TransactionDescription>
+              </View>
+              <DateContainer>
+                <DateText>{item.date}</DateText>
+              </DateContainer>
+            </TransactionItem>
           </TouchableOpacity>
         )}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ padding: 16 }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={{ padding: 20, alignItems: "center" }}>
@@ -1519,7 +1556,7 @@ const SavingsScreen = () => {
           </View>
         }
       />
-    </Card>
+    </>
   );
 
   // 캘린더 뷰 렌더링
