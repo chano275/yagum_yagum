@@ -419,15 +419,54 @@ const RuleSettingScreen = () => {
   const primaryColor = typeof teamColor === 'object' && teamColor.primary ? teamColor.primary : "#D11A6F";
   
   // 적금 목표와 한도 불러오기
-  const selectedGoalAmount = joinData.savingGoal || 300000;
+  const selectedGoalAmount = joinData.savingGoal || 500000;
   const selectedDailyLimit = joinData.dailyLimit || 5000;
   
   // 팀 정보 가져오기 (없으면 기본값 사용)
   // 로컬 assets 이미지 사용 (require는 상수 경로여야 함)
   const getTeamLogo = () => {
-    // 실제 앱에서는 joinData.selectedTeam?.id 등으로 동적 선택 처리 가능
-    // 여기서는 로고 예시로 자이언츠 이미지 사용
-    return require('../../assets/kbo/giants.png');
+    // 목표 이미지 매핑
+    const goalImages: {[key: string]: any} = {
+      '500000': require('../../assets/kbo/uniform/giants.png'),
+      '1000000': require('../../assets/nextseason.png'),
+      '1500000': require('../../assets/season_ticket.png'),
+      '3000000': require('../../assets/springcamp.png'),
+    };
+    
+    // 선택한 팀에 맞는 유니폼 이미지 설정
+    if (joinData.selectedTeam?.name && joinData.savingGoal === 500000) {
+      try {
+        if (joinData.selectedTeam.name === 'KIA 타이거즈') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/tigers.png');
+        } else if (joinData.selectedTeam.name === '삼성 라이온즈') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/lions.png');
+        } else if (joinData.selectedTeam.name === 'LG 트윈스') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/twins.png');
+        } else if (joinData.selectedTeam.name === '두산 베어스') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/bears.png');
+        } else if (joinData.selectedTeam.name === 'KT 위즈') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/wiz.png');
+        } else if (joinData.selectedTeam.name === 'SSG 랜더스') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/landers.png');
+        } else if (joinData.selectedTeam.name === '롯데 자이언츠') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/giants.png');
+        } else if (joinData.selectedTeam.name === '한화 이글스') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/eagles.png');
+        } else if (joinData.selectedTeam.name === 'NC 다이노스') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/dinos.png');
+        } else if (joinData.selectedTeam.name === '키움 히어로즈') {
+          goalImages['500000'] = require('../../assets/kbo/uniform/heroes.png');
+        }
+      } catch (error) {
+        console.log('유니폼 이미지 로딩 오류:', error);
+      }
+    }
+    
+    // 선택한 적금 목표 금액 가져오기
+    const selectedGoalAmount = String(joinData.savingGoal || 500000);
+    
+    // 선택한 목표 금액에 해당하는 이미지 반환
+    return goalImages[selectedGoalAmount] || require('../../assets/kbo/uniform/giants.png');
   };
   
   const getPlayerImage = () => {
@@ -438,6 +477,20 @@ const RuleSettingScreen = () => {
   const teamLogo = getTeamLogo();
   const teamName = joinData.selectedTeam?.name || '자이언츠';
   const uniformName = joinData.selectedPlayer?.name || '선수 이름';
+  
+  // 목표 제목 가져오기
+  const getGoalTitle = () => {
+    const goalAmount = joinData.savingGoal || 500000;
+    const goalTitles: { [key: string]: string } = {
+      '500000': '유니폼',
+      '1000000': '다음 시즌 직관',
+      '1500000': '시즌권',
+      '3000000': '스프링캠프'
+    };
+    return goalTitles[String(goalAmount)] || '유니폼';
+  };
+  
+  const goalTitle = getGoalTitle();
   
   // 적금 규칙 불러오기
   const savedRules = joinData.savingRules || {
@@ -1204,7 +1257,7 @@ const RuleSettingScreen = () => {
             <TeamLogoContainer>
               <TeamLogo source={teamLogo} />
               <TeamInfoContainer>
-                <TeamName>유니폼</TeamName>
+                <TeamName>{goalTitle}</TeamName>
                 <View style={{ marginTop: 8 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                     <Text style={{ fontSize: 14, color: '#666666' }}>목표 금액</Text>
@@ -1348,7 +1401,7 @@ const RuleSettingScreen = () => {
                   </GoalInfoRow>
                   
                   <GoalInfoRow>
-                    <GoalInfoLabel>홈런 1개당</GoalInfoLabel>
+                    <GoalInfoLabel>홈런</GoalInfoLabel>
                     <InputContainer>
                       <StyledInput
                         value={rules.basic.homerun.toString()}

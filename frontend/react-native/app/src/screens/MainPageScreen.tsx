@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
   Text,
+  ActivityIndicator,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import styled from "styled-components/native";
@@ -941,9 +942,7 @@ const MainPage = () => {
               teamName ||
               "팀 정보가 불러와지지 않았습니다."}
           </HeaderTitle>
-          <IconContainer>
-            <BellIcon source={require("../../assets/icon.png")} />
-          </IconContainer>
+          <View style={{ width: 40 }} />
         </Header>
 
         <SafeAreaView style={{ flex: 1, paddingBottom: 60 }}>
@@ -955,14 +954,12 @@ const MainPage = () => {
             {isLoading || accountLoading ? (
               <View
                 style={{
-                  padding: 20,
+                  padding: 10,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Text style={{ fontSize: 16, color: "#666" }}>
-                  데이터를 불러오는 중입니다...
-                </Text>
+                <ActivityIndicator size="small" color={teamColor.primary} />
               </View>
             ) : error || accountError ? (
               <View
