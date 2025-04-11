@@ -1,0 +1,46 @@
+services:
+  fastapi:
+    build:
+      context: ./backend/fastapi
+      dockerfile: Dockerfile
+      args:
+        BACKEND_PORT: ${BACKEND_PORT}
+    env_file:
+      - ./backend/fastapi/app/.env
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    depends_on:
+      - mariadb
+
+  mariadb:
+    image: mariadb:latest
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIA_PASSWORD}
+      MARIADB_DATABASE: finball
+    volumes:
+      - ./backend/mariadb/data:/var/lib/mysql
+    ports:
+      - "${MARIA_PORT}:3306"
+
+  reactnative:
+    build:
+      context: ./frontend/react-native
+      dockerfile: Dockerfile
+      args:
+        FRONTEND_METRO_PORT: ${FRONTEND_METRO_PORT}
+        FRONTEND_EXPO_PORT: ${FRONTEND_EXPO_PORT}
+    env_file:
+      - ./frontend/react-native/app/.env
+    ports:
+      - "${FRONTEND_METRO_PORT}:${FRONTEND_METRO_PORT}"
+      - "${FRONTEND_EXPO_PORT}:${FRONTEND_EXPO_PORT}"
+    entrypoint: ["/bin/sh", "-c", "npx expo start --web"]
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    depends_on:
+      - fastapi
+    ports:
+      - "${NGINX_PORT}:${NGINX_PORT}"
