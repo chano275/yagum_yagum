@@ -377,6 +377,15 @@ const MobileContainer = styled(BaseMobileContainer)<StyledProps>`
   padding-top: ${props => Platform.OS === "web" ? "24px" : `${props.insetsTop || 0}px`};
 `;
 
+const DataSourceText = styled.Text<BaseStyledProps>`
+  font-size: ${({ width }) => width * 0.028}px;
+  color: #999999;
+  text-align: center;
+  margin-top: ${({ width }) => width * 0.04}px;
+  margin-bottom: ${({ width }) => width * 0.04}px;
+  font-family: ${({ theme }) => theme.fonts.regular};
+`;
+
 const HomeScreen = () => {
   const { width: windowWidth } = useWindowDimensions();
   const width = getAdjustedWidth(windowWidth);
@@ -1051,6 +1060,10 @@ const HomeScreen = () => {
                     )}
                   </AnimatedServiceCard>
                 </RecommendSection>
+
+                <DataSourceText width={width}>
+                ※ 본 서비스의 야구 데이터는 STATIZ(스탯티즈)를 기반으로 제공됩니다.
+                </DataSourceText>
               </Container>
             </AnimatedScrollView>
         </MobileContainer>
