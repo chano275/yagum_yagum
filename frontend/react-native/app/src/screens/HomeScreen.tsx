@@ -65,6 +65,7 @@ const HeaderTitle = styled.Text<BaseStyledProps>`
   font-size: ${({ width }) => width * 0.06}px;
   font-weight: bold;
   color: #333;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const IconContainer = styled.View`
@@ -160,21 +161,25 @@ const ServiceTitle = styled.Text<BaseStyledProps>`
   font-weight: bold;
   letter-spacing: -0.3px;
   color: #333;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const ColoredText = styled.Text`
   color: #2d5bff;
   font-weight: bold;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const BlackText = styled.Text`
   color: black;
   font-weight: bold;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const LightText = styled.Text`
   color: #999999;
   font-weight: bold;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const ServiceDescription = styled.Text<BaseStyledProps>`
@@ -182,6 +187,7 @@ const ServiceDescription = styled.Text<BaseStyledProps>`
   line-height: ${({ width }) => Math.min(width * 0.052, 24)}px;
   color: #222222;
   letter-spacing: -0.3px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const StartButton = styled.TouchableOpacity<BaseStyledProps>`
@@ -196,6 +202,7 @@ const ButtonText = styled.Text<BaseStyledProps>`
   color: white;
   font-size: ${({ width }) => Math.min(width * 0.04, 18)}px;
   font-weight: bold;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const RecommendSection = styled.View<BaseStyledProps>`
@@ -207,6 +214,7 @@ const SectionTitle = styled.Text<BaseStyledProps>`
   font-weight: 900;
   color: #222222;
   margin-bottom: ${({ width }) => width * 0.008}px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const AuthCard = styled.View<BaseStyledProps>`
@@ -253,6 +261,7 @@ const AuthCardText = styled.Text<BaseStyledProps>`
   font-weight: bold;
   margin-bottom: 8px;
   line-height: ${({ width }) => width * 0.06}px;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const AuthCardImage = styled.Image<BaseStyledProps>`
@@ -288,12 +297,14 @@ const AccountTypeText = styled.Text<BaseStyledProps>`
   color: #000;
   line-height: ${({ width }) => width * 0.052}px;
   font-weight: 600;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const AccountNumberText = styled.Text<BaseStyledProps>`
   font-size: ${({ width }) => width * 0.038}px;
   color: #666;
   line-height: ${({ width }) => width * 0.052}px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const CopyButton = styled.TouchableOpacity`
@@ -338,6 +349,7 @@ const Balance = styled.Text<BaseStyledProps>`
   font-weight: 700;
   color: #000;
   margin: 0;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const ButtonContainer = styled.View`
@@ -358,10 +370,20 @@ const ButtonLabel = styled.Text<BaseStyledProps>`
   font-size: ${({ width }) => width * 0.036}px;
   color: #2d5bff;
   font-weight: 600;
+  font-family: ${({ theme }) => theme.fonts.bold};
 `;
 
 const MobileContainer = styled(BaseMobileContainer)<StyledProps>`
   padding-top: ${props => Platform.OS === "web" ? "24px" : `${props.insetsTop || 0}px`};
+`;
+
+const DataSourceText = styled.Text<BaseStyledProps>`
+  font-size: ${({ width }) => width * 0.028}px;
+  color: #999999;
+  text-align: center;
+  margin-top: ${({ width }) => width * 0.04}px;
+  margin-bottom: ${({ width }) => width * 0.04}px;
+  font-family: ${({ theme }) => theme.fonts.regular};
 `;
 
 const HomeScreen = () => {
@@ -541,17 +563,32 @@ const HomeScreen = () => {
             <ServiceTextContainer width={width}>
               <ServiceTitle width={width}>
                 {isLoggedIn ? (
-                  <>
-                    <Text style={{ fontSize: width * 0.034 }}>
-                      <BlackText>
-                        {accountInfo?.user_name || "김싸피"}
-                      </BlackText>
-                      <LightText>님을 위한 맞춤 서비스,</LightText>
-                    </Text>
-                    {"\n"}
-                    <ColoredText>야금야금</ColoredText>
-                    <BlackText>적금</BlackText>
-                  </>
+                  accountInfo?.savings_accounts &&
+                  accountInfo.savings_accounts.length > 0 ? (
+                    <>
+                      <Text style={{ fontSize: width * 0.034 }}>
+                        <BlackText>
+                          {accountInfo?.user_name || "김싸피"}
+                        </BlackText>
+                        <LightText>님을 위한 맞춤 서비스,</LightText>
+                      </Text>
+                      {"\n"}
+                      <ColoredText>야금야금</ColoredText>
+                      <BlackText>적금</BlackText>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={{ fontSize: width * 0.034 }}>
+                        <BlackText>
+                          {accountInfo?.user_name || "김싸피"}
+                        </BlackText>
+                        <LightText>님을 위한 맞춤 서비스,</LightText>
+                      </Text>
+                      {"\n"}
+                      <ColoredText>야금야금</ColoredText>
+                      <BlackText> 가입하기</BlackText>
+                    </>
+                  )
                 ) : (
                   <>
                     <Text style={{ fontSize: width * 0.036 }}>
@@ -998,6 +1035,16 @@ const HomeScreen = () => {
                             {"\n"}
                             야구의 재미를 더하다!
                           </ServiceDescription>
+                          {(!isLoggedIn || (isLoggedIn && (!accountInfo?.savings_accounts || accountInfo.savings_accounts.length === 0))) && (
+                            <Text style={{ 
+                              fontSize: width * 0.038,
+                              marginTop: 8,
+                              color: '#2D5BFF',
+                              fontFamily: 'Pretendard-Bold'
+                            }}>
+                              지금 바로 가입하기 !!
+                            </Text>
+                          )}
                         </ServiceTextContainer>
                         <ServiceIcon
                           source={require("../../assets/recommend.png")}
@@ -1013,6 +1060,10 @@ const HomeScreen = () => {
                     )}
                   </AnimatedServiceCard>
                 </RecommendSection>
+
+                <DataSourceText width={width}>
+                ※ 본 서비스의 야구 데이터는 STATIZ(스탯티즈)를 기반으로 제공됩니다.
+                </DataSourceText>
               </Container>
             </AnimatedScrollView>
         </MobileContainer>
