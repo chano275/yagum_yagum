@@ -2,7 +2,7 @@
 ![야금야금](/uploads/d166eeb2b56cc6de40818c5241d4035c/야금야금.png)
 
 ## 서비스 소개 영상
-![](/uploads/55434e0d47343b599f6ab7c118f96176/B206_야금야금_영상_포트폴리오.mp4)
+![영상 포트폴리오](/uploads/55434e0d47343b599f6ab7c118f96176/B206_야금야금_영상_포트폴리오.mp4)
 
 ## 목차
 [1. 서비스 소개](#1️⃣-서비스-소개)\
@@ -74,19 +74,19 @@
 ## 3️⃣ 주요기능
 | 로그인 | 계좌 조회 |
 |---|---|
-| <img src="exec/gif/회원가입.gif" width="450"/> | <img src="exec/gif/로그인.gif" width="450"/> |
+| <img src="/uploads/c77d76f4cd2977a54a01bcb1a7d31ffc/로그인.gif" width="450"/> | <img src="/uploads/d392d20e2702a30cc3a03444d62e8729/계좌조회.gif" width="450"/> |
 
 | 적금 가입 | 메인 페이지 |
 |---|---|
-| <img src="exec/gif/회원가입.gif" width="450"/> | <img src="exec/gif/로그인.gif" width="450"/> |
+| <img src="/uploads/3d1ab93e6345dd6dd4ffb12d8bc3a211/적금가입.gif" width="450"/> | <img src="/uploads/2d994edc3b46deaf9f093c8a9746f17c/메인페이지.gif" width="450"/> |
 
 | 적금내역 페이지 | 주간 리포트 페이지 |
 |---|---|
-| <img src="exec/gif/회원가입.gif" width="450"/> | <img src="exec/gif/로그인.gif" width="450"/> |
+| <img src="/uploads/0b7b7e77d44678dcb5735c4318bee04d/적금내역.gif" width="450"/> | <img src="/uploads/d878f8607fa8a1ccdf8674c76804ae28/주간리포트.gif" width="450"/> |
 
 | 경기 직관 인증 | 팀 순위 맞추기 |
 |---|---|
-| <img src="exec/gif/회원가입.gif" width="450"/> | <img src="exec/gif/로그인.gif" width="450"/> |
+| <img src="/uploads/9e8b7759562a9b366254fb7f2b5fc080/경기직관인증.gif" width="450"/> | <img src="/uploads/6b3de834c1faff6b300c3fb21e1a6d44/팀순위맞추기.gif" width="450"/> |
 
 ## 4️⃣ 기술스택
 <table>
@@ -179,3 +179,5 @@
     <td align="center"><strong>박상호</strong><br><strong>FE</strong></td>
   </tr>
 </table>
+
+※ 본 서비스의 야구 데이터는 STATIZ(스탯티즈)를 기반으로 제공됩니다.
