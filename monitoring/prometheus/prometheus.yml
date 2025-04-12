@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'fastapi'
+    static_configs:
+      - targets: ['fastapi:8000']
+
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+
+# NGINX (포트 80)
+#   └─ /nginx_status → 내부 상태 공개
+#       └─ nginx-exporter 가 수집
+#           └─ Prometheus 가 pull
+#               └─ Grafana 가 시각화

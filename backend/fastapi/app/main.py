@@ -15,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # 로깅 설정
 logging.basicConfig(
@@ -81,6 +82,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+Instrumentator().instrument(app).expose(app)
+
 
 # 전역 예외 핸들러
 @app.exception_handler(Exception)
