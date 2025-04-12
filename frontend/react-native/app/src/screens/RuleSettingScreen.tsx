@@ -728,7 +728,7 @@ const RuleSettingScreen = () => {
         let url = 
         // `http://localhost:8000/api/saving_rule/rules`
         // `http://3.38.183.156:8000/api/saving_rule/rules`;
-        `https://j12b206.p.ssafy.io/api/saving_rule/rules`;
+        `https://j12b206.p.ssafy.io/saving_rule/rules`;
         if (playerId) {
           url += `?player_id=${playerId}`;
         }
