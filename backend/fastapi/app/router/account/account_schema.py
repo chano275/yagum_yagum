@@ -119,9 +119,12 @@ class SourceAccountInfo(BaseModel):
     total_amount: int
 
 class UserAccountsResponse(BaseModel):
-    user_id: int
-    user_email: str
-    user_name: str
+    user_id: Optional[int]
+    user_email: Optional[str]
+    user_name: Optional[str]
+    # user_id: int
+    # user_email: str
+    # user_name: str
     source_account: SourceAccountInfo
     savings_accounts: List[SavingsAccountInfo]
 

@@ -48,12 +48,11 @@ async def get_current_user(
         db: Session = Depends(get_db), 
         token: Optional[str] = Depends(oauth2_scheme) # str = Depends(oauth2_scheme)):
 ):
-    
     if token is None:
-        # 비로그인 기본 응답
         return {
             "user_id": None,
             "user_email": None,
+            "user_name": None,
             "source_account": {
                 "account_num": "000-000-000000",
                 "total_amount": 0
