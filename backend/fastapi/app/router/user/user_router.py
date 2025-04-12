@@ -44,14 +44,22 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 # 현재 유저 가져오기
-async def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+        db: Session = Depends(get_db), 
+        token: Optional[str] = Depends(oauth2_scheme) # str = Depends(oauth2_scheme)):
+):
     
     if token is None:
-        # 토큰이 없는 경우 → 익명 사용자 허용
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="로그인이 필요합니다",
-        )
+        # 비로그인 기본 응답
+        return {
+            "user_id": None,
+            "user_email": None,
+            "source_account": {
+                "account_num": "000-000-000000",
+                "total_amount": 0
+            },
+            "savings_accounts": []
+        }
     
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
