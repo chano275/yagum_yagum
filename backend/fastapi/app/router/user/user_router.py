@@ -399,7 +399,9 @@ async def get_user_accounts(
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        logger.info(f"사용자 계좌 정보 조회 요청: 사용자 ID {current_user.USER_ID}")
+        # logger.info(f"사용자 계좌 정보 조회 요청: 사용자 ID {current_user.USER_ID}")
+        logger.info(f"사용자 계좌 정보 조회 요청: 사용자 ID {current_user.get('user_id')}")
+
         
         # 입출금 계좌 정보 가져오기
         source_account = current_user.SOURCE_ACCOUNT
