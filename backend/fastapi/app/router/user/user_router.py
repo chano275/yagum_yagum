@@ -27,7 +27,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 router = APIRouter()
 
 # OAuth2 설정
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/user/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/user/login", auto_error=False)
 
 # JWT 토큰 생성 함수
 def create_access_token(data: dict, expires_delta: timedelta = None):
@@ -45,6 +45,14 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 
 # 현재 유저 가져오기
 async def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
+    
+    if token is None:
+        # 토큰이 없는 경우 → 익명 사용자 허용
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="로그인이 필요합니다",
+        )
+    
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="인증 정보가 유효하지 않습니다",
