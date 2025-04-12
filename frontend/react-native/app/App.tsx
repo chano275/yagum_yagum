@@ -20,7 +20,8 @@ import { useStore } from "./src/store/useStore";
 // const BASE_URL = 'http://localhost:8000';  // 개발 환경
 
 // 배포 환경용
-const BASE_URL = 'http://3.38.183.156:8000';  // 배포 환경
+// const BASE_URL = 'http://3.38.183.156:8000';  // 배포 환경
+const BASE_URL = 'https://3.38.183.156:8000';  // 배포 환경
 
 axios.defaults.baseURL = BASE_URL;
 
