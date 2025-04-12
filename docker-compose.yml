@@ -46,13 +46,11 @@ services:
       - "${NGINX_PORT}:${NGINX_PORT}"
 
   prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    build:
+      context: ./monitoring/prometheus
+      dockerfile: Dockerfile
     ports:
       - "9090:9090"
-
 
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
