@@ -1,0 +1,10 @@
+# ✅ 2. Prometheus 데이터 소스 설정 (자동 프로비저닝)
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090 # 컨테이너 간 통신이므로 localhost 대신 prometheus 사용
+    isDefault: true

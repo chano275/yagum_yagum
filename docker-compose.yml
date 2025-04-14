@@ -61,3 +61,20 @@ services:
       - nginx
     ports:
       - "9113:9113"
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+
+volumes:
+  grafana-storage: #grafana 컨테이너 안에서 만든 설정, 대시보드, 유저 정보 등을 EC2 호스트에 “보존”하기 위한 저장 공간
