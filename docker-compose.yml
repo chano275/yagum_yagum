@@ -45,6 +45,7 @@ services:
     ports:
       - "${NGINX_PORT}:${NGINX_PORT}"
 
+## 모니터링 툴
   prometheus:
     build:
       context: ./monitoring/prometheus
@@ -75,6 +76,14 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - prometheus
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+
+
 
 volumes:
   grafana-storage: #grafana 컨테이너 안에서 만든 설정, 대시보드, 유저 정보 등을 EC2 호스트에 “보존”하기 위한 저장 공간
