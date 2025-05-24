@@ -1,8 +1,8 @@
 # ⚾️ 야구 팬들을 위한 자동 적금 서비스 야금야금 ⚾️
-![야금야금](/uploads/d166eeb2b56cc6de40818c5241d4035c/야금야금.png)
+![야금야금](exec/image/야금야금.png)
 
 ## 서비스 소개 영상
-![영상 포트폴리오](/uploads/55434e0d47343b599f6ab7c118f96176/B206_야금야금_영상_포트폴리오.mp4)
+![영상 포트폴리오](exec/video/B206_야금야금_영상_포트폴리오.mp4)
 
 ## 목차
 [1. 서비스 소개](#1️⃣-서비스-소개)\
@@ -74,19 +74,19 @@
 ## 3️⃣ 주요기능
 | 로그인 | 계좌 조회 |
 |---|---|
-| <img src="/uploads/c77d76f4cd2977a54a01bcb1a7d31ffc/로그인.gif" width="450"/> | <img src="/uploads/d392d20e2702a30cc3a03444d62e8729/계좌조회.gif" width="450"/> |
+| <img src="exec/gif/로그인.gif" width="375"/> | <img src="exec/gif/계좌조회.gif" width="375"/> |
 
 | 적금 가입 | 메인 페이지 |
 |---|---|
-| <img src="/uploads/3d1ab93e6345dd6dd4ffb12d8bc3a211/적금가입.gif" width="450"/> | <img src="/uploads/2d994edc3b46deaf9f093c8a9746f17c/메인페이지.gif" width="450"/> |
+| <img src="exec/gif/적금가입.gif" width="375"/> | <img src="exec/gif/메인페이지.gif" width="375"/> |
 
 | 적금내역 페이지 | 주간 리포트 페이지 |
 |---|---|
-| <img src="/uploads/0b7b7e77d44678dcb5735c4318bee04d/적금내역.gif" width="450"/> | <img src="/uploads/d878f8607fa8a1ccdf8674c76804ae28/주간리포트.gif" width="450"/> |
+| <img src="exec/gif/적금내역.gif" width="375"/> | <img src="exec/gif/주간리포트.gif" width="375"/> |
 
 | 경기 직관 인증 | 팀 순위 맞추기 |
 |---|---|
-| <img src="/uploads/9e8b7759562a9b366254fb7f2b5fc080/경기직관인증.gif" width="450"/> | <img src="/uploads/6b3de834c1faff6b300c3fb21e1a6d44/팀순위맞추기.gif" width="450"/> |
+| <img src="exec/gif/경기직관인증.gif" width="375"/> | <img src="exec/gif/팀순위맞추기.gif" width="375"/> |
 
 ## 4️⃣ 기술스택
 <table>
@@ -137,37 +137,37 @@
 </table>
 
 ## 5️⃣ 시스템 아키텍쳐
-![시스템_아키텍쳐](/uploads/888998d683b120db1b56be75b20f3307/image.png)
+![시스템_아키텍쳐](exec/image/아키텍처.png)
 
 ## 6️⃣ ERD
-![ERD](/uploads/88e50c1dcce03224608f1d52122e8bd9/image.png)
+![ERD](exec/image/ERD.png)
 
 ## 7️⃣ API 명세서
-![API_명세서](/uploads/33908ed2676c49f1df26ec52bedffc98/image.png)
+![API_명세서](exec/image/API.png)
 
 ## 8️⃣ 포팅 매뉴얼
-![포팅_매뉴얼](/uploads/303178c594ba85c9f66a34a3f85deb8c/image.png)
+![포팅_매뉴얼](exec/image/포팅매뉴얼.png)
 
 ## 9️⃣ 팀 구성원 및 역할
 <table>
   <tr>
     <td align="center">
-      <img src="/uploads/8b18ecca90cd2b0d50102f7081499bde/image.png" width="150"/>
+      <img src="exec/image/전제후.png" width="150"/>
     </td>
     <td align="center">
-      <img src="/uploads/00f16602001ca52b5be63f85c2077566/image.png" width="150"/>
+      <img src="exec/image/정찬호.png" width="150"/>
     </td>
     <td align="center">
-      <img src="/uploads/a4cdab824154fae031468a7718cbd5ed/image.png" width="150"/>
+      <img src="exec/image/김수민.png" width="150"/>
     </td>
     <td align="center">
-      <img src="/uploads/f3be99e34c402cb1e8b11456fc72ceb5/image.png" width="150"/>
+      <img src="exec/image/김의찬.png" width="150"/>
     </td>
     <td align="center">
-      <img src="/uploads/3cab103a7aa17327e3722f0abf677555/image.png" width="150"/>
+      <img src="exec/image/구민석.png" width="150"/>
     </td>
     <td align="center">
-      <img src="/uploads/4b419419d3d2a1e454d141c8b1c2cae1/image.png" width="150"/>
+      <img src="exec/image/박상호.png" width="150"/>
     </td>
   </tr>
   <tr>
